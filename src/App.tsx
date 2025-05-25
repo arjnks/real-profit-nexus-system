@@ -24,6 +24,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Customers from "./pages/admin/Customers";
 import AddCustomer from "./pages/admin/AddCustomer";
 import EditCustomer from "./pages/admin/EditCustomer";
+import Products from "./pages/admin/Products";
 import Requests from "./pages/admin/Requests";
 import MLMTree from "./pages/admin/MLMTree";
 
@@ -75,6 +76,14 @@ const App = () => (
                 element={
                   <ProtectedRoute role="admin">
                     <EditCustomer />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/products" 
+                element={
+                  <ProtectedRoute role="admin">
+                    <Products />
                   </ProtectedRoute>
                 } 
               />

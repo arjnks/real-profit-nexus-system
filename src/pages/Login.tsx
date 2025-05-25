@@ -7,32 +7,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const { login, user } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
-
+    
     try {
       const success = await login(username, password);
       if (success) {
-        // Redirect based on role (handled in the auth context)
-        navigate('/');
-      } else {
-        setError('Invalid username or password');
+        // Navigation will be handled by the useEffect above
       }
-    } catch (err) {
-      setError('An error occurred during login');
-      console.error(err);
+    } catch (error) {
+      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -40,119 +46,73 @@ const Login = () => {
 
   return (
     <Layout>
-      <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md">
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="login" className="text-base">Login</TabsTrigger>
-              <TabsTrigger value="track" className="text-base">Track Order</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-2xl font-bold text-center">Login to Real Profit</CardTitle>
-                  <CardDescription className="text-center">
-                    Enter your credentials to access your account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && (
-                      <div className="p-3 bg-red-50 text-red-600 text-sm rounded border border-red-200">
-                        {error}
-                      </div>
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-realprofit-blue">
+              Welcome Back
+            </CardTitle>
+            <CardDescription>
+              Sign in to your Real Profit account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
-                      <Input
-                        id="username"
-                        type="text"
-                        placeholder="Enter your username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Password</Label>
-                        <Link
-                          to="/forgot-password"
-                          className="text-sm text-realprofit-blue hover:underline"
-                        >
-                          Forgot password?
-                        </Link>
-                      </div>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? 'Logging in...' : 'Login'}
-                    </Button>
-                  </form>
-                </CardContent>
-                <CardFooter className="flex flex-col space-y-4">
-                  <div className="text-sm text-center text-gray-600">
-                    Demo credentials:
-                    <ul className="mt-1">
-                      <li><strong>Admin:</strong> admin123 / admin123</li>
-                      <li><strong>Customer:</strong> customer / customer123</li>
-                    </ul>
-                  </div>
-                  <div className="text-sm text-center text-gray-600">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="text-realprofit-blue hover:underline">
-                      Register
-                    </Link>
-                  </div>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="track">
-              <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-2xl font-bold text-center">Track Your Order</CardTitle>
-                  <CardDescription className="text-center">
-                    Enter your order details to check status
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="orderId">Order ID</Label>
-                      <Input
-                        id="orderId"
-                        type="text"
-                        placeholder="Enter your order ID"
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">
-                      Track Order
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                  </button>
+                </div>
+              </div>
+              
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-realprofit-blue hover:underline">
+                Register here
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
       </div>
     </Layout>
   );

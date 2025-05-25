@@ -1,23 +1,25 @@
 
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import {
-  LayoutDashboard,
-  Users,
-  ShoppingCart,
-  GitBranch,
-  CreditCard,
-  ClipboardList,
-  Tag,
-  Calendar,
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { 
+  LayoutDashboard, 
+  Users, 
+  ShoppingCart, 
+  Package,
+  ClipboardList, 
+  TreePine,
   LogOut,
-  Menu,
-  X,
-  ChevronDown,
-  ChevronUp,
+  User,
+  Menu
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -25,226 +27,99 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [customersExpanded, setCustomersExpanded] = useState(false);
+  const { user, logout } = useAuth();
+  const { customers, orders } = useData();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  // Count pending items
+  const pendingCustomers = customers.filter(c => c.isPending).length;
+  const pendingOrders = orders.filter(o => o.isPendingApproval).length;
+  const totalPending = pendingCustomers + pendingOrders;
 
-  const NavItem = ({
-    to,
-    icon: Icon,
-    label,
-    expandable = false,
-    expanded = false,
-    onToggle,
-    count,
-  }: {
-    to: string;
-    icon: React.ElementType;
-    label: string;
-    expandable?: boolean;
-    expanded?: boolean;
-    onToggle?: () => void;
-    count?: number;
-  }) => {
-    const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
+  const navigation = [
+    { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Customers', href: '/admin/customers', icon: Users },
+    { name: 'Products', href: '/admin/products', icon: Package },
+    { 
+      name: 'Requests', 
+      href: '/admin/requests', 
+      icon: ClipboardList,
+      badge: totalPending > 0 ? totalPending : null
+    },
+    { name: 'MLM Tree', href: '/admin/mlm', icon: TreePine },
+  ];
 
-    return (
-      <div>
-        {expandable ? (
-          <button
-            onClick={onToggle}
-            className={`w-full flex items-center justify-between p-2 rounded-md ${
-              isActive ? 'bg-realprofit-blue/10 text-realprofit-blue' : 'hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center">
-              <Icon className="h-5 w-5 mr-3" />
-              {sidebarOpen && <span>{label}</span>}
-            </div>
-            {sidebarOpen && (
-              <div className="flex items-center">
-                {count !== undefined && (
-                  <span className="text-xs bg-realprofit-blue text-white rounded-full px-2 py-0.5 mr-1">
-                    {count}
-                  </span>
-                )}
-                {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </div>
-            )}
-          </button>
-        ) : (
-          <Link
-            to={to}
-            className={`flex items-center justify-between p-2 rounded-md ${
-              isActive ? 'bg-realprofit-blue/10 text-realprofit-blue' : 'hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center">
-              <Icon className="h-5 w-5 mr-3" />
-              {sidebarOpen && <span>{label}</span>}
-            </div>
-            {sidebarOpen && count !== undefined && (
-              <span className="text-xs bg-realprofit-blue text-white rounded-full px-2 py-0.5">
-                {count}
-              </span>
-            )}
-          </Link>
-        )}
-      </div>
-    );
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Mobile sidebar toggle */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-          className="rounded-full"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {/* Mobile overlay */}
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 transform ${
-          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out bg-white border-r ${
-          sidebarOpen ? 'w-64' : 'w-20'
-        }`}
-      >
-        <div className="h-full flex flex-col">
-          {/* Sidebar header */}
-          <div className="flex items-center justify-between h-16 px-4 border-b">
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Navigation */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <Link to="/admin/dashboard" className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-realprofit-blue flex items-center justify-center mr-2">
+              <div className="w-8 h-8 bg-realprofit-blue rounded-lg flex items-center justify-center mr-3">
                 <span className="text-white font-bold text-sm">RP</span>
               </div>
-              {sidebarOpen && <span className="text-lg font-bold text-realprofit-blue">Real Profit</span>}
+              <span className="text-xl font-bold text-realprofit-blue">Real Profit Admin</span>
             </Link>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="hidden lg:flex"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMobileSidebarOpen(false)}
-                className="lg:hidden"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
 
-          {/* Sidebar content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <nav className="space-y-1">
-              <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
-              <NavItem
-                to="/admin/customers"
-                icon={Users}
-                label="Customers"
-                expandable
-                expanded={customersExpanded}
-                onToggle={() => setCustomersExpanded(!customersExpanded)}
-              />
-              {customersExpanded && sidebarOpen && (
-                <div className="ml-8 space-y-1 mt-1">
-                  <Link
-                    to="/admin/customers/add"
-                    className={`flex items-center p-2 rounded-md ${
-                      location.pathname === '/admin/customers/add'
-                        ? 'bg-realprofit-blue/10 text-realprofit-blue'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    Add Customer
-                  </Link>
-                  <Link
-                    to="/admin/customers/edit"
-                    className={`flex items-center p-2 rounded-md ${
-                      location.pathname === '/admin/customers/edit'
-                        ? 'bg-realprofit-blue/10 text-realprofit-blue'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    Edit Customer
-                  </Link>
-                </div>
-              )}
-              <NavItem to="/admin/purchases" icon={ShoppingCart} label="Purchases" />
-              <NavItem to="/admin/mlm" icon={GitBranch} label="MLM Tree" />
-              <NavItem to="/admin/transactions" icon={CreditCard} label="Transactions" />
-              <NavItem to="/admin/requests" icon={ClipboardList} label="Requests" count={2} />
-              <NavItem to="/admin/offers" icon={Tag} label="Offers" />
-              <NavItem to="/admin/reservations" icon={Calendar} label="Reservations" />
-
-              <Separator className="my-4" />
-
-              <Button
-                variant="ghost"
-                className={`w-full justify-start p-2 ${!sidebarOpen && 'justify-center'}`}
-                onClick={handleLogout}
-              >
-                <LogOut className="h-5 w-5 mr-3" />
-                {sidebarOpen && <span>Logout</span>}
-              </Button>
-            </nav>
-          </div>
-
-          {/* Sidebar footer */}
-          <div className="p-4 border-t">
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-realprofit-blue flex items-center justify-center mr-2">
-                <span className="text-white font-bold text-xs">A</span>
-              </div>
-              {sidebarOpen && (
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{user?.name || 'Admin'}</span>
-                  <span className="text-xs text-gray-500">{user?.code || 'A100'}</span>
-                </div>
-              )}
+            {/* User Menu */}
+            <div className="flex items-center space-x-4">
+              <Link to="/" className="text-gray-600 hover:text-gray-900">
+                View Site
+              </Link>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    {user?.name || user?.username}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-white">
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
-      </aside>
+      </header>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="bg-white border-b h-16 flex items-center px-6">
-          <h1 className="text-xl font-semibold text-gray-800">
-            Real Profit Admin
-          </h1>
-        </header>
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white shadow-sm min-h-[calc(100vh-64px)]">
+          <nav className="p-4 space-y-2">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'bg-realprofit-blue text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <item.icon className="mr-3 h-5 w-5" />
+                {item.name}
+                {item.badge && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </nav>
+        </aside>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        {/* Main Content */}
+        <main className="flex-1 p-6">
           {children}
         </main>
       </div>
