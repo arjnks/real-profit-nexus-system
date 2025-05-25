@@ -72,7 +72,7 @@ const EditCustomer = () => {
         phone,
         code,
         points,
-        tier: tier as "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond",
+        tier: tier as "Bronze" | "Silver" | "Gold" | "Diamond",
         parentCode: parentCode === 'A100' ? null : parentCode,
         isReserved,
       });
@@ -163,7 +163,6 @@ const EditCustomer = () => {
                     <SelectItem value="Bronze">Bronze</SelectItem>
                     <SelectItem value="Silver">Silver</SelectItem>
                     <SelectItem value="Gold">Gold</SelectItem>
-                    <SelectItem value="Platinum">Platinum</SelectItem>
                     <SelectItem value="Diamond">Diamond</SelectItem>
                   </SelectContent>
                 </Select>

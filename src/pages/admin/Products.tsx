@@ -67,7 +67,8 @@ const Products = () => {
       price: parseFloat(price),
       description,
       category,
-      image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200'
+      image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200',
+      inStock: true
     });
 
     toast.success('Product added successfully');

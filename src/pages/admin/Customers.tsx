@@ -88,7 +88,6 @@ const Customers = () => {
             <SelectItem value="bronze">Bronze</SelectItem>
             <SelectItem value="silver">Silver</SelectItem>
             <SelectItem value="gold">Gold</SelectItem>
-            <SelectItem value="platinum">Platinum</SelectItem>
             <SelectItem value="diamond">Diamond</SelectItem>
           </SelectContent>
         </Select>
@@ -132,7 +131,6 @@ const Customers = () => {
                       customer.tier === 'Bronze' ? 'bg-amber-100 text-amber-800' :
                       customer.tier === 'Silver' ? 'bg-gray-200 text-gray-800' :
                       customer.tier === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
-                      customer.tier === 'Platinum' ? 'bg-gray-100 text-gray-800' :
                       'bg-blue-100 text-blue-800'
                     }`}>
                       {customer.tier}

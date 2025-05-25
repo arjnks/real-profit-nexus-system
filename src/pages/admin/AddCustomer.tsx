@@ -56,8 +56,6 @@ const AddCustomer = () => {
         name,
         phone,
         code: newCode,
-        points: 0,
-        tier: 'Bronze',
         parentCode,
         isReserved,
         isPending: false,

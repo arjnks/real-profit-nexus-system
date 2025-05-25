@@ -56,8 +56,6 @@ const Register = () => {
         name,
         phone,
         code: tempCode,
-        points: 0,
-        tier: 'Bronze',
         parentCode: parentCode || 'A100', // Default to admin if no parent selected
         isReserved: false,
         isPending: true,
