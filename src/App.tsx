@@ -17,6 +17,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Shop from "./pages/Shop";
+import CustomerDashboard from "./pages/CustomerDashboard";
 import NotFound from "./pages/NotFound";
 
 // Admin Pages
@@ -25,6 +26,7 @@ import Customers from "./pages/admin/Customers";
 import AddCustomer from "./pages/admin/AddCustomer";
 import EditCustomer from "./pages/admin/EditCustomer";
 import Products from "./pages/admin/Products";
+import Purchases from "./pages/admin/Purchases";
 import Requests from "./pages/admin/Requests";
 import MLMTree from "./pages/admin/MLMTree";
 
@@ -44,6 +46,16 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/shop" element={<Shop />} />
+              
+              {/* Customer Routes */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute role="customer">
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -84,6 +96,14 @@ const App = () => (
                 element={
                   <ProtectedRoute role="admin">
                     <Products />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/purchases" 
+                element={
+                  <ProtectedRoute role="admin">
+                    <Purchases />
                   </ProtectedRoute>
                 } 
               />

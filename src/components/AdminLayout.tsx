@@ -19,7 +19,7 @@ import {
   TreePine,
   LogOut,
   User,
-  Menu
+  CreditCard
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -40,6 +40,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Products', href: '/admin/products', icon: Package },
+    { name: 'Purchases', href: '/admin/purchases', icon: CreditCard },
     { 
       name: 'Requests', 
       href: '/admin/requests', 

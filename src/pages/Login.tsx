@@ -23,7 +23,7 @@ const Login = () => {
       if (user.role === 'admin') {
         navigate('/admin/dashboard');
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     }
   }, [user, navigate]);
@@ -59,7 +59,7 @@ const Login = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">Username/Phone</Label>
                 <Input
                   id="username"
                   type="text"

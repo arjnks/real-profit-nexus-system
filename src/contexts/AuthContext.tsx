@@ -11,7 +11,7 @@ type User = {
   name?: string;
   phone?: string;
   code?: string;
-  tier?: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond";
+  tier?: "Bronze" | "Silver" | "Gold" | "Diamond";
 };
 
 interface AuthContextType {
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Admin login (hardcoded for now as specified)
+      // Admin login (hardcoded as specified)
       if (username === "admin123" && password === "admin123") {
         const adminUser: User = {
           id: "admin",
@@ -70,33 +70,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
-      // Customer login (simplified for this version)
-      // In a real app, this would validate against a database
-      const demoCustomers = [
-        {
-          id: "customer1",
-          username: "customer",
-          password: "customer123",
-          role: "customer",
-          name: "Demo Customer",
-          phone: "9876543210",
-          code: "A101",
-          tier: "Bronze"
-        }
-      ];
-      
-      const customer = demoCustomers.find(c => c.username === username && c.password === password);
+      // Customer login - validate against registered customers
+      const customers = JSON.parse(localStorage.getItem("realprofit_customers") || "[]");
+      const customer = customers.find((c: any) => 
+        c.phone === username && !c.isPending
+      );
       
       if (customer) {
-        const { password, ...customerData } = customer;
-        localStorage.setItem("realprofit_user", JSON.stringify(customerData));
-        setUser(customerData as User);
-        toast.success(`Welcome back, ${customerData.name}!`);
+        const customerUser: User = {
+          id: customer.id,
+          username: customer.phone,
+          role: "customer",
+          name: customer.name,
+          phone: customer.phone,
+          code: customer.code,
+          tier: customer.tier
+        };
+        
+        localStorage.setItem("realprofit_user", JSON.stringify(customerUser));
+        setUser(customerUser);
+        toast.success(`Welcome back, ${customer.name}!`);
         setIsLoading(false);
         return true;
       }
       
-      toast.error("Invalid username or password");
+      toast.error("Invalid credentials or account not approved");
       setIsLoading(false);
       return false;
     } catch (error) {
