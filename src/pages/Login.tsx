@@ -30,10 +30,15 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!username.trim() || !password.trim()) {
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
-      const success = await login(username, password);
+      const success = await login(username.trim(), password);
       if (success) {
         // Navigation will be handled by the useEffect above
       }
@@ -67,6 +72,7 @@ const Login = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   className="w-full"
+                  autoComplete="username"
                 />
               </div>
               
@@ -80,6 +86,7 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="w-full pr-10"
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
@@ -98,7 +105,7 @@ const Login = () => {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading}
+                disabled={isLoading || !username.trim() || !password.trim()}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
