@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
@@ -13,6 +12,7 @@ import { toast } from 'sonner';
 const Shop = () => {
   const { products, offers } = useData();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<{ product: any; quantity: number }[]>([]);
 
@@ -60,6 +60,22 @@ const Shop = () => {
     (total, item) => total + item.product.price * item.quantity,
     0
   );
+
+  // Handle checkout
+  const handleCheckout = () => {
+    if (!user) {
+      toast.error('Please login to continue');
+      navigate('/login');
+      return;
+    }
+    
+    if (user.role !== 'customer') {
+      toast.error('Only customers can place orders');
+      return;
+    }
+    
+    navigate('/checkout', { state: { cart } });
+  };
 
   return (
     <Layout>
@@ -192,10 +208,8 @@ const Shop = () => {
               <span className="font-bold text-realprofit-blue">₹{cartTotal.toFixed(2)}</span>
             </div>
             
-            <Button className="w-full mt-3" asChild>
-              <Link to="/checkout">
-                Proceed to Checkout
-              </Link>
+            <Button className="w-full mt-3" onClick={handleCheckout}>
+              Proceed to Checkout
             </Button>
           </div>
         )}

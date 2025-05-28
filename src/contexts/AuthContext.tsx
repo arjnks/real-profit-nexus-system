@@ -77,6 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
       
       if (customer) {
+        // For customers, password is not required in this system
         const customerUser: User = {
           id: customer.id,
           username: customer.phone,
@@ -94,7 +95,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
-      toast.error("Invalid credentials or account not approved");
+      // Check if customer exists but is pending
+      const pendingCustomer = customers.find((c: any) => 
+        c.phone === username && c.isPending
+      );
+      
+      if (pendingCustomer) {
+        toast.error("Your account is still pending approval. Please wait for admin approval.");
+        setIsLoading(false);
+        return false;
+      }
+      
+      toast.error("Invalid phone number or account not found");
       setIsLoading(false);
       return false;
     } catch (error) {

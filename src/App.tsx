@@ -1,53 +1,47 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
-// Context Providers
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
-
-// Auth Guard
+import { Toaster } from "@/components/ui/sonner";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-// Pages
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Shop from "./pages/Shop";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import NotFound from "./pages/NotFound";
+// Public pages
+import Index from "@/pages/Index";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import Shop from "@/pages/Shop";
+import NotFound from "@/pages/NotFound";
 
-// Admin Pages
-import Dashboard from "./pages/admin/Dashboard";
-import Customers from "./pages/admin/Customers";
-import AddCustomer from "./pages/admin/AddCustomer";
-import EditCustomer from "./pages/admin/EditCustomer";
-import Products from "./pages/admin/Products";
-import Purchases from "./pages/admin/Purchases";
-import Requests from "./pages/admin/Requests";
-import MLMTree from "./pages/admin/MLMTree";
+// Customer pages
+import CustomerDashboard from "@/pages/CustomerDashboard";
+import Profile from "@/pages/Profile";
+import Orders from "@/pages/Orders";
+import Checkout from "@/pages/Checkout";
 
-const queryClient = new QueryClient();
+// Admin pages
+import AdminDashboard from "@/pages/admin/Dashboard";
+import Customers from "@/pages/admin/Customers";
+import AddCustomer from "@/pages/admin/AddCustomer";
+import EditCustomer from "@/pages/admin/EditCustomer";
+import Products from "@/pages/admin/Products";
+import Purchases from "@/pages/admin/Purchases";
+import Requests from "@/pages/admin/Requests";
+import MLMTree from "@/pages/admin/MLMTree";
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+function App() {
+  return (
     <AuthProvider>
       <DataProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+        <Router>
+          <div className="min-h-screen bg-background">
             <Routes>
-              {/* Public Routes */}
+              {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/shop" element={<Shop />} />
               
-              {/* Customer Routes */}
+              {/* Customer routes */}
               <Route 
                 path="/dashboard" 
                 element={
@@ -56,14 +50,37 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute role="customer">
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/orders" 
+                element={
+                  <ProtectedRoute role="customer">
+                    <Orders />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/checkout" 
+                element={
+                  <ProtectedRoute role="customer">
+                    <Checkout />
+                  </ProtectedRoute>
+                } 
+              />
               
-              {/* Admin Routes */}
-              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+              {/* Admin routes */}
               <Route 
                 path="/admin/dashboard" 
                 element={
                   <ProtectedRoute role="admin">
-                    <Dashboard />
+                    <AdminDashboard />
                   </ProtectedRoute>
                 } 
               />
@@ -116,7 +133,7 @@ const App = () => (
                 } 
               />
               <Route 
-                path="/admin/mlm" 
+                path="/admin/mlm-tree" 
                 element={
                   <ProtectedRoute role="admin">
                     <MLMTree />
@@ -124,14 +141,15 @@ const App = () => (
                 } 
               />
               
-              {/* 404 Route */}
+              {/* 404 route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+          </div>
+          <Toaster />
+        </Router>
       </DataProvider>
     </AuthProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;
