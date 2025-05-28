@@ -24,11 +24,12 @@ const Checkout = () => {
   const { user } = useAuth();
   const { addOrder, customers, calculateTierBenefits } = useData();
   
-  const [address, setAddress] = useState('');
   const [pincode, setPincode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
   const [usePoints, setUsePoints] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const allowedPincodes = ['680305', '680684', '680683'];
 
   // Get cart from location state or redirect to shop
   const cart = location.state?.cart || [];
@@ -67,13 +68,13 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!address.trim() || !pincode.trim()) {
-      toast.error('Please fill in all required fields');
+    if (!pincode.trim()) {
+      toast.error('Please enter pincode');
       return;
     }
 
-    if (pincode !== '680305') {
-      toast.error('Delivery not available for this pincode');
+    if (!allowedPincodes.includes(pincode)) {
+      toast.error(`Delivery not available for this pincode. Available pincodes: ${allowedPincodes.join(', ')}`);
       return;
     }
 
@@ -98,7 +99,6 @@ const Checkout = () => {
         amountPaid: totalAmount,
         status: 'pending',
         paymentMethod,
-        address: address.trim(),
         pincode: pincode.trim(),
         usedPointsDiscount: pointsDiscount > 0
       });
@@ -170,17 +170,6 @@ const Checkout = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="address">Delivery Address *</Label>
-                  <Input
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter your full address"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
                   <Label htmlFor="pincode">Pincode *</Label>
                   <Input
                     id="pincode"
@@ -189,14 +178,14 @@ const Checkout = () => {
                     placeholder="Enter pincode"
                     required
                   />
-                  {pincode === '680305' && (
+                  {allowedPincodes.includes(pincode) && (
                     <p className="text-sm text-green-600">
-                      ✓ Delivery available • UPI: realprofit@google.pay
+                      ✓ Delivery available • UPI: deepchandran911@okaxis
                     </p>
                   )}
-                  {pincode && pincode !== '680305' && (
+                  {pincode && !allowedPincodes.includes(pincode) && (
                     <p className="text-sm text-red-600">
-                      ✗ Delivery not available for this pincode
+                      ✗ Delivery not available for this pincode. Available: {allowedPincodes.join(', ')}
                     </p>
                   )}
                 </div>
@@ -239,7 +228,7 @@ const Checkout = () => {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading || !pincode || pincode !== '680305'}
+                  disabled={isLoading || !pincode || !allowedPincodes.includes(pincode)}
                 >
                   <CreditCard className="mr-2 h-4 w-4" />
                   {isLoading ? 'Placing Order...' : `Place Order - ₹${totalAmount.toFixed(2)}`}

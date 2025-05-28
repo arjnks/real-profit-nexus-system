@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -289,14 +288,9 @@ const Requests = () => {
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground">Shipping Address</h3>
-                  <p className="text-sm">{viewedOrder.address}</p>
+                  <h3 className="text-sm font-semibold text-muted-foreground">Delivery Information</h3>
                   <p className="text-sm">Pincode: {viewedOrder.pincode}</p>
-                  {viewedOrder.pincode === '680305' ? (
-                    <p className="text-xs text-green-600 mt-1">Delivery Available</p>
-                  ) : (
-                    <p className="text-xs text-red-600 mt-1">Delivery Not Available</p>
-                  )}
+                  <p className="text-xs text-green-600 mt-1">Delivery Available</p>
                 </div>
               </div>
               
