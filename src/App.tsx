@@ -12,6 +12,7 @@ import Register from "@/pages/Register";
 import Shop from "@/pages/Shop";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
+import Services from "@/pages/Services";
 import NotFound from "@/pages/NotFound";
 
 // Membership pages
@@ -35,6 +36,7 @@ import Products from "@/pages/admin/Products";
 import Purchases from "@/pages/admin/Purchases";
 import Requests from "@/pages/admin/Requests";
 import MLMTree from "@/pages/admin/MLMTree";
+import AdminServices from "@/pages/admin/Services";
 
 function App() {
   return (
@@ -50,6 +52,7 @@ function App() {
               <Route path="/shop" element={<Shop />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/services" element={<Services />} />
               
               {/* Membership routes */}
               <Route path="/membership/bronze" element={<MembershipBronze />} />
@@ -153,6 +156,14 @@ function App() {
                 element={
                   <ProtectedRoute role="admin">
                     <MLMTree />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/services" 
+                element={
+                  <ProtectedRoute role="admin">
+                    <AdminServices />
                   </ProtectedRoute>
                 } 
               />

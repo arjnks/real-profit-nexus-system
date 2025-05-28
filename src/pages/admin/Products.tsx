@@ -26,7 +26,7 @@ import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Products = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = useData();
+  const { products, addProduct, updateProduct, deleteProduct, calculatePointsForProduct } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -34,6 +34,7 @@ const Products = () => {
 
   // Form state
   const [name, setName] = useState('');
+  const [mrp, setMrp] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -48,6 +49,7 @@ const Products = () => {
   // Reset form
   const resetForm = () => {
     setName('');
+    setMrp('');
     setPrice('');
     setDescription('');
     setCategory('');
@@ -57,41 +59,61 @@ const Products = () => {
 
   // Handle add product
   const handleAddProduct = () => {
-    if (!name || !price || !description || !category) {
+    if (!name || !mrp || !price || !description || !category) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const mrpValue = parseFloat(mrp);
+    const priceValue = parseFloat(price);
+
+    if (priceValue > mrpValue) {
+      toast.error('Company Profit Price cannot be higher than MRP');
       return;
     }
 
     addProduct({
       name,
-      price: parseFloat(price),
+      mrp: mrpValue,
+      price: priceValue,
       description,
       category,
       image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200',
       inStock: true
     });
 
-    toast.success('Product added successfully');
+    const points = calculatePointsForProduct(mrpValue, priceValue);
+    toast.success(`Product added successfully! Customers will earn ${points} points per unit.`);
     resetForm();
     setIsAddDialogOpen(false);
   };
 
   // Handle edit product
   const handleEditProduct = () => {
-    if (!editingProduct || !name || !price || !description || !category) {
+    if (!editingProduct || !name || !mrp || !price || !description || !category) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const mrpValue = parseFloat(mrp);
+    const priceValue = parseFloat(price);
+
+    if (priceValue > mrpValue) {
+      toast.error('Company Profit Price cannot be higher than MRP');
       return;
     }
 
     updateProduct(editingProduct.id, {
       name,
-      price: parseFloat(price),
+      mrp: mrpValue,
+      price: priceValue,
       description,
       category,
       image: image || editingProduct.image
     });
 
-    toast.success('Product updated successfully');
+    const points = calculatePointsForProduct(mrpValue, priceValue);
+    toast.success(`Product updated successfully! Customers will earn ${points} points per unit.`);
     resetForm();
     setIsEditDialogOpen(false);
   };
@@ -108,6 +130,7 @@ const Products = () => {
   const openEditDialog = (product: any) => {
     setEditingProduct(product);
     setName(product.name);
+    setMrp(product.mrp?.toString() || product.price.toString());
     setPrice(product.price.toString());
     setDescription(product.description);
     setCategory(product.category);
@@ -126,11 +149,11 @@ const Products = () => {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
               <DialogDescription>
-                Add a new product to your inventory
+                Add a new product to your inventory with MRP and selling price
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -144,7 +167,18 @@ const Products = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="price">Price (₹)</Label>
+                <Label htmlFor="mrp">Maximum Retail Price (MRP) ₹</Label>
+                <Input
+                  id="mrp"
+                  type="number"
+                  step="0.01"
+                  value={mrp}
+                  onChange={(e) => setMrp(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <Label htmlFor="price">Company Profit Price (Selling Price) ₹</Label>
                 <Input
                   id="price"
                   type="number"
@@ -153,6 +187,11 @@ const Products = () => {
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="0.00"
                 />
+                {mrp && price && (
+                  <p className="text-sm text-green-600 mt-1">
+                    Points per unit: {calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="category">Category</Label>
@@ -211,7 +250,9 @@ const Products = () => {
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead>MRP</TableHead>
+              <TableHead>Selling Price</TableHead>
+              <TableHead>Points/Unit</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -229,7 +270,11 @@ const Products = () => {
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>
+                  <TableCell>₹{(product.mrp || product.price).toFixed(2)}</TableCell>
                   <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                  <TableCell className="text-green-600 font-medium">
+                    {calculatePointsForProduct(product.mrp || product.price, product.price)}
+                  </TableCell>
                   <TableCell className="max-w-xs truncate">{product.description}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
@@ -255,7 +300,7 @@ const Products = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                   No products found
                 </TableCell>
               </TableRow>
@@ -266,11 +311,11 @@ const Products = () => {
 
       {/* Edit Product Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>
-              Update product details
+              Update product details with MRP and selling price
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -284,7 +329,18 @@ const Products = () => {
               />
             </div>
             <div>
-              <Label htmlFor="edit-price">Price (₹)</Label>
+              <Label htmlFor="edit-mrp">Maximum Retail Price (MRP) ₹</Label>
+              <Input
+                id="edit-mrp"
+                type="number"
+                step="0.01"
+                value={mrp}
+                onChange={(e) => setMrp(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-price">Company Profit Price (Selling Price) ₹</Label>
               <Input
                 id="edit-price"
                 type="number"
@@ -293,6 +349,11 @@ const Products = () => {
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
               />
+              {mrp && price && (
+                <p className="text-sm text-green-600 mt-1">
+                  Points per unit: {calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-category">Category</Label>

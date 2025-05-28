@@ -29,9 +29,10 @@ const Purchases = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [cart, setCart] = useState<any[]>([]);
-  const [address, setAddress] = useState('');
   const [pincode, setPincode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
+
+  const allowedPincodes = ['680305', '680684', '680683'];
 
   // Filter customers for search
   const filteredCustomers = customers.filter(customer => 
@@ -100,13 +101,13 @@ const Purchases = () => {
       return;
     }
     
-    if (!address || !pincode) {
-      toast.error('Please enter address and pincode');
+    if (!pincode) {
+      toast.error('Please enter pincode');
       return;
     }
 
-    if (pincode !== '680305') {
-      toast.error('Delivery not available for this pincode');
+    if (!allowedPincodes.includes(pincode)) {
+      toast.error(`Delivery not available for this pincode. Available pincodes: ${allowedPincodes.join(', ')}`);
       return;
     }
 
@@ -121,7 +122,6 @@ const Purchases = () => {
       amountPaid: totalAmount,
       status: 'pending',
       paymentMethod,
-      address,
       pincode,
       usedPointsDiscount: pointsDiscount > 0
     });
@@ -130,7 +130,6 @@ const Purchases = () => {
     
     // Reset form
     setCart([]);
-    setAddress('');
     setPincode('');
     setSelectedCustomer(null);
     setCustomerSearch('');
@@ -298,16 +297,6 @@ const Purchases = () => {
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="address">Delivery Address</Label>
-                <Input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Enter full address"
-                />
-              </div>
-              
-              <div className="space-y-2">
                 <Label htmlFor="pincode">Pincode</Label>
                 <Input
                   id="pincode"
@@ -315,14 +304,14 @@ const Purchases = () => {
                   onChange={(e) => setPincode(e.target.value)}
                   placeholder="Enter pincode"
                 />
-                {pincode === '680305' && (
+                {allowedPincodes.includes(pincode) && (
                   <p className="text-sm text-green-600">
-                    ✓ Delivery available • UPI ID: realprofit@google.pay
+                    ✓ Delivery available • UPI ID: deepchandran911@okaxis
                   </p>
                 )}
-                {pincode && pincode !== '680305' && (
+                {pincode && !allowedPincodes.includes(pincode) && (
                   <p className="text-sm text-red-600">
-                    ✗ Delivery not available for this pincode
+                    ✗ Delivery not available for this pincode. Available: {allowedPincodes.join(', ')}
                   </p>
                 )}
               </div>
@@ -340,11 +329,11 @@ const Purchases = () => {
                 </Select>
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Button
                   onClick={handleSubmitOrder}
                   className="w-full"
-                  disabled={!pincode || pincode !== '680305'}
+                  disabled={!pincode || !allowedPincodes.includes(pincode)}
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   Create Order

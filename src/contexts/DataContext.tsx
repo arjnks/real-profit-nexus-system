@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // Types
@@ -21,11 +20,22 @@ export type Customer = {
 export type Product = {
   id: string;
   name: string;
-  price: number;
+  price: number; // This is now the selling price (Company Profit Price)
+  mrp: number; // Maximum Retail Price
   image: string;
   description: string;
   category: string;
   inStock: boolean;
+};
+
+export type Service = {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  image: string;
+  category: string;
+  isActive: boolean;
 };
 
 export type Order = {
@@ -46,7 +56,6 @@ export type Order = {
   points: number;
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "refunded";
   paymentMethod: "cod" | "upi";
-  address: string;
   pincode: string;
   orderDate: string;
   isPendingApproval: boolean;
@@ -69,6 +78,7 @@ export type Offer = {
 interface DataContextType {
   customers: Customer[];
   products: Product[];
+  services: Service[];
   orders: Order[];
   offers: Offer[];
   addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent">) => void;
@@ -76,12 +86,16 @@ interface DataContextType {
   addProduct: (product: Omit<Product, "id">) => void;
   updateProduct: (id: string, productData: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
+  addService: (service: Omit<Service, "id">) => void;
+  updateService: (id: string, serviceData: Partial<Service>) => void;
+  deleteService: (id: string) => void;
   addOrder: (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => string;
   updateOrder: (id: string, orderData: Partial<Order>) => void;
   getNextAvailableCode: () => string;
   awardPoints: (customerId: string, points: number) => void;
   reserveCode: (code: string, name: string, phone: string) => void;
   calculateTierBenefits: (tier: string) => number;
+  calculatePointsForProduct: (mrp: number, sellingPrice: number) => number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -97,6 +111,7 @@ export const useData = () => {
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
 
@@ -104,11 +119,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const storedCustomers = localStorage.getItem("realprofit_customers");
     const storedProducts = localStorage.getItem("realprofit_products");
+    const storedServices = localStorage.getItem("realprofit_services");
     const storedOrders = localStorage.getItem("realprofit_orders");
     const storedOffers = localStorage.getItem("realprofit_offers");
 
     if (storedCustomers) setCustomers(JSON.parse(storedCustomers));
     if (storedProducts) setProducts(JSON.parse(storedProducts));
+    if (storedServices) setServices(JSON.parse(storedServices));
     if (storedOrders) setOrders(JSON.parse(storedOrders));
     if (storedOffers) setOffers(JSON.parse(storedOffers));
   }, []);
@@ -123,12 +140,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [products]);
 
   useEffect(() => {
+    localStorage.setItem("realprofit_services", JSON.stringify(services));
+  }, [services]);
+
+  useEffect(() => {
     localStorage.setItem("realprofit_orders", JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
     localStorage.setItem("realprofit_offers", JSON.stringify(offers));
   }, [offers]);
+
+  // Calculate points based on MRP vs Selling Price difference
+  const calculatePointsForProduct = (mrp: number, sellingPrice: number): number => {
+    const difference = mrp - sellingPrice;
+    return Math.max(0, Math.floor(difference)); // 1 point per rupee difference
+  };
 
   // Get next available sequential code
   const getNextAvailableCode = (): string => {
@@ -292,16 +319,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProducts(prev => prev.filter(product => product.id !== id));
   };
 
+  // Add a new service
+  const addService = (service: Omit<Service, "id">) => {
+    const newService: Service = {
+      ...service,
+      id: `service_${Date.now()}`,
+    };
+    
+    setServices(prev => [...prev, newService]);
+  };
+
+  // Update an existing service
+  const updateService = (id: string, serviceData: Partial<Service>) => {
+    setServices(prev =>
+      prev.map(service =>
+        service.id === id ? { ...service, ...serviceData } : service
+      )
+    );
+  };
+
+  // Delete a service
+  const deleteService = (id: string) => {
+    setServices(prev => prev.filter(service => service.id !== id));
+  };
+
   // Add a new order
   const addOrder = (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => {
     const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
-    const points = Math.floor(order.amountPaid / 5); // Points based on amount paid (not total amount if points were used)
+    
+    // Calculate points based on MRP vs selling price difference for each product
+    let totalPoints = 0;
+    order.products.forEach(product => {
+      const productData = products.find(p => p.id === product.productId);
+      if (productData) {
+        const pointsPerUnit = calculatePointsForProduct(productData.mrp, productData.price);
+        totalPoints += pointsPerUnit * product.quantity;
+      }
+    });
     
     const newOrder: Order = {
       ...order,
       id: orderId,
       orderDate: new Date().toISOString(),
-      points,
+      points: totalPoints,
       isPendingApproval: true,
       isPointsAwarded: false,
       deliveryApproved: false,
@@ -351,6 +411,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         customers,
         products,
+        services,
         orders,
         offers,
         addCustomer,
@@ -358,12 +419,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addProduct,
         updateProduct,
         deleteProduct,
+        addService,
+        updateService,
+        deleteService,
         addOrder,
         updateOrder,
         getNextAvailableCode,
         awardPoints,
         reserveCode,
         calculateTierBenefits,
+        calculatePointsForProduct,
       }}
     >
       {children}
