@@ -10,7 +10,15 @@ import Index from "@/pages/Index";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Shop from "@/pages/Shop";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
 import NotFound from "@/pages/NotFound";
+
+// Membership pages
+import MembershipBronze from "@/pages/membership/Bronze";
+import MembershipSilver from "@/pages/membership/Silver";
+import MembershipGold from "@/pages/membership/Gold";
+import MembershipDiamond from "@/pages/membership/Diamond";
 
 // Customer pages
 import CustomerDashboard from "@/pages/CustomerDashboard";
@@ -40,6 +48,14 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/shop" element={<Shop />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              
+              {/* Membership routes */}
+              <Route path="/membership/bronze" element={<MembershipBronze />} />
+              <Route path="/membership/silver" element={<MembershipSilver />} />
+              <Route path="/membership/gold" element={<MembershipGold />} />
+              <Route path="/membership/diamond" element={<MembershipDiamond />} />
               
               {/* Customer routes */}
               <Route 
