@@ -166,10 +166,10 @@ const Index = () => {
           <div className="flex items-center justify-center">
             <Mail className="h-6 w-6 text-realprofit-blue mr-2" />
             <a 
-              href="mailto:realprofit@gmail.com" 
+              href="mailto:werealprofit@gmail.com" 
               className="text-xl text-realprofit-blue hover:underline"
             >
-              realprofit@gmail.com
+              werealprofit@gmail.com
             </a>
           </div>
         </div>
