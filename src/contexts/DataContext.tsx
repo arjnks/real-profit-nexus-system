@@ -15,6 +15,7 @@ export type Customer = {
   isPending?: boolean;
   totalSpent: number;
   monthlySpent: { [month: string]: number };
+  accumulatedPointMoney: number; // New field to track accumulated money that hasn't been converted to points yet
 };
 
 export type Product = {
@@ -81,7 +82,7 @@ interface DataContextType {
   services: Service[];
   orders: Order[];
   offers: Offer[];
-  addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent">) => void;
+  addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => void;
   updateCustomer: (id: string, customerData: Partial<Customer>) => void;
   addProduct: (product: Omit<Product, "id">) => void;
   updateProduct: (id: string, productData: Partial<Product>) => void;
@@ -92,7 +93,7 @@ interface DataContextType {
   addOrder: (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => string;
   updateOrder: (id: string, orderData: Partial<Order>) => void;
   getNextAvailableCode: () => string;
-  awardPoints: (customerId: string, points: number) => void;
+  awardPoints: (customerId: string, pointMoney: number) => void;
   reserveCode: (code: string, name: string, phone: string) => void;
   calculateTierBenefits: (tier: string) => number;
   calculatePointsForProduct: (mrp: number, sellingPrice: number) => number;
@@ -123,7 +124,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedOrders = localStorage.getItem("realprofit_orders");
     const storedOffers = localStorage.getItem("realprofit_offers");
 
-    if (storedCustomers) setCustomers(JSON.parse(storedCustomers));
+    if (storedCustomers) {
+      const customers = JSON.parse(storedCustomers);
+      // Migrate existing customers to add accumulatedPointMoney field
+      const migratedCustomers = customers.map((customer: Customer) => ({
+        ...customer,
+        accumulatedPointMoney: customer.accumulatedPointMoney || 0
+      }));
+      setCustomers(migratedCustomers);
+    }
     if (storedProducts) setProducts(JSON.parse(storedProducts));
     if (storedServices) setServices(JSON.parse(storedServices));
     if (storedOrders) setOrders(JSON.parse(storedOrders));
@@ -151,14 +160,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("realprofit_offers", JSON.stringify(offers));
   }, [offers]);
 
-  // Calculate points based on MRP vs Selling Price difference
+  // Calculate point money based on MRP vs Selling Price difference (not actual points)
   const calculatePointsForProduct = (mrp: number, sellingPrice: number): number => {
     const difference = mrp - sellingPrice;
-    return Math.max(0, Math.floor(difference)); // 1 point per rupee difference
+    return Math.max(0, Math.floor(difference)); // Return the money amount, not points
   };
 
   // Get next available sequential code
   const getNextAvailableCode = (): string => {
+    // ... keep existing code (getNextAvailableCode implementation)
     const activeCodes = customers
       .filter(c => !c.isPending && c.code.startsWith('A'))
       .map(c => parseInt(c.code.substring(1)))
@@ -198,7 +208,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Add a new customer
-  const addCustomer = (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent">) => {
+  const addCustomer = (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => {
     const newCustomer: Customer = {
       ...customer,
       id: `cust_${Date.now()}`,
@@ -208,6 +218,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       tier: 'Bronze',
       totalSpent: 0,
       monthlySpent: {},
+      accumulatedPointMoney: 0,
     };
     
     setCustomers(prev => [...prev, newCustomer]);
@@ -230,44 +241,54 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  // Award points and distribute mini coins through MLM tree
-  const awardPoints = (customerId: string, points: number) => {
+  // Award point money and convert to actual points when accumulated amount reaches ₹5 or multiples
+  const awardPoints = (customerId: string, pointMoney: number) => {
     setCustomers(prev => {
       const updated = [...prev];
       const customerIndex = updated.findIndex(c => c.id === customerId);
       
       if (customerIndex === -1) return prev;
       
-      // Award points to customer
+      // Add point money to accumulated amount
+      const newAccumulated = updated[customerIndex].accumulatedPointMoney + pointMoney;
+      
+      // Calculate how many full points can be awarded (₹5 = 1 point)
+      const newPoints = Math.floor(newAccumulated / 5);
+      const remainingMoney = newAccumulated % 5;
+      
+      // Update customer with new points and remaining accumulated money
       updated[customerIndex] = {
         ...updated[customerIndex],
-        points: updated[customerIndex].points + points,
-        tier: calculateTier(updated[customerIndex].points + points)
+        points: updated[customerIndex].points + newPoints,
+        accumulatedPointMoney: remainingMoney,
+        tier: calculateTier(updated[customerIndex].points + newPoints)
       };
       
-      // Distribute mini coins to all parents in MLM tree
-      let currentCode = updated[customerIndex].parentCode;
-      while (currentCode) {
-        const parentIndex = updated.findIndex(c => c.code === currentCode);
-        if (parentIndex === -1) break;
-        
-        updated[parentIndex] = {
-          ...updated[parentIndex],
-          miniCoins: updated[parentIndex].miniCoins + points
-        };
-        
-        // Convert mini coins to points (5 mini coins = 1 point)
-        if (updated[parentIndex].miniCoins >= 5) {
-          const newPoints = Math.floor(updated[parentIndex].miniCoins / 5);
+      // Distribute mini coins to all parents in MLM tree (based on actual points awarded)
+      if (newPoints > 0) {
+        let currentCode = updated[customerIndex].parentCode;
+        while (currentCode) {
+          const parentIndex = updated.findIndex(c => c.code === currentCode);
+          if (parentIndex === -1) break;
+          
           updated[parentIndex] = {
             ...updated[parentIndex],
-            points: updated[parentIndex].points + newPoints,
-            miniCoins: updated[parentIndex].miniCoins % 5,
-            tier: calculateTier(updated[parentIndex].points + newPoints)
+            miniCoins: updated[parentIndex].miniCoins + newPoints
           };
+          
+          // Convert mini coins to points (5 mini coins = 1 point)
+          if (updated[parentIndex].miniCoins >= 5) {
+            const parentNewPoints = Math.floor(updated[parentIndex].miniCoins / 5);
+            updated[parentIndex] = {
+              ...updated[parentIndex],
+              points: updated[parentIndex].points + parentNewPoints,
+              miniCoins: updated[parentIndex].miniCoins % 5,
+              tier: calculateTier(updated[parentIndex].points + parentNewPoints)
+            };
+          }
+          
+          currentCode = updated[parentIndex].parentCode;
         }
-        
-        currentCode = updated[parentIndex].parentCode;
       }
       
       return updated;
@@ -290,6 +311,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isPending: false,
       totalSpent: 0,
       monthlySpent: {},
+      accumulatedPointMoney: 0,
     };
     
     setCustomers(prev => [...prev, newCustomer]);
@@ -347,13 +369,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addOrder = (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => {
     const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
     
-    // Calculate points based on MRP vs selling price difference for each product
-    let totalPoints = 0;
+    // Calculate total point money based on MRP vs selling price difference for each product
+    let totalPointMoney = 0;
     order.products.forEach(product => {
       const productData = products.find(p => p.id === product.productId);
       if (productData) {
-        const pointsPerUnit = calculatePointsForProduct(productData.mrp, productData.price);
-        totalPoints += pointsPerUnit * product.quantity;
+        const pointMoneyPerUnit = calculatePointsForProduct(productData.mrp, productData.price);
+        totalPointMoney += pointMoneyPerUnit * product.quantity;
       }
     });
     
@@ -361,7 +383,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...order,
       id: orderId,
       orderDate: new Date().toISOString(),
-      points: totalPoints,
+      points: totalPointMoney, // Store the total point money value
       isPendingApproval: true,
       isPointsAwarded: false,
       deliveryApproved: false,
