@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -83,7 +82,8 @@ const Products = () => {
     });
 
     const points = calculatePointsForProduct(mrpValue, priceValue);
-    toast.success(`Product added successfully! Customers will earn ${points} points per unit.`);
+    console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
+    toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
     resetForm();
     setIsAddDialogOpen(false);
   };
@@ -113,7 +113,8 @@ const Products = () => {
     });
 
     const points = calculatePointsForProduct(mrpValue, priceValue);
-    toast.success(`Product updated successfully! Customers will earn ${points} points per unit.`);
+    console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
+    toast.success(`Product updated successfully! Customers will earn ₹${points} point money per unit.`);
     resetForm();
     setIsEditDialogOpen(false);
   };
@@ -189,7 +190,7 @@ const Products = () => {
                 />
                 {mrp && price && (
                   <p className="text-sm text-green-600 mt-1">
-                    Points per unit: {calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
+                    Point money per unit: ₹{calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
                   </p>
                 )}
               </div>
@@ -252,7 +253,7 @@ const Products = () => {
               <TableHead>Category</TableHead>
               <TableHead>MRP</TableHead>
               <TableHead>Selling Price</TableHead>
-              <TableHead>Points/Unit</TableHead>
+              <TableHead>Point Money/Unit</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -273,7 +274,7 @@ const Products = () => {
                   <TableCell>₹{(product.mrp || product.price).toFixed(2)}</TableCell>
                   <TableCell>₹{product.price.toFixed(2)}</TableCell>
                   <TableCell className="text-green-600 font-medium">
-                    {calculatePointsForProduct(product.mrp || product.price, product.price)}
+                    ₹{calculatePointsForProduct(product.mrp || product.price, product.price)}
                   </TableCell>
                   <TableCell className="max-w-xs truncate">{product.description}</TableCell>
                   <TableCell>
@@ -351,7 +352,7 @@ const Products = () => {
               />
               {mrp && price && (
                 <p className="text-sm text-green-600 mt-1">
-                  Points per unit: {calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
+                  Point money per unit: ₹{calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
                 </p>
               )}
             </div>
