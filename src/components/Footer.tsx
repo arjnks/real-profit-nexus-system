@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin } from 'lucide-react';
@@ -20,13 +19,13 @@ const Footer: React.FC = () => {
             </p>
             <div className="flex items-center text-gray-600 mb-2">
               <Mail className="h-4 w-4 mr-2" />
-              <a href="mailto:realprofit@gmail.com" className="text-sm hover:text-realprofit-blue">
-                realprofit@gmail.com
+              <a href="mailto:werealprofit@gmail.com" className="text-sm hover:text-realprofit-blue">
+                werealprofit@gmail.com
               </a>
             </div>
             <div className="flex items-center text-gray-600 mb-2">
               <Phone className="h-4 w-4 mr-2" />
-              <span className="text-sm">+91 98765 43210</span>
+              <span className="text-sm">+91 7306699370</span>
             </div>
             <div className="flex items-center text-gray-600">
               <MapPin className="h-4 w-4 mr-2" />
