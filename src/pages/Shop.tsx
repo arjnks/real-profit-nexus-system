@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -10,7 +11,7 @@ import { Search, ShoppingCart, Filter, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Shop = () => {
-  const { products, offers } = useData();
+  const { products, offers, calculatePointsForProduct } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,7 +158,7 @@ const Shop = () => {
                 <div className="mt-2">
                   <span className="text-realprofit-blue font-bold">₹{product.price.toFixed(2)}</span>
                   <span className="text-xs text-gray-500 ml-2">
-                    Earn {Math.floor(product.price / 5)} points
+                    Earn {calculatePointsForProduct(product.mrp || product.price, product.price)} points
                   </span>
                 </div>
               </CardContent>
