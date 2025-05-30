@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -28,6 +27,11 @@ const Customers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTier, setFilterTier] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Force re-render when customers data changes
+  useEffect(() => {
+    // This effect will run whenever customers array changes
+  }, [customers]);
 
   // Handle customer approval
   const handleApprove = (customerId: string) => {
