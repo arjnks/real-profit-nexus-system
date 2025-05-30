@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -42,6 +41,26 @@ const Purchases = () => {
       customer.phone.includes(customerSearch)
     )
   );
+
+  // Calculate point money and actual points that will be awarded
+  const calculateOrderRewards = () => {
+    if (!selectedCustomer || cart.length === 0) return { pointMoney: 0, actualPoints: 0, remainingMoney: 0 };
+    
+    let totalPointMoney = 0;
+    cart.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (product) {
+        const pointMoneyPerUnit = Math.max(0, Math.floor(product.mrp - product.price));
+        totalPointMoney += pointMoneyPerUnit * item.quantity;
+      }
+    });
+    
+    const totalAccumulated = selectedCustomer.accumulatedPointMoney + totalPointMoney;
+    const actualPoints = Math.floor(totalAccumulated / 5);
+    const remainingMoney = totalAccumulated % 5;
+    
+    return { pointMoney: totalPointMoney, actualPoints, remainingMoney };
+  };
 
   // Add product to cart
   const addToCart = (product: any) => {
@@ -88,6 +107,7 @@ const Purchases = () => {
   }
 
   const totalAmount = subtotal - pointsDiscount;
+  const rewardCalculation = calculateOrderRewards();
 
   // Handle order submission
   const handleSubmitOrder = () => {
@@ -126,7 +146,8 @@ const Purchases = () => {
       usedPointsDiscount: pointsDiscount > 0
     });
 
-    toast.success(`Order ${orderId} created successfully`);
+    const { pointMoney, actualPoints, remainingMoney } = rewardCalculation;
+    toast.success(`Order ${orderId} created successfully! Customer will earn ${actualPoints} points from ₹${pointMoney} point money. ₹${remainingMoney} will remain for next purchase.`);
     
     // Reset form
     setCart([]);
@@ -176,7 +197,7 @@ const Purchases = () => {
                       <div className="font-medium">{customer.name}</div>
                       <div className="text-sm text-gray-500">{customer.code} • {customer.phone}</div>
                       <div className="text-xs text-gray-400">
-                        {customer.tier} • {customer.points} points
+                        {customer.tier} • {customer.points} points • ₹{customer.accumulatedPointMoney} accumulated
                       </div>
                     </div>
                   ))}
@@ -188,7 +209,7 @@ const Purchases = () => {
                   <div className="font-medium text-green-800">{selectedCustomer.name}</div>
                   <div className="text-sm text-green-700">{selectedCustomer.code} • {selectedCustomer.phone}</div>
                   <div className="text-xs text-green-600">
-                    {selectedCustomer.tier} • {selectedCustomer.points} points available
+                    {selectedCustomer.tier} • {selectedCustomer.points} points • ₹{selectedCustomer.accumulatedPointMoney} accumulated
                   </div>
                 </div>
               )}
@@ -213,7 +234,9 @@ const Purchases = () => {
                     />
                     <div>
                       <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-gray-500">₹{product.price}</div>
+                      <div className="text-sm text-gray-500">
+                        ₹{product.price} • +₹{Math.max(0, Math.floor(product.mrp - product.price))} point money
+                      </div>
                     </div>
                   </div>
                   <Button
@@ -281,6 +304,17 @@ const Purchases = () => {
                     <span>Total:</span>
                     <span>₹{totalAmount.toFixed(2)}</span>
                   </div>
+                  
+                  {selectedCustomer && rewardCalculation.pointMoney > 0 && (
+                    <div className="bg-blue-50 p-3 rounded-md border border-blue-200 mt-3">
+                      <div className="text-sm font-medium text-blue-800">Reward Calculation:</div>
+                      <div className="text-xs text-blue-700 mt-1">
+                        Point Money Earned: ₹{rewardCalculation.pointMoney}<br/>
+                        Actual Points: {rewardCalculation.actualPoints} (after adding to ₹{selectedCustomer.accumulatedPointMoney} accumulated)<br/>
+                        Remaining: ₹{rewardCalculation.remainingMoney}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

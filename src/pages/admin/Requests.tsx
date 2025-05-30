@@ -18,7 +18,7 @@ import {
   SelectValue, 
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, XCircle, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 
 const Requests = () => {
-  const { customers, orders, updateCustomer, updateOrder } = useData();
+  const { customers, orders, updateCustomer, updateOrder, awardPoints, calculatePointsForProduct } = useData();
   const [filterType, setFilterType] = useState('all');
   const [viewOrderId, setViewOrderId] = useState<string | null>(null);
 
@@ -47,6 +47,21 @@ const Requests = () => {
 
   // Get the currently viewed order details
   const viewedOrder = viewOrderId ? orders.find(order => order.id === viewOrderId) : null;
+
+  // Calculate actual points that will be awarded after accumulation
+  const calculateActualPointsAwarded = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId);
+    const customer = customers.find(c => c.id === order?.customerId);
+    
+    if (!order || !customer) return { pointMoney: 0, actualPoints: 0, remainingMoney: 0 };
+    
+    const pointMoney = order.points; // This is the point money from the order
+    const totalAccumulated = customer.accumulatedPointMoney + pointMoney;
+    const actualPoints = Math.floor(totalAccumulated / 5);
+    const remainingMoney = totalAccumulated % 5;
+    
+    return { pointMoney, actualPoints, remainingMoney };
+  };
 
   // Handle order approval
   const handleApproveOrder = (orderId: string) => {
@@ -66,20 +81,23 @@ const Requests = () => {
     toast.success('Order rejected successfully');
   };
 
-  // Handle points approval
-  const handleApprovePoints = (orderId: string) => {
+  // Handle delivery confirmation and points awarding
+  const handleConfirmDelivery = (orderId: string) => {
     const order = orders.find(order => order.id === orderId);
-    if (order) {
-      // Award points to customer
-      const customer = customers.find(c => c.id === order.customerId);
-      if (customer) {
-        updateCustomer(customer.id, { 
-          points: customer.points + order.points 
-        });
-      }
-      // Mark points as awarded
-      updateOrder(orderId, { isPointsAwarded: true });
-      toast.success('Points awarded successfully');
+    if (order && !order.isPointsAwarded) {
+      // Award the point money (which will handle accumulation and conversion)
+      awardPoints(order.customerId, order.points);
+      
+      // Update order status
+      updateOrder(orderId, { 
+        status: 'delivered',
+        isPointsAwarded: true,
+        deliveryApproved: true 
+      });
+      
+      const { pointMoney, actualPoints, remainingMoney } = calculateActualPointsAwarded(orderId);
+      
+      toast.success(`Delivery confirmed! Customer earned ${actualPoints} points from ₹${pointMoney} point money. ₹${remainingMoney} remains for next purchase.`);
     }
   };
 
@@ -135,69 +153,112 @@ const Requests = () => {
                   <TableHead>Order ID</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Points</TableHead>
+                  <TableHead>Point Money</TableHead>
                   <TableHead>Payment</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredOrders.length > 0 ? (
-                  filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.id}</TableCell>
-                      <TableCell>
-                        {order.customerName}
-                        <div className="text-xs text-muted-foreground">{order.customerCode}</div>
-                      </TableCell>
-                      <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell>{order.points}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          order.paymentMethod === 'cod' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                        }`}>
-                          {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI Payment'}
-                        </span>
-                      </TableCell>
-                      <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setViewOrderId(order.id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-green-600"
-                            onClick={() => handleApproveOrder(order.id)}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="sr-only">Approve</span>
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-600"
-                            onClick={() => handleRejectOrder(order.id)}
-                          >
-                            <XCircle className="h-4 w-4" />
-                            <span className="sr-only">Reject</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredOrders.map((order) => {
+                    const { actualPoints, remainingMoney } = calculateActualPointsAwarded(order.id);
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.id}</TableCell>
+                        <TableCell>
+                          {order.customerName}
+                          <div className="text-xs text-muted-foreground">{order.customerCode}</div>
+                        </TableCell>
+                        <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            ₹{order.points}
+                            <div className="text-xs text-green-600">
+                              Will award: {actualPoints} points
+                            </div>
+                            {remainingMoney > 0 && (
+                              <div className="text-xs text-orange-600">
+                                Remaining: ₹{remainingMoney}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            order.paymentMethod === 'cod' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI Payment'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setViewOrderId(order.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View</span>
+                            </Button>
+                            
+                            {order.isPendingApproval && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-green-600"
+                                  onClick={() => handleApproveOrder(order.id)}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="sr-only">Approve</span>
+                                </Button>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-600"
+                                  onClick={() => handleRejectOrder(order.id)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  <span className="sr-only">Reject</span>
+                                </Button>
+                              </>
+                            )}
+                            
+                            {order.status === 'confirmed' && !order.isPointsAwarded && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-purple-600"
+                                onClick={() => handleConfirmDelivery(order.id)}
+                                title="Confirm Delivery & Award Points"
+                              >
+                                <Gift className="h-4 w-4" />
+                                <span className="sr-only">Confirm Delivery</span>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                       No pending order requests
                     </TableCell>
                   </TableRow>
@@ -273,7 +334,7 @@ const Requests = () => {
           <DialogHeader>
             <DialogTitle>Order Details - {viewedOrder?.id}</DialogTitle>
             <DialogDescription>
-              Review the order details before approving or rejecting
+              Review the order details and point allocation
             </DialogDescription>
           </DialogHeader>
           
@@ -325,6 +386,28 @@ const Requests = () => {
               </div>
               
               <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Reward Details</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm">Point Money Earned:</p>
+                    <p className="font-medium text-green-600">₹{viewedOrder.points}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm">Actual Points Awarded:</p>
+                    <p className="font-medium text-blue-600">
+                      {calculateActualPointsAwarded(viewedOrder.id).actualPoints} points
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm">Remaining Money:</p>
+                    <p className="font-medium text-orange-600">
+                      ₹{calculateActualPointsAwarded(viewedOrder.id).remainingMoney}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2">Payment Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -334,8 +417,8 @@ const Requests = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm">Reward Points:</p>
-                    <p className="font-medium">{viewedOrder.points} points</p>
+                    <p className="text-sm">Status:</p>
+                    <p className="font-medium">{viewedOrder.status}</p>
                   </div>
                 </div>
               </div>
@@ -350,18 +433,6 @@ const Requests = () => {
               >
                 Close
               </Button>
-              
-              {viewedOrder && !viewedOrder.isPointsAwarded && viewedOrder.status === 'delivered' && (
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    handleApprovePoints(viewedOrder.id);
-                    setViewOrderId(null);
-                  }}
-                >
-                  Award Points
-                </Button>
-              )}
             </div>
             
             <div className="flex gap-2">
@@ -386,6 +457,19 @@ const Requests = () => {
                     Approve Order
                   </Button>
                 </>
+              )}
+              
+              {viewedOrder && viewedOrder.status === 'confirmed' && !viewedOrder.isPointsAwarded && (
+                <Button 
+                  onClick={() => {
+                    handleConfirmDelivery(viewedOrder.id);
+                    setViewOrderId(null);
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  <Gift className="mr-2 h-4 w-4" />
+                  Confirm Delivery & Award Points
+                </Button>
               )}
             </div>
           </DialogFooter>
