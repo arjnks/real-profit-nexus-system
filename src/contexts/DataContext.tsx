@@ -15,7 +15,7 @@ export type Customer = {
   isPending?: boolean;
   totalSpent: number;
   monthlySpent: { [month: string]: number };
-  accumulatedPointMoney: number; // New field to track accumulated money that hasn't been converted to points yet
+  accumulatedPointMoney: number; // New field to track accumulated money that hasn't been converted to points yet;
 };
 
 export type Product = {
@@ -244,54 +244,55 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Award point money and convert to actual points when accumulated amount reaches ₹5 or multiples
   const awardPoints = (customerId: string, pointMoney: number) => {
     setCustomers(prev => {
-      const updated = [...prev];
-      const customerIndex = updated.findIndex(c => c.id === customerId);
+      // Create a completely new array to ensure React detects the change
+      const newCustomers = prev.map(customer => ({ ...customer }));
+      const customerIndex = newCustomers.findIndex(c => c.id === customerId);
       
       if (customerIndex === -1) return prev;
       
       // Add point money to accumulated amount
-      const newAccumulated = updated[customerIndex].accumulatedPointMoney + pointMoney;
+      const newAccumulated = newCustomers[customerIndex].accumulatedPointMoney + pointMoney;
       
       // Calculate how many full points can be awarded (₹5 = 1 point)
       const newPoints = Math.floor(newAccumulated / 5);
       const remainingMoney = newAccumulated % 5;
       
       // Update customer with new points and remaining accumulated money
-      updated[customerIndex] = {
-        ...updated[customerIndex],
-        points: updated[customerIndex].points + newPoints,
+      newCustomers[customerIndex] = {
+        ...newCustomers[customerIndex],
+        points: newCustomers[customerIndex].points + newPoints,
         accumulatedPointMoney: remainingMoney,
-        tier: calculateTier(updated[customerIndex].points + newPoints)
+        tier: calculateTier(newCustomers[customerIndex].points + newPoints)
       };
       
       // Distribute mini coins to all parents in MLM tree (based on actual points awarded)
       if (newPoints > 0) {
-        let currentCode = updated[customerIndex].parentCode;
+        let currentCode = newCustomers[customerIndex].parentCode;
         while (currentCode) {
-          const parentIndex = updated.findIndex(c => c.code === currentCode);
+          const parentIndex = newCustomers.findIndex(c => c.code === currentCode);
           if (parentIndex === -1) break;
           
-          updated[parentIndex] = {
-            ...updated[parentIndex],
-            miniCoins: updated[parentIndex].miniCoins + newPoints
+          newCustomers[parentIndex] = {
+            ...newCustomers[parentIndex],
+            miniCoins: newCustomers[parentIndex].miniCoins + newPoints
           };
           
           // Convert mini coins to points (5 mini coins = 1 point)
-          if (updated[parentIndex].miniCoins >= 5) {
-            const parentNewPoints = Math.floor(updated[parentIndex].miniCoins / 5);
-            updated[parentIndex] = {
-              ...updated[parentIndex],
-              points: updated[parentIndex].points + parentNewPoints,
-              miniCoins: updated[parentIndex].miniCoins % 5,
-              tier: calculateTier(updated[parentIndex].points + parentNewPoints)
+          if (newCustomers[parentIndex].miniCoins >= 5) {
+            const parentNewPoints = Math.floor(newCustomers[parentIndex].miniCoins / 5);
+            newCustomers[parentIndex] = {
+              ...newCustomers[parentIndex],
+              points: newCustomers[parentIndex].points + parentNewPoints,
+              miniCoins: newCustomers[parentIndex].miniCoins % 5,
+              tier: calculateTier(newCustomers[parentIndex].points + parentNewPoints)
             };
           }
           
-          currentCode = updated[parentIndex].parentCode;
+          currentCode = newCustomers[parentIndex].parentCode;
         }
       }
       
-      return updated;
+      return newCustomers;
     });
   };
 
