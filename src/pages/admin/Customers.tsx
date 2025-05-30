@@ -112,6 +112,7 @@ const Customers = () => {
               <TableHead>Name</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Points</TableHead>
+              <TableHead>Point Money</TableHead>
               <TableHead>Tier</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead>Status</TableHead>
@@ -128,15 +129,19 @@ const Customers = () => {
                   <TableCell>
                     <div className="text-sm">
                       <div className="font-medium">{customer.points} points</div>
-                      {customer.accumulatedPointMoney > 0 && (
-                        <div className="text-xs text-orange-600">
-                          +₹{customer.accumulatedPointMoney} pending
-                        </div>
-                      )}
                       {customer.miniCoins > 0 && (
                         <div className="text-xs text-blue-600">
                           +{customer.miniCoins} mini coins
                         </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {customer.accumulatedPointMoney > 0 ? (
+                        <span className="text-orange-600">₹{customer.accumulatedPointMoney}</span>
+                      ) : (
+                        <span className="text-gray-400">₹0</span>
                       )}
                     </div>
                   </TableCell>
@@ -200,7 +205,7 @@ const Customers = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                   No customers found matching your filters
                 </TableCell>
               </TableRow>
