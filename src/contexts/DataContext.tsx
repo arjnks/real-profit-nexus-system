@@ -243,12 +243,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Award point money and convert to actual points when accumulated amount reaches ₹5 or multiples
   const awardPoints = (customerId: string, pointMoney: number) => {
+    console.log(`Awarding ${pointMoney} point money to customer ${customerId}`);
+    
     setCustomers(prev => {
       // Create a completely new array to ensure React detects the change
       const newCustomers = prev.map(customer => ({ ...customer }));
       const customerIndex = newCustomers.findIndex(c => c.id === customerId);
       
-      if (customerIndex === -1) return prev;
+      if (customerIndex === -1) {
+        console.log(`Customer ${customerId} not found`);
+        return prev;
+      }
       
       // Add point money to accumulated amount
       const newAccumulated = newCustomers[customerIndex].accumulatedPointMoney + pointMoney;
@@ -257,6 +262,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newPoints = Math.floor(newAccumulated / 5);
       const remainingMoney = newAccumulated % 5;
       
+      console.log(`Customer ${customerId}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
+      
       // Update customer with new points and remaining accumulated money
       newCustomers[customerIndex] = {
         ...newCustomers[customerIndex],
@@ -264,6 +271,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         accumulatedPointMoney: remainingMoney,
         tier: calculateTier(newCustomers[customerIndex].points + newPoints)
       };
+      
+      console.log(`Customer ${customerId} now has ${newCustomers[customerIndex].points} points`);
       
       // Distribute mini coins to all parents in MLM tree (based on actual points awarded)
       if (newPoints > 0) {
@@ -402,8 +411,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (order.id === id) {
           const updated = { ...order, ...orderData };
           
-          // If order is approved and delivered, update customer's total spent
-          if (orderData.status === 'delivered' && order.customerId) {
+          // If order status is being changed to 'delivered' and points haven't been awarded yet
+          if (orderData.status === 'delivered' && !order.isPointsAwarded && order.customerId) {
+            console.log(`Order ${id} delivered, awarding points to customer ${order.customerId}`);
+            
+            // Award points immediately when order is delivered
+            awardPoints(order.customerId, order.points);
+            
+            // Mark points as awarded
+            updated.isPointsAwarded = true;
+            updated.deliveryApproved = true;
+            
+            // Update customer's total spent
             const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM format
             setCustomers(prevCustomers =>
               prevCustomers.map(customer => {
