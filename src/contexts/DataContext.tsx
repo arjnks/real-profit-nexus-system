@@ -411,16 +411,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (order.id === id) {
           const updated = { ...order, ...orderData };
           
-          // If order status is being changed to 'delivered' and points haven't been awarded yet
-          if (orderData.status === 'delivered' && !order.isPointsAwarded && order.customerId) {
-            console.log(`Order ${id} delivered, awarding points to customer ${order.customerId}`);
+          // If order status is being changed to 'confirmed' and points haven't been awarded yet
+          if (orderData.status === 'confirmed' && !order.isPointsAwarded && order.customerId) {
+            console.log(`Order ${id} confirmed, awarding points to customer ${order.customerId}`);
             
-            // Award points immediately when order is delivered
+            // Award points immediately when order is confirmed
             awardPoints(order.customerId, order.points);
             
             // Mark points as awarded
             updated.isPointsAwarded = true;
-            updated.deliveryApproved = true;
+            updated.deliveryApproved = false; // Will be set to true when actually delivered
             
             // Update customer's total spent
             const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM format
@@ -439,6 +439,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return customer;
               })
             );
+          }
+          
+          // If order status is being changed to 'delivered' (just mark as delivered, points already awarded)
+          if (orderData.status === 'delivered') {
+            updated.deliveryApproved = true;
           }
           
           return updated;
