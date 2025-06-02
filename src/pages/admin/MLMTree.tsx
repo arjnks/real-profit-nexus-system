@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -166,7 +165,7 @@ const MLMTree = () => {
           <div className={`w-3 h-3 rounded-full ${tierColors[node.tier as keyof typeof tierColors]} mr-2`}></div>
           
           {hasRecentActivity && (
-            <Activity className="h-3 w-3 text-green-500 mr-1" title="Recent MLM activity" />
+            <Activity className="h-3 w-3 text-green-500 mr-1" />
           )}
           
           <div className="flex-1">
