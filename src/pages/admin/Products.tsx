@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -78,7 +79,13 @@ const Products = () => {
       description,
       category,
       image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200',
-      inStock: true
+      inStock: true,
+      tierDiscounts: {
+        Bronze: 2,
+        Silver: 3,
+        Gold: 4,
+        Diamond: 5
+      }
     });
 
     const points = calculatePointsForProduct(mrpValue, priceValue);
