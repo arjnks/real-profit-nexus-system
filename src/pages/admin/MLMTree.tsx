@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -12,15 +13,31 @@ import {
   SelectValue, 
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MLMTree = () => {
-  const { customers, orders, moveCustomerInMLM } = useData();
+  const { customers, orders, moveCustomerInMLM, addCustomer } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['A100']);
   const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
   const [newParentCode, setNewParentCode] = useState<string>('');
+
+  // Ensure A100 root customer exists
+  const ensureRootCustomer = () => {
+    const rootExists = customers.find(c => c.code === 'A100');
+    if (!rootExists) {
+      addCustomer({
+        name: 'Root Customer',
+        phone: '0000000000',
+        code: 'A100',
+        parentCode: null,
+        isReserved: false,
+        isPending: false,
+      });
+      toast.success('Root customer A100 created');
+    }
+  };
 
   // Get recent MLM activity
   const getRecentMLMActivity = () => {
@@ -30,10 +47,11 @@ const MLMTree = () => {
       .slice(0, 10);
   };
 
-  // Build the MLM tree
+  // Build the MLM tree with proper root handling
   const buildTree = () => {
     const tree: { [key: string]: any } = {};
     
+    // Build tree structure
     customers.forEach(customer => {
       tree[customer.code] = {
         ...customer,
@@ -41,13 +59,24 @@ const MLMTree = () => {
       };
     });
     
+    // Connect parent-child relationships
     customers.forEach(customer => {
       if (customer.parentCode && tree[customer.parentCode]) {
         tree[customer.parentCode].children.push(tree[customer.code]);
       }
     });
     
-    return tree['A100'] || null;
+    // Find root customer (A100 or first customer without parent)
+    let root = tree['A100'];
+    if (!root) {
+      // If A100 doesn't exist, find customers without parents
+      const rootCustomers = customers.filter(c => !c.parentCode);
+      if (rootCustomers.length > 0) {
+        root = tree[rootCustomers[0].code];
+      }
+    }
+    
+    return root || null;
   };
 
   // Toggle node expansion
@@ -192,55 +221,53 @@ const MLMTree = () => {
               Level {level + 1}
             </div>
             
-            {node.code !== 'A100' && (
-              <div className="flex items-center space-x-1">
-                {isEditing ? (
-                  <>
-                    <Select value={newParentCode} onValueChange={setNewParentCode}>
-                      <SelectTrigger className="w-24 h-6 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A100">A100</SelectItem>
-                        {customers
-                          .filter(c => c.id !== node.id && c.code !== node.code)
-                          .map((customer) => (
-                            <SelectItem key={customer.id} value={customer.code}>
-                              {customer.code}
-                            </SelectItem>
-                          ))
-                        }
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-green-600"
-                      onClick={() => saveParentChange(node.id)}
-                    >
-                      <Save className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-red-600"
-                      onClick={cancelEditing}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </>
-                ) : (
+            <div className="flex items-center space-x-1">
+              {isEditing ? (
+                <>
+                  <Select value={newParentCode} onValueChange={setNewParentCode}>
+                    <SelectTrigger className="w-24 h-6 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A100">A100</SelectItem>
+                      {customers
+                        .filter(c => c.id !== node.id && c.code !== node.code)
+                        .map((customer) => (
+                          <SelectItem key={customer.id} value={customer.code}>
+                            {customer.code}
+                          </SelectItem>
+                        ))
+                      }
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6"
-                    onClick={() => startEditingParent(node.id, node.parentCode)}
+                    className="h-6 w-6 text-green-600"
+                    onClick={() => saveParentChange(node.id)}
                   >
-                    <Edit2 className="h-3 w-3" />
+                    <Save className="h-3 w-3" />
                   </Button>
-                )}
-              </div>
-            )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-red-600"
+                    onClick={cancelEditing}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => startEditingParent(node.id, node.parentCode)}
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         
@@ -270,14 +297,20 @@ const MLMTree = () => {
 
         <TabsContent value="tree">
           <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, code or phone..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, code or phone..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button onClick={ensureRootCustomer} variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Ensure Root A100
+              </Button>
             </div>
           </div>
 
@@ -334,16 +367,22 @@ const MLMTree = () => {
                 {filteredTree ? (
                   renderNode(filteredTree)
                 ) : (
-                  <p className="text-center py-6 text-muted-foreground">
-                    No MLM tree data available or no results match your search
-                  </p>
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground mb-4">
+                      No MLM tree data available. The system needs a root customer (A100).
+                    </p>
+                    <Button onClick={ensureRootCustomer} variant="default">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Root Customer A100
+                    </Button>
+                  </div>
                 )}
               </div>
               
               <div className="mt-4 p-3 bg-blue-50 rounded-md">
                 <h4 className="font-medium text-sm text-blue-900 mb-2">MLM Distribution Rules:</h4>
                 <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• When a customer earns points, ₹1 is distributed to each of the 5 parent levels</li>
+                  <li>• When a customer earns points, each parent level receives mini coins</li>
                   <li>• 5 mini coins automatically convert to 1 point</li>
                   <li>• Tier thresholds: Bronze (20), Silver (40), Gold (80), Diamond (160) points</li>
                   <li>• Click edit icons to reorganize the MLM structure</li>
@@ -397,7 +436,7 @@ const MLMTree = () => {
                 </div>
               ) : (
                 <p className="text-center py-6 text-muted-foreground">
-                  No recent MLM activity found
+                  No recent MLM activity found. Confirm some orders to see activity here.
                 </p>
               )}
             </CardContent>
