@@ -16,6 +16,7 @@ export type Customer = {
   totalSpent: number;
   monthlySpent: { [month: string]: number };
   accumulatedPointMoney: number;
+  lastMLMDistribution?: string; // Track last MLM distribution
 };
 
 export type Product = {
@@ -70,6 +71,7 @@ export type Order = {
   deliveryApproved: boolean;
   pointsApproved: boolean;
   usedPointsDiscount?: boolean;
+  mlmDistributionLog?: string[]; // Track MLM distribution for this order
 };
 
 export type Offer = {
@@ -99,7 +101,7 @@ interface DataContextType {
   addOrder: (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => string;
   updateOrder: (id: string, orderData: Partial<Order>) => void;
   getNextAvailableCode: () => string;
-  awardPoints: (customerId: string, pointMoney: number) => void;
+  awardPoints: (customerId: string, pointMoney: number, orderId?: string) => void;
   reserveCode: (code: string, name: string, phone: string) => void;
   calculateTierBenefits: (tier: string) => number;
   calculatePointsForProduct: (mrp: number, sellingPrice: number) => number;
@@ -136,7 +138,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const customers = JSON.parse(storedCustomers);
       const migratedCustomers = customers.map((customer: Customer) => ({
         ...customer,
-        accumulatedPointMoney: customer.accumulatedPointMoney || 0
+        accumulatedPointMoney: customer.accumulatedPointMoney || 0,
+        lastMLMDistribution: customer.lastMLMDistribution || null
       }));
       setCustomers(migratedCustomers);
     }
@@ -154,7 +157,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProducts(migratedProducts);
     }
     if (storedServices) setServices(JSON.parse(storedServices));
-    if (storedOrders) setOrders(JSON.parse(storedOrders));
+    if (storedOrders) {
+      const orders = JSON.parse(storedOrders);
+      const migratedOrders = orders.map((order: Order) => ({
+        ...order,
+        mlmDistributionLog: order.mlmDistributionLog || []
+      }));
+      setOrders(migratedOrders);
+    }
     if (storedOffers) setOffers(JSON.parse(storedOffers));
   }, []);
 
@@ -267,9 +277,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Award point money and distribute through MLM structure
-  const awardPoints = (customerId: string, pointMoney: number) => {
-    console.log(`Awarding ${pointMoney} point money to customer ${customerId}`);
+  // Enhanced award points function with MLM tracking
+  const awardPoints = (customerId: string, pointMoney: number, orderId?: string) => {
+    console.log(`Awarding ${pointMoney} point money to customer ${customerId} for order ${orderId}`);
     
     setCustomers(prev => {
       const newCustomers = prev.map(customer => ({ ...customer }));
@@ -281,38 +291,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       const customer = newCustomers[customerIndex];
-      
-      // Add point money to accumulated amount
       const newAccumulated = customer.accumulatedPointMoney + pointMoney;
-      
-      // Calculate how many full points can be awarded (₹5 = 1 point)
       const newPoints = Math.floor(newAccumulated / 5);
       const remainingMoney = newAccumulated % 5;
       
-      console.log(`Customer ${customerId}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
+      console.log(`Customer ${customer.code}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
       
       // Update customer with new points and remaining accumulated money
       newCustomers[customerIndex] = {
         ...customer,
         points: customer.points + newPoints,
         accumulatedPointMoney: remainingMoney,
-        tier: calculateTier(customer.points + newPoints)
+        tier: calculateTier(customer.points + newPoints),
+        lastMLMDistribution: orderId ? new Date().toISOString() : customer.lastMLMDistribution
       };
+      
+      // Track MLM distribution log for the order
+      const mlmDistributionLog: string[] = [];
       
       // Distribute ₹1 to each of the 5 parent levels for each point earned
       if (newPoints > 0) {
         const mlmPath = getMLMPath(customer.code);
         
+        mlmDistributionLog.push(`Customer ${customer.code} earned ${newPoints} points from ₹${pointMoney} point money`);
+        
         mlmPath.forEach((parentCode, level) => {
           const parentIndex = newCustomers.findIndex(c => c.code === parentCode);
           if (parentIndex !== -1) {
-            // Add ₹1 per point earned as mini coins
-            const miniCoinsToAdd = newPoints; // ₹1 per point = 1 mini coin per point
+            const miniCoinsToAdd = newPoints;
             
             newCustomers[parentIndex] = {
               ...newCustomers[parentIndex],
-              miniCoins: newCustomers[parentIndex].miniCoins + miniCoinsToAdd
+              miniCoins: newCustomers[parentIndex].miniCoins + miniCoinsToAdd,
+              lastMLMDistribution: new Date().toISOString()
             };
+            
+            mlmDistributionLog.push(`Level ${level + 1}: ${parentCode} received ${miniCoinsToAdd} mini coins`);
             
             // Convert mini coins to points (5 mini coins = 1 point)
             if (newCustomers[parentIndex].miniCoins >= 5) {
@@ -324,10 +338,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 tier: calculateTier(newCustomers[parentIndex].points + parentNewPoints)
               };
               
+              mlmDistributionLog.push(`Level ${level + 1}: ${parentCode} converted ${parentNewPoints} points from mini coins`);
               console.log(`Parent ${parentCode} at level ${level + 1} received ${miniCoinsToAdd} mini coins, converted ${parentNewPoints} points`);
             }
           }
         });
+      }
+      
+      // Update the order with MLM distribution log
+      if (orderId) {
+        setOrders(prevOrders => 
+          prevOrders.map(order => 
+            order.id === orderId 
+              ? { ...order, mlmDistributionLog }
+              : order
+          )
+        );
       }
       
       return newCustomers;
@@ -447,7 +473,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addOrder = (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => {
     const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
     
-    // Calculate total point money based on MRP vs selling price difference
     let totalPointMoney = 0;
     order.products.forEach(product => {
       const productData = products.find(p => p.id === product.productId);
@@ -466,6 +491,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isPointsAwarded: false,
       deliveryApproved: false,
       pointsApproved: false,
+      mlmDistributionLog: [],
     };
     
     setOrders(prev => [...prev, newOrder]);
@@ -483,10 +509,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (orderData.status === 'confirmed' && !order.isPointsAwarded && order.customerId) {
             console.log(`Order ${id} confirmed, awarding points to customer ${order.customerId}`);
             
-            // Award points immediately when order is confirmed
-            awardPoints(order.customerId, order.points);
+            // Award points with order ID for tracking MLM distribution
+            awardPoints(order.customerId, order.points, id);
             
-            // Mark points as awarded
             updated.isPointsAwarded = true;
             updated.deliveryApproved = false;
             
@@ -509,7 +534,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             );
           }
           
-          // If order status is being changed to 'delivered'
           if (orderData.status === 'delivered') {
             updated.deliveryApproved = true;
           }

@@ -4,7 +4,7 @@ import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Select,
   SelectContent,
@@ -12,15 +12,24 @@ import {
   SelectTrigger,
   SelectValue, 
 } from '@/components/ui/select';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MLMTree = () => {
-  const { customers, moveCustomerInMLM } = useData();
+  const { customers, orders, moveCustomerInMLM } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['A100']);
   const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
   const [newParentCode, setNewParentCode] = useState<string>('');
+
+  // Get recent MLM activity
+  const getRecentMLMActivity = () => {
+    return orders
+      .filter(order => order.isPointsAwarded && order.mlmDistributionLog && order.mlmDistributionLog.length > 0)
+      .sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime())
+      .slice(0, 10);
+  };
 
   // Build the MLM tree
   const buildTree = () => {
@@ -103,6 +112,7 @@ const MLMTree = () => {
 
   const treeRoot = buildTree();
   const filteredTree = filterTree(treeRoot);
+  const recentActivity = getRecentMLMActivity();
 
   // Render a tree node
   const renderNode = (node: any, level = 0) => {
@@ -119,6 +129,10 @@ const MLMTree = () => {
       Diamond: 'bg-blue-500',
     };
     
+    // Check if customer had recent MLM activity
+    const hasRecentActivity = node.lastMLMDistribution && 
+      new Date(node.lastMLMDistribution).getTime() > Date.now() - (24 * 60 * 60 * 1000); // Last 24 hours
+    
     return (
       <div key={node.code} className="mb-1">
         <div 
@@ -129,7 +143,7 @@ const MLMTree = () => {
              node.phone.includes(searchTerm))
               ? 'bg-yellow-50'
               : ''
-          }`}
+          } ${hasRecentActivity ? 'border-l-4 border-l-green-500' : ''}`}
           style={{ marginLeft: `${level * 20}px` }}
         >
           {hasChildren && (
@@ -151,6 +165,10 @@ const MLMTree = () => {
           
           <div className={`w-3 h-3 rounded-full ${tierColors[node.tier as keyof typeof tierColors]} mr-2`}></div>
           
+          {hasRecentActivity && (
+            <Activity className="h-3 w-3 text-green-500 mr-1" title="Recent MLM activity" />
+          )}
+          
           <div className="flex-1">
             <div className="flex items-center">
               <span className="font-medium">{node.name}</span>
@@ -164,7 +182,7 @@ const MLMTree = () => {
               <span className="mr-4">Code: {node.code}</span>
               <span className="mr-4">Points: {node.points}</span>
               {node.miniCoins > 0 && (
-                <span className="mr-4">Mini Coins: {node.miniCoins}</span>
+                <span className="mr-4 text-orange-600">Mini Coins: {node.miniCoins}</span>
               )}
               <span>Parent: {node.parentCode || 'A100'}</span>
             </div>
@@ -241,88 +259,152 @@ const MLMTree = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">MLM Tree Management</h1>
         <p className="text-muted-foreground">
-          Visualize and manage the multi-level marketing structure. Click edit icons to move customers.
+          Visualize and manage the multi-level marketing structure. Recent MLM activity is highlighted.
         </p>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, code or phone..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
+      <Tabs defaultValue="tree" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="tree">MLM Tree</TabsTrigger>
+          <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h3 className="font-semibold">MLM Structure</h3>
-              <div className="flex items-center gap-2">
-                {['Bronze', 'Silver', 'Gold', 'Diamond'].map((tier) => (
-                  <div key={tier} className="flex items-center">
-                    <div 
-                      className={`w-3 h-3 rounded-full mr-1 ${
-                        tier === 'Bronze' ? 'bg-amber-700' :
-                        tier === 'Silver' ? 'bg-gray-400' :
-                        tier === 'Gold' ? 'bg-yellow-500' :
-                        'bg-blue-500'
-                      }`} 
-                    />
-                    <span className="text-xs">{tier}</span>
-                  </div>
-                ))}
-              </div>
+        <TabsContent value="tree">
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, code or phone..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setExpandedNodes(prev => 
-                prev.length === 1 && prev[0] === 'A100'
-                  ? customers.map(c => c.code)
-                  : ['A100']
-              )}
-            >
-              {expandedNodes.length === 1 ? (
-                <>
-                  <ChevronDown className="h-4 w-4 mr-1" />
-                  Expand All
-                </>
+          </div>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <h3 className="font-semibold">MLM Structure</h3>
+                  <div className="flex items-center gap-2">
+                    {['Bronze', 'Silver', 'Gold', 'Diamond'].map((tier) => (
+                      <div key={tier} className="flex items-center">
+                        <div 
+                          className={`w-3 h-3 rounded-full mr-1 ${
+                            tier === 'Bronze' ? 'bg-amber-700' :
+                            tier === 'Silver' ? 'bg-gray-400' :
+                            tier === 'Gold' ? 'bg-yellow-500' :
+                            'bg-blue-500'
+                          }`} 
+                        />
+                        <span className="text-xs">{tier}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center ml-4">
+                      <Activity className="h-3 w-3 text-green-500 mr-1" />
+                      <span className="text-xs">Recent Activity</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExpandedNodes(prev => 
+                    prev.length === 1 && prev[0] === 'A100'
+                      ? customers.map(c => c.code)
+                      : ['A100']
+                  )}
+                >
+                  {expandedNodes.length === 1 ? (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      Expand All
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                      Collapse All
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              <div className="border rounded-md p-2 max-h-[600px] overflow-auto">
+                {filteredTree ? (
+                  renderNode(filteredTree)
+                ) : (
+                  <p className="text-center py-6 text-muted-foreground">
+                    No MLM tree data available or no results match your search
+                  </p>
+                )}
+              </div>
+              
+              <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                <h4 className="font-medium text-sm text-blue-900 mb-2">MLM Distribution Rules:</h4>
+                <ul className="text-xs text-blue-800 space-y-1">
+                  <li>• When a customer earns points, ₹1 is distributed to each of the 5 parent levels</li>
+                  <li>• 5 mini coins automatically convert to 1 point</li>
+                  <li>• Tier thresholds: Bronze (20), Silver (40), Gold (80), Diamond (160) points</li>
+                  <li>• Click edit icons to reorganize the MLM structure</li>
+                  <li>• Green border indicates recent MLM activity (last 24 hours)</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent MLM Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentActivity.length > 0 ? (
+                <div className="space-y-4">
+                  {recentActivity.map((order) => (
+                    <div key={order.id} className="border rounded-md p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-medium">Order {order.id}</h4>
+                          <p className="text-sm text-gray-600">
+                            Customer: {order.customerName} ({order.customerCode})
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(order.orderDate).toLocaleDateString()} at {new Date(order.orderDate).toLocaleTimeString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">₹{order.points} Point Money</p>
+                          <p className="text-xs text-green-600">Distributed</p>
+                        </div>
+                      </div>
+                      
+                      {order.mlmDistributionLog && order.mlmDistributionLog.length > 0 && (
+                        <div className="bg-gray-50 rounded-md p-3 mt-3">
+                          <h5 className="text-xs font-medium text-gray-700 mb-2">Distribution Log:</h5>
+                          <div className="space-y-1">
+                            {order.mlmDistributionLog.map((log, index) => (
+                              <p key={index} className="text-xs text-gray-600">
+                                {log}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <>
-                  <ChevronUp className="h-4 w-4 mr-1" />
-                  Collapse All
-                </>
+                <p className="text-center py-6 text-muted-foreground">
+                  No recent MLM activity found
+                </p>
               )}
-            </Button>
-          </div>
-          
-          <div className="border rounded-md p-2 max-h-[600px] overflow-auto">
-            {filteredTree ? (
-              renderNode(filteredTree)
-            ) : (
-              <p className="text-center py-6 text-muted-foreground">
-                No MLM tree data available or no results match your search
-              </p>
-            )}
-          </div>
-          
-          <div className="mt-4 p-3 bg-blue-50 rounded-md">
-            <h4 className="font-medium text-sm text-blue-900 mb-2">MLM Distribution Rules:</h4>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• When a customer earns points, ₹1 is distributed to each of the 5 parent levels</li>
-              <li>• 5 mini coins automatically convert to 1 point</li>
-              <li>• Tier thresholds: Bronze (20), Silver (40), Gold (80), Diamond (160) points</li>
-              <li>• Click edit icons to reorganize the MLM structure</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 };
