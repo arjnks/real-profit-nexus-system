@@ -152,6 +152,14 @@ function App() {
                 } 
               />
               <Route 
+                path="/admin/mlm" 
+                element={
+                  <ProtectedRoute role="admin">
+                    <MLMTree />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/admin/mlm-tree" 
                 element={
                   <ProtectedRoute role="admin">
