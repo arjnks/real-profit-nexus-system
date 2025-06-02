@@ -15,18 +15,24 @@ export type Customer = {
   isPending?: boolean;
   totalSpent: number;
   monthlySpent: { [month: string]: number };
-  accumulatedPointMoney: number; // New field to track accumulated money that hasn't been converted to points yet;
+  accumulatedPointMoney: number;
 };
 
 export type Product = {
   id: string;
   name: string;
-  price: number; // This is now the selling price (Company Profit Price)
-  mrp: number; // Maximum Retail Price
+  price: number;
+  mrp: number;
   image: string;
   description: string;
   category: string;
   inStock: boolean;
+  tierDiscounts: {
+    Bronze: number;
+    Silver: number;
+    Gold: number;
+    Diamond: number;
+  };
 };
 
 export type Service = {
@@ -97,6 +103,8 @@ interface DataContextType {
   reserveCode: (code: string, name: string, phone: string) => void;
   calculateTierBenefits: (tier: string) => number;
   calculatePointsForProduct: (mrp: number, sellingPrice: number) => number;
+  moveCustomerInMLM: (customerId: string, newParentCode: string | null) => void;
+  getMLMPath: (customerCode: string) => string[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -126,14 +134,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (storedCustomers) {
       const customers = JSON.parse(storedCustomers);
-      // Migrate existing customers to add accumulatedPointMoney field
       const migratedCustomers = customers.map((customer: Customer) => ({
         ...customer,
         accumulatedPointMoney: customer.accumulatedPointMoney || 0
       }));
       setCustomers(migratedCustomers);
     }
-    if (storedProducts) setProducts(JSON.parse(storedProducts));
+    if (storedProducts) {
+      const products = JSON.parse(storedProducts);
+      const migratedProducts = products.map((product: Product) => ({
+        ...product,
+        tierDiscounts: product.tierDiscounts || {
+          Bronze: 2,
+          Silver: 3,
+          Gold: 4,
+          Diamond: 5
+        }
+      }));
+      setProducts(migratedProducts);
+    }
     if (storedServices) setServices(JSON.parse(storedServices));
     if (storedOrders) setOrders(JSON.parse(storedOrders));
     if (storedOffers) setOffers(JSON.parse(storedOffers));
@@ -160,22 +179,63 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("realprofit_offers", JSON.stringify(offers));
   }, [offers]);
 
-  // Calculate point money based on MRP vs Selling Price difference (not actual points)
+  // Calculate point money based on MRP vs Selling Price difference
   const calculatePointsForProduct = (mrp: number, sellingPrice: number): number => {
     const difference = mrp - sellingPrice;
-    return Math.max(0, Math.floor(difference)); // Return the money amount, not points
+    return Math.max(0, Math.floor(difference));
+  };
+
+  // Get MLM path (5 levels up from a customer)
+  const getMLMPath = (customerCode: string): string[] => {
+    const path: string[] = [];
+    let currentCode = customerCode;
+    
+    for (let level = 0; level < 5; level++) {
+      const customer = customers.find(c => c.code === currentCode);
+      if (!customer || !customer.parentCode) break;
+      
+      path.push(customer.parentCode);
+      currentCode = customer.parentCode;
+    }
+    
+    return path;
+  };
+
+  // Move customer in MLM structure
+  const moveCustomerInMLM = (customerId: string, newParentCode: string | null) => {
+    setCustomers(prev => {
+      const newCustomers = prev.map(customer => ({ ...customer }));
+      const customerIndex = newCustomers.findIndex(c => c.id === customerId);
+      
+      if (customerIndex === -1) return prev;
+      
+      // Validate new parent exists (except for A100 or null)
+      if (newParentCode && newParentCode !== 'A100') {
+        const parentExists = newCustomers.some(c => c.code === newParentCode);
+        if (!parentExists) {
+          console.error(`Parent code ${newParentCode} doesn't exist`);
+          return prev;
+        }
+      }
+      
+      newCustomers[customerIndex] = {
+        ...newCustomers[customerIndex],
+        parentCode: newParentCode === 'A100' ? null : newParentCode
+      };
+      
+      return newCustomers;
+    });
   };
 
   // Get next available sequential code
   const getNextAvailableCode = (): string => {
-    // ... keep existing code (getNextAvailableCode implementation)
     const activeCodes = customers
       .filter(c => !c.isPending && c.code.startsWith('A'))
       .map(c => parseInt(c.code.substring(1)))
       .filter(num => !isNaN(num))
       .sort((a, b) => a - b);
     
-    let nextNumber = 101; // Start from A101 (A100 is admin)
+    let nextNumber = 101;
     for (const num of activeCodes) {
       if (num === nextNumber) {
         nextNumber++;
@@ -196,15 +256,82 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'Bronze';
   };
 
-  // Calculate tier benefits (percentage of product value that can be paid with points)
+  // Calculate tier benefits (point discount for products)
   const calculateTierBenefits = (tier: string): number => {
     switch (tier) {
-      case 'Diamond': return 70;
-      case 'Gold': return 30;
-      case 'Silver': return 20;
-      case 'Bronze': return 10;
-      default: return 10;
+      case 'Diamond': return 5;
+      case 'Gold': return 4;
+      case 'Silver': return 3;
+      case 'Bronze': return 2;
+      default: return 2;
     }
+  };
+
+  // Award point money and distribute through MLM structure
+  const awardPoints = (customerId: string, pointMoney: number) => {
+    console.log(`Awarding ${pointMoney} point money to customer ${customerId}`);
+    
+    setCustomers(prev => {
+      const newCustomers = prev.map(customer => ({ ...customer }));
+      const customerIndex = newCustomers.findIndex(c => c.id === customerId);
+      
+      if (customerIndex === -1) {
+        console.log(`Customer ${customerId} not found`);
+        return prev;
+      }
+      
+      const customer = newCustomers[customerIndex];
+      
+      // Add point money to accumulated amount
+      const newAccumulated = customer.accumulatedPointMoney + pointMoney;
+      
+      // Calculate how many full points can be awarded (₹5 = 1 point)
+      const newPoints = Math.floor(newAccumulated / 5);
+      const remainingMoney = newAccumulated % 5;
+      
+      console.log(`Customer ${customerId}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
+      
+      // Update customer with new points and remaining accumulated money
+      newCustomers[customerIndex] = {
+        ...customer,
+        points: customer.points + newPoints,
+        accumulatedPointMoney: remainingMoney,
+        tier: calculateTier(customer.points + newPoints)
+      };
+      
+      // Distribute ₹1 to each of the 5 parent levels for each point earned
+      if (newPoints > 0) {
+        const mlmPath = getMLMPath(customer.code);
+        
+        mlmPath.forEach((parentCode, level) => {
+          const parentIndex = newCustomers.findIndex(c => c.code === parentCode);
+          if (parentIndex !== -1) {
+            // Add ₹1 per point earned as mini coins
+            const miniCoinsToAdd = newPoints; // ₹1 per point = 1 mini coin per point
+            
+            newCustomers[parentIndex] = {
+              ...newCustomers[parentIndex],
+              miniCoins: newCustomers[parentIndex].miniCoins + miniCoinsToAdd
+            };
+            
+            // Convert mini coins to points (5 mini coins = 1 point)
+            if (newCustomers[parentIndex].miniCoins >= 5) {
+              const parentNewPoints = Math.floor(newCustomers[parentIndex].miniCoins / 5);
+              newCustomers[parentIndex] = {
+                ...newCustomers[parentIndex],
+                points: newCustomers[parentIndex].points + parentNewPoints,
+                miniCoins: newCustomers[parentIndex].miniCoins % 5,
+                tier: calculateTier(newCustomers[parentIndex].points + parentNewPoints)
+              };
+              
+              console.log(`Parent ${parentCode} at level ${level + 1} received ${miniCoinsToAdd} mini coins, converted ${parentNewPoints} points`);
+            }
+          }
+        });
+      }
+      
+      return newCustomers;
+    });
   };
 
   // Add a new customer
@@ -230,7 +357,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       prev.map(customer => {
         if (customer.id === id) {
           const updated = { ...customer, ...customerData };
-          // Recalculate tier if points changed
           if (customerData.points !== undefined) {
             updated.tier = calculateTier(updated.points);
           }
@@ -239,70 +365,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return customer;
       })
     );
-  };
-
-  // Award point money and convert to actual points when accumulated amount reaches ₹5 or multiples
-  const awardPoints = (customerId: string, pointMoney: number) => {
-    console.log(`Awarding ${pointMoney} point money to customer ${customerId}`);
-    
-    setCustomers(prev => {
-      // Create a completely new array to ensure React detects the change
-      const newCustomers = prev.map(customer => ({ ...customer }));
-      const customerIndex = newCustomers.findIndex(c => c.id === customerId);
-      
-      if (customerIndex === -1) {
-        console.log(`Customer ${customerId} not found`);
-        return prev;
-      }
-      
-      // Add point money to accumulated amount
-      const newAccumulated = newCustomers[customerIndex].accumulatedPointMoney + pointMoney;
-      
-      // Calculate how many full points can be awarded (₹5 = 1 point)
-      const newPoints = Math.floor(newAccumulated / 5);
-      const remainingMoney = newAccumulated % 5;
-      
-      console.log(`Customer ${customerId}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
-      
-      // Update customer with new points and remaining accumulated money
-      newCustomers[customerIndex] = {
-        ...newCustomers[customerIndex],
-        points: newCustomers[customerIndex].points + newPoints,
-        accumulatedPointMoney: remainingMoney,
-        tier: calculateTier(newCustomers[customerIndex].points + newPoints)
-      };
-      
-      console.log(`Customer ${customerId} now has ${newCustomers[customerIndex].points} points`);
-      
-      // Distribute mini coins to all parents in MLM tree (based on actual points awarded)
-      if (newPoints > 0) {
-        let currentCode = newCustomers[customerIndex].parentCode;
-        while (currentCode) {
-          const parentIndex = newCustomers.findIndex(c => c.code === currentCode);
-          if (parentIndex === -1) break;
-          
-          newCustomers[parentIndex] = {
-            ...newCustomers[parentIndex],
-            miniCoins: newCustomers[parentIndex].miniCoins + newPoints
-          };
-          
-          // Convert mini coins to points (5 mini coins = 1 point)
-          if (newCustomers[parentIndex].miniCoins >= 5) {
-            const parentNewPoints = Math.floor(newCustomers[parentIndex].miniCoins / 5);
-            newCustomers[parentIndex] = {
-              ...newCustomers[parentIndex],
-              points: newCustomers[parentIndex].points + parentNewPoints,
-              miniCoins: newCustomers[parentIndex].miniCoins % 5,
-              tier: calculateTier(newCustomers[parentIndex].points + parentNewPoints)
-            };
-          }
-          
-          currentCode = newCustomers[parentIndex].parentCode;
-        }
-      }
-      
-      return newCustomers;
-    });
   };
 
   // Reserve a code
@@ -332,6 +394,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newProduct: Product = {
       ...product,
       id: `prod_${Date.now()}`,
+      tierDiscounts: product.tierDiscounts || {
+        Bronze: 2,
+        Silver: 3,
+        Gold: 4,
+        Diamond: 5
+      }
     };
     
     setProducts(prev => [...prev, newProduct]);
@@ -379,7 +447,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addOrder = (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => {
     const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
     
-    // Calculate total point money based on MRP vs selling price difference for each product
+    // Calculate total point money based on MRP vs selling price difference
     let totalPointMoney = 0;
     order.products.forEach(product => {
       const productData = products.find(p => p.id === product.productId);
@@ -393,7 +461,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...order,
       id: orderId,
       orderDate: new Date().toISOString(),
-      points: totalPointMoney, // Store the total point money value
+      points: totalPointMoney,
       isPendingApproval: true,
       isPointsAwarded: false,
       deliveryApproved: false,
@@ -420,10 +488,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Mark points as awarded
             updated.isPointsAwarded = true;
-            updated.deliveryApproved = false; // Will be set to true when actually delivered
+            updated.deliveryApproved = false;
             
             // Update customer's total spent
-            const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM format
+            const currentMonth = new Date().toISOString().substring(0, 7);
             setCustomers(prevCustomers =>
               prevCustomers.map(customer => {
                 if (customer.id === order.customerId) {
@@ -441,7 +509,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             );
           }
           
-          // If order status is being changed to 'delivered' (just mark as delivered, points already awarded)
+          // If order status is being changed to 'delivered'
           if (orderData.status === 'delivered') {
             updated.deliveryApproved = true;
           }
@@ -476,6 +544,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         reserveCode,
         calculateTierBenefits,
         calculatePointsForProduct,
+        moveCustomerInMLM,
+        getMLMPath,
       }}
     >
       {children}
