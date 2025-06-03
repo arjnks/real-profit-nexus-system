@@ -129,21 +129,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load data from localStorage on mount
   useEffect(() => {
-    const storedCustomers = localStorage.getItem("realprofit_customers");
+    // Clear existing customer data and start fresh
+    localStorage.removeItem("realprofit_customers");
+    setCustomers([]);
+    
     const storedProducts = localStorage.getItem("realprofit_products");
     const storedServices = localStorage.getItem("realprofit_services");
     const storedOrders = localStorage.getItem("realprofit_orders");
     const storedOffers = localStorage.getItem("realprofit_offers");
 
-    if (storedCustomers) {
-      const customers = JSON.parse(storedCustomers);
-      const migratedCustomers = customers.map((customer: Customer) => ({
-        ...customer,
-        accumulatedPointMoney: customer.accumulatedPointMoney || 0,
-        lastMLMDistribution: customer.lastMLMDistribution || null
-      }));
-      setCustomers(migratedCustomers);
-    }
     if (storedProducts) {
       const products = JSON.parse(storedProducts);
       const migratedProducts = products.map((product: Product) => ({
@@ -241,7 +235,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get next available sequential code
   const getNextAvailableCode = (): string => {
     const activeCodes = customers
-      .filter(c => !c.isPending && c.code.startsWith('A'))
+      .filter(c => c.code.startsWith('A'))
       .map(c => parseInt(c.code.substring(1)))
       .filter(num => !isNaN(num))
       .sort((a, b) => a - b);
@@ -361,7 +355,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // Add a new customer
+  // Add a new customer (now immediately active)
   const addCustomer = (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => {
     const newCustomer: Customer = {
       ...customer,
@@ -373,6 +367,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       totalSpent: 0,
       monthlySpent: {},
       accumulatedPointMoney: 0,
+      isPending: false, // Immediately active
     };
     
     setCustomers(prev => [...prev, newCustomer]);
