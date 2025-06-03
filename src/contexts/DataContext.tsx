@@ -92,6 +92,7 @@ interface DataContextType {
   offers: Offer[];
   addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => void;
   updateCustomer: (id: string, customerData: Partial<Customer>) => void;
+  deleteCustomer: (id: string) => void;
   addProduct: (product: Omit<Product, "id">) => void;
   updateProduct: (id: string, productData: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
@@ -393,6 +394,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  // Delete a customer
+  const deleteCustomer = (id: string) => {
+    setCustomers(prev => prev.filter(customer => customer.id !== id));
+  };
+
   // Reserve a code
   const reserveCode = (code: string, name: string, phone: string) => {
     const newCustomer: Customer = {
@@ -555,6 +561,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         offers,
         addCustomer,
         updateCustomer,
+        deleteCustomer,
         addProduct,
         updateProduct,
         deleteProduct,

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -13,13 +12,25 @@ import {
   SelectTrigger,
   SelectValue, 
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EditCustomer = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, updateCustomer } = useData();
+  const { customers, updateCustomer, deleteCustomer } = useData();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -29,6 +40,7 @@ const EditCustomer = () => {
   const [parentCode, setParentCode] = useState('');
   const [isReserved, setIsReserved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Find the customer
   useEffect(() => {
@@ -84,6 +96,35 @@ const EditCustomer = () => {
       console.error(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      // Check if customer has children in MLM tree
+      const hasChildren = customers.some(c => c.parentCode === code);
+      
+      if (hasChildren) {
+        toast.error('Cannot delete customer with children in MLM tree. Please reassign children first.');
+        setIsDeleting(false);
+        return;
+      }
+      
+      // Delete the customer
+      deleteCustomer(id);
+      
+      toast.success('Customer deleted successfully!');
+      navigate('/admin/customers');
+      
+    } catch (error) {
+      toast.error('Failed to delete customer');
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -206,12 +247,44 @@ const EditCustomer = () => {
           </form>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/admin/customers')}
-          >
-            Cancel
-          </Button>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/customers')}
+            >
+              Cancel
+            </Button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="default">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Customer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the customer
+                    "{name}" and remove their data from the system. Make sure they have no
+                    children in the MLM tree before proceeding.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete Customer'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+          
           <Button
             type="submit"
             form="edit-customer-form"
