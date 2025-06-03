@@ -26,13 +26,13 @@ const Index = () => {
                   Shop Now
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-realprofit-blue">
+              <Button asChild size="lg" className="bg-realprofit-green text-white hover:bg-realprofit-green/90">
                 <Link to="/register">
                   <Users className="mr-2 h-5 w-5" />
                   Register Now
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-realprofit-blue">
+              <Button asChild size="lg" className="bg-realprofit-gold text-white hover:bg-realprofit-gold/90">
                 <Link to="/login">
                   Login Now
                 </Link>
