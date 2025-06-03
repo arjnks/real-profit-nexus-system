@@ -18,14 +18,14 @@ import { toast } from 'sonner';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { customers, addCustomer } = useData();
+  const { customers, addCustomer, getNextAvailableCode } = useData();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [parentCode, setParentCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get available parent codes (customers who can have children)
+  // Get available parent codes (active customers only)
   const availableParents = customers.filter(customer => !customer.isPending);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,21 +48,21 @@ const Register = () => {
         return;
       }
       
-      // Generate temporary code (will be replaced with real code after first order approval)
-      const tempCode = `TEMP_${Date.now()}`;
+      // Generate next available code
+      const customerCode = getNextAvailableCode();
       
-      // Add customer as pending
+      // Add customer as active (no pending status)
       addCustomer({
         name,
         phone,
-        code: tempCode,
+        code: customerCode,
         parentCode: parentCode || 'A100', // Default to admin if no parent selected
         isReserved: false,
-        isPending: true,
+        isPending: false, // Customer is immediately active
       });
       
-      toast.success('Registration submitted successfully!', {
-        description: 'Your account will be activated after your first order is approved.',
+      toast.success('Registration successful!', {
+        description: 'You can now login with your phone number.',
       });
       
       navigate('/login');

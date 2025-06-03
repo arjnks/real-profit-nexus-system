@@ -70,11 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
-      // Customer login - validate against registered customers
+      // Customer login - validate against registered customers (no pending check)
       const customers = JSON.parse(localStorage.getItem("realprofit_customers") || "[]");
-      const customer = customers.find((c: any) => 
-        c.phone === username && !c.isPending
-      );
+      const customer = customers.find((c: any) => c.phone === username);
       
       if (customer) {
         // For customers, password is not required in this system
@@ -93,17 +91,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success(`Welcome back, ${customer.name}!`);
         setIsLoading(false);
         return true;
-      }
-      
-      // Check if customer exists but is pending
-      const pendingCustomer = customers.find((c: any) => 
-        c.phone === username && c.isPending
-      );
-      
-      if (pendingCustomer) {
-        toast.error("Your account is still pending approval. Please wait for admin approval.");
-        setIsLoading(false);
-        return false;
       }
       
       toast.error("Invalid phone number or account not found");

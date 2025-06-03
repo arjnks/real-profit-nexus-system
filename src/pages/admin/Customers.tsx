@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -19,31 +20,17 @@ import {
   SelectTrigger,
   SelectValue, 
 } from '@/components/ui/select';
-import { UserPlus, Search, Edit, CheckCircle, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { UserPlus, Search, Edit } from 'lucide-react';
 
 const Customers = () => {
-  const { customers, updateCustomer } = useData();
+  const { customers } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTier, setFilterTier] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
 
   // Force re-render when customers data changes
   useEffect(() => {
     // This effect will run whenever customers array changes
   }, [customers]);
-
-  // Handle customer approval
-  const handleApprove = (customerId: string) => {
-    updateCustomer(customerId, { isPending: false });
-    toast.success('Customer approved successfully');
-  };
-
-  // Handle customer rejection
-  const handleReject = (customerId: string) => {
-    // In a real app, you might want to delete the customer or mark them as rejected
-    toast.success('Customer rejected successfully');
-  };
 
   // Filter customers based on search and filters
   const filteredCustomers = customers.filter((customer) => {
@@ -53,11 +40,7 @@ const Customers = () => {
     
     const matchesTier = filterTier === 'all' || customer.tier.toLowerCase() === filterTier.toLowerCase();
     
-    const matchesStatus = filterStatus === 'all' || 
-                          (filterStatus === 'pending' && customer.isPending) ||
-                          (filterStatus === 'active' && !customer.isPending);
-    
-    return matchesSearch && matchesTier && matchesStatus;
+    return matchesSearch && matchesTier;
   });
 
   return (
@@ -95,17 +78,6 @@ const Customers = () => {
             <SelectItem value="diamond">Diamond</SelectItem>
           </SelectContent>
         </Select>
-        
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="border rounded-md">
@@ -118,7 +90,6 @@ const Customers = () => {
               <TableHead>Points</TableHead>
               <TableHead>Tier</TableHead>
               <TableHead>Joined</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -156,55 +127,18 @@ const Customers = () => {
                   </TableCell>
                   <TableCell>{new Date(customer.joinedDate).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    {customer.isPending ? (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        Pending
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                        <Link to={`/admin/customers/edit/${customer.id}`}>
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Link>
-                      </Button>
-                      
-                      {customer.isPending && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-green-600"
-                            onClick={() => handleApprove(customer.id)}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="sr-only">Approve</span>
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-600"
-                            onClick={() => handleReject(customer.id)}
-                          >
-                            <XCircle className="h-4 w-4" />
-                            <span className="sr-only">Reject</span>
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                    <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                      <Link to={`/admin/customers/edit/${customer.id}`}>
+                        <Edit className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                   No customers found matching your filters
                 </TableCell>
               </TableRow>
