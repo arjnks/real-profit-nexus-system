@@ -129,15 +129,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load data from localStorage on mount
   useEffect(() => {
-    // Clear existing customer data and start fresh
-    localStorage.removeItem("realprofit_customers");
-    setCustomers([]);
-    
+    const storedCustomers = localStorage.getItem("realprofit_customers");
     const storedProducts = localStorage.getItem("realprofit_products");
     const storedServices = localStorage.getItem("realprofit_services");
     const storedOrders = localStorage.getItem("realprofit_orders");
     const storedOffers = localStorage.getItem("realprofit_offers");
 
+    if (storedCustomers) {
+      const customers = JSON.parse(storedCustomers);
+      const migratedCustomers = customers.map((customer: Customer) => ({
+        ...customer,
+        accumulatedPointMoney: customer.accumulatedPointMoney || 0,
+        lastMLMDistribution: customer.lastMLMDistribution || null,
+        isPending: false // Ensure all existing customers are active
+      }));
+      setCustomers(migratedCustomers);
+    }
+    
     if (storedProducts) {
       const products = JSON.parse(storedProducts);
       const migratedProducts = products.map((product: Product) => ({
