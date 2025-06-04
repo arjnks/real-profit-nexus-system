@@ -23,16 +23,60 @@ import {
 import { UserPlus, Search, Edit, RefreshCw, Loader2 } from 'lucide-react';
 
 const Customers = () => {
-  const { customers, isLoading } = useData();
+  const { customers: contextCustomers, isLoading } = useData();
+  const [customers, setCustomers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTier, setFilterTier] = useState('all');
 
-  // Force re-render when customers data changes and add debugging
+  // Force sync with localStorage and context
   useEffect(() => {
-    console.log('Customers data updated:', customers);
-    console.log('Total customers:', customers.length);
-    console.log('Loading state:', isLoading);
-  }, [customers, isLoading]);
+    const syncCustomers = () => {
+      try {
+        const storedCustomers = localStorage.getItem("realprofit_customers");
+        console.log('Raw localStorage data:', storedCustomers);
+        
+        if (storedCustomers) {
+          const parsed = JSON.parse(storedCustomers);
+          console.log('Parsed customers from localStorage:', parsed);
+          setCustomers(parsed);
+        } else {
+          console.log('No customers in localStorage');
+          setCustomers([]);
+        }
+      } catch (error) {
+        console.error('Error reading customers from localStorage:', error);
+        setCustomers([]);
+      }
+    };
+
+    // Initial sync
+    syncCustomers();
+
+    // Use context customers if available
+    if (contextCustomers && contextCustomers.length > 0) {
+      console.log('Using context customers:', contextCustomers);
+      setCustomers(contextCustomers);
+    }
+
+    // Listen for localStorage changes
+    const handleStorageChange = () => {
+      syncCustomers();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check periodically
+    const interval = setInterval(syncCustomers, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [contextCustomers]);
+
+  console.log('Current customers state:', customers);
+  console.log('Context customers:', contextCustomers);
+  console.log('Is loading:', isLoading);
 
   // Filter customers based on search and filters
   const filteredCustomers = customers.filter((customer) => {
@@ -46,13 +90,22 @@ const Customers = () => {
   });
 
   const handleRefresh = () => {
-    // Force a re-render by checking localStorage directly
+    console.log('Manual refresh triggered');
     const storedCustomers = localStorage.getItem("realprofit_customers");
-    console.log('Stored customers in localStorage:', storedCustomers);
-    window.location.reload();
+    console.log('Manual refresh - localStorage data:', storedCustomers);
+    
+    if (storedCustomers) {
+      try {
+        const parsed = JSON.parse(storedCustomers);
+        setCustomers(parsed);
+        console.log('Manual refresh - parsed customers:', parsed);
+      } catch (error) {
+        console.error('Error parsing customers during refresh:', error);
+      }
+    }
   };
 
-  if (isLoading) {
+  if (isLoading && customers.length === 0) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -169,6 +222,9 @@ const Customers = () => {
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                   {customers.length === 0 ? 'No customers registered yet' : 'No customers found matching your filters'}
+                  <div className="text-xs mt-2">
+                    Debug: {customers.length} total customers, Context: {contextCustomers.length}
+                  </div>
                 </TableCell>
               </TableRow>
             )}
