@@ -90,6 +90,7 @@ interface DataContextType {
   services: Service[];
   orders: Order[];
   offers: Offer[];
+  isLoading: boolean;
   addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => void;
   updateCustomer: (id: string, customerData: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
@@ -126,78 +127,94 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [services, setServices] = useState<Service[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load data from localStorage on mount
   useEffect(() => {
-    const storedCustomers = localStorage.getItem("realprofit_customers");
-    const storedProducts = localStorage.getItem("realprofit_products");
-    const storedServices = localStorage.getItem("realprofit_services");
-    const storedOrders = localStorage.getItem("realprofit_orders");
-    const storedOffers = localStorage.getItem("realprofit_offers");
-
-    if (storedCustomers) {
+    const loadData = () => {
       try {
-        const customers = JSON.parse(storedCustomers);
-        console.log('Loading customers from localStorage:', customers.length);
-        const migratedCustomers = customers.map((customer: Customer) => ({
-          ...customer,
-          accumulatedPointMoney: customer.accumulatedPointMoney || 0,
-          lastMLMDistribution: customer.lastMLMDistribution || null,
-          isPending: false // Ensure all existing customers are active
-        }));
-        setCustomers(migratedCustomers);
-      } catch (error) {
-        console.error('Error parsing customers from localStorage:', error);
-        setCustomers([]);
-      }
-    }
-    
-    if (storedProducts) {
-      const products = JSON.parse(storedProducts);
-      const migratedProducts = products.map((product: Product) => ({
-        ...product,
-        tierDiscounts: product.tierDiscounts || {
-          Bronze: 2,
-          Silver: 3,
-          Gold: 4,
-          Diamond: 5
+        const storedCustomers = localStorage.getItem("realprofit_customers");
+        const storedProducts = localStorage.getItem("realprofit_products");
+        const storedServices = localStorage.getItem("realprofit_services");
+        const storedOrders = localStorage.getItem("realprofit_orders");
+        const storedOffers = localStorage.getItem("realprofit_offers");
+
+        if (storedCustomers) {
+          const customers = JSON.parse(storedCustomers);
+          console.log('Loading customers from localStorage:', customers.length);
+          const migratedCustomers = customers.map((customer: Customer) => ({
+            ...customer,
+            accumulatedPointMoney: customer.accumulatedPointMoney || 0,
+            lastMLMDistribution: customer.lastMLMDistribution || null,
+            isPending: false // Ensure all existing customers are active
+          }));
+          setCustomers(migratedCustomers);
         }
-      }));
-      setProducts(migratedProducts);
-    }
-    if (storedServices) setServices(JSON.parse(storedServices));
-    if (storedOrders) {
-      const orders = JSON.parse(storedOrders);
-      const migratedOrders = orders.map((order: Order) => ({
-        ...order,
-        mlmDistributionLog: order.mlmDistributionLog || []
-      }));
-      setOrders(migratedOrders);
-    }
-    if (storedOffers) setOffers(JSON.parse(storedOffers));
+        
+        if (storedProducts) {
+          const products = JSON.parse(storedProducts);
+          const migratedProducts = products.map((product: Product) => ({
+            ...product,
+            tierDiscounts: product.tierDiscounts || {
+              Bronze: 2,
+              Silver: 3,
+              Gold: 4,
+              Diamond: 5
+            }
+          }));
+          setProducts(migratedProducts);
+        }
+        if (storedServices) setServices(JSON.parse(storedServices));
+        if (storedOrders) {
+          const orders = JSON.parse(storedOrders);
+          const migratedOrders = orders.map((order: Order) => ({
+            ...order,
+            mlmDistributionLog: order.mlmDistributionLog || []
+          }));
+          setOrders(migratedOrders);
+        }
+        if (storedOffers) setOffers(JSON.parse(storedOffers));
+      } catch (error) {
+        console.error('Error loading data from localStorage:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   // Save to localStorage whenever data changes - with immediate effect
   useEffect(() => {
-    console.log('Saving customers to localStorage:', customers.length);
-    localStorage.setItem("realprofit_customers", JSON.stringify(customers));
-  }, [customers]);
+    if (!isLoading) {
+      console.log('Saving customers to localStorage:', customers.length);
+      localStorage.setItem("realprofit_customers", JSON.stringify(customers));
+    }
+  }, [customers, isLoading]);
 
   useEffect(() => {
-    localStorage.setItem("realprofit_products", JSON.stringify(products));
-  }, [products]);
+    if (!isLoading) {
+      localStorage.setItem("realprofit_products", JSON.stringify(products));
+    }
+  }, [products, isLoading]);
 
   useEffect(() => {
-    localStorage.setItem("realprofit_services", JSON.stringify(services));
-  }, [services]);
+    if (!isLoading) {
+      localStorage.setItem("realprofit_services", JSON.stringify(services));
+    }
+  }, [services, isLoading]);
 
   useEffect(() => {
-    localStorage.setItem("realprofit_orders", JSON.stringify(orders));
-  }, [orders]);
+    if (!isLoading) {
+      localStorage.setItem("realprofit_orders", JSON.stringify(orders));
+    }
+  }, [orders, isLoading]);
 
   useEffect(() => {
-    localStorage.setItem("realprofit_offers", JSON.stringify(offers));
-  }, [offers]);
+    if (!isLoading) {
+      localStorage.setItem("realprofit_offers", JSON.stringify(offers));
+    }
+  }, [offers, isLoading]);
 
   // Calculate point money based on MRP vs Selling Price difference
   const calculatePointsForProduct = (mrp: number, sellingPrice: number): number => {
@@ -574,6 +591,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         services,
         orders,
         offers,
+        isLoading,
         addCustomer,
         updateCustomer,
         deleteCustomer,

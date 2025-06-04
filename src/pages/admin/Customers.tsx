@@ -20,10 +20,10 @@ import {
   SelectTrigger,
   SelectValue, 
 } from '@/components/ui/select';
-import { UserPlus, Search, Edit, RefreshCw } from 'lucide-react';
+import { UserPlus, Search, Edit, RefreshCw, Loader2 } from 'lucide-react';
 
 const Customers = () => {
-  const { customers } = useData();
+  const { customers, isLoading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTier, setFilterTier] = useState('all');
 
@@ -31,7 +31,8 @@ const Customers = () => {
   useEffect(() => {
     console.log('Customers data updated:', customers);
     console.log('Total customers:', customers.length);
-  }, [customers]);
+    console.log('Loading state:', isLoading);
+  }, [customers, isLoading]);
 
   // Filter customers based on search and filters
   const filteredCustomers = customers.filter((customer) => {
@@ -50,6 +51,17 @@ const Customers = () => {
     console.log('Stored customers in localStorage:', storedCustomers);
     window.location.reload();
   };
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading customers...</span>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
