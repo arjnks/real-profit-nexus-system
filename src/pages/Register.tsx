@@ -55,21 +55,43 @@ const Register = () => {
       // Get next available code
       const newCode = getNextAvailableCode();
       
-      // Add customer immediately (no approval needed)
-      console.log('Adding new customer:', {
-        name: formData.name,
-        phone: formData.phone,
-        code: newCode,
-        parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null
-      });
+      console.log('Registering new customer with code:', newCode);
+      console.log('Current customers before adding:', customers.length);
 
-      addCustomer({
+      // Create customer object
+      const newCustomer = {
         name: formData.name,
         phone: formData.phone,
         code: newCode,
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
         isReserved: false
-      });
+      };
+
+      console.log('Adding customer:', newCustomer);
+
+      // Add customer
+      addCustomer(newCustomer);
+
+      // Force update localStorage immediately
+      const currentCustomers = JSON.parse(localStorage.getItem("realprofit_customers") || "[]");
+      const customerWithId = {
+        ...newCustomer,
+        id: `cust_${Date.now()}`,
+        joinedDate: new Date().toISOString(),
+        points: 0,
+        miniCoins: 0,
+        tier: 'Bronze' as const,
+        totalSpent: 0,
+        monthlySpent: {},
+        accumulatedPointMoney: 0,
+        isPending: false,
+      };
+      
+      const updatedCustomers = [...currentCustomers, customerWithId];
+      localStorage.setItem("realprofit_customers", JSON.stringify(updatedCustomers));
+      
+      console.log('Customer saved to localStorage. Total customers now:', updatedCustomers.length);
+      console.log('localStorage data:', localStorage.getItem("realprofit_customers"));
 
       // Auto-login the customer
       const loginSuccess = await login(formData.phone, '');

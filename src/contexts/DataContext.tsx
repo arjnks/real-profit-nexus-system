@@ -136,14 +136,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedOffers = localStorage.getItem("realprofit_offers");
 
     if (storedCustomers) {
-      const customers = JSON.parse(storedCustomers);
-      const migratedCustomers = customers.map((customer: Customer) => ({
-        ...customer,
-        accumulatedPointMoney: customer.accumulatedPointMoney || 0,
-        lastMLMDistribution: customer.lastMLMDistribution || null,
-        isPending: false // Ensure all existing customers are active
-      }));
-      setCustomers(migratedCustomers);
+      try {
+        const customers = JSON.parse(storedCustomers);
+        console.log('Loading customers from localStorage:', customers.length);
+        const migratedCustomers = customers.map((customer: Customer) => ({
+          ...customer,
+          accumulatedPointMoney: customer.accumulatedPointMoney || 0,
+          lastMLMDistribution: customer.lastMLMDistribution || null,
+          isPending: false // Ensure all existing customers are active
+        }));
+        setCustomers(migratedCustomers);
+      } catch (error) {
+        console.error('Error parsing customers from localStorage:', error);
+        setCustomers([]);
+      }
     }
     
     if (storedProducts) {
@@ -171,8 +177,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedOffers) setOffers(JSON.parse(storedOffers));
   }, []);
 
-  // Save to localStorage whenever data changes
+  // Save to localStorage whenever data changes - with immediate effect
   useEffect(() => {
+    console.log('Saving customers to localStorage:', customers.length);
     localStorage.setItem("realprofit_customers", JSON.stringify(customers));
   }, [customers]);
 
@@ -378,7 +385,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isPending: false, // Immediately active
     };
     
-    setCustomers(prev => [...prev, newCustomer]);
+    console.log('Adding customer to state:', newCustomer);
+    setCustomers(prev => {
+      const newCustomers = [...prev, newCustomer];
+      console.log('New customers array length:', newCustomers.length);
+      return newCustomers;
+    });
   };
 
   // Update an existing customer
