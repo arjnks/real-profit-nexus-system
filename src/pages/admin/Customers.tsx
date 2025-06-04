@@ -20,16 +20,17 @@ import {
   SelectTrigger,
   SelectValue, 
 } from '@/components/ui/select';
-import { UserPlus, Search, Edit } from 'lucide-react';
+import { UserPlus, Search, Edit, RefreshCw } from 'lucide-react';
 
 const Customers = () => {
   const { customers } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTier, setFilterTier] = useState('all');
 
-  // Force re-render when customers data changes
+  // Force re-render when customers data changes and add debugging
   useEffect(() => {
-    // This effect will run whenever customers array changes
+    console.log('Customers data updated:', customers);
+    console.log('Total customers:', customers.length);
   }, [customers]);
 
   // Filter customers based on search and filters
@@ -43,16 +44,32 @@ const Customers = () => {
     return matchesSearch && matchesTier;
   });
 
+  const handleRefresh = () => {
+    // Force a re-render by checking localStorage directly
+    const storedCustomers = localStorage.getItem("realprofit_customers");
+    console.log('Stored customers in localStorage:', storedCustomers);
+    window.location.reload();
+  };
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
-        <Button asChild>
-          <Link to="/admin/customers/add">
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add Customer
-          </Link>
-        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
+          <p className="text-sm text-muted-foreground">Total: {customers.length} customers</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button asChild>
+            <Link to="/admin/customers/add">
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Customer
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -139,7 +156,7 @@ const Customers = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
-                  No customers found matching your filters
+                  {customers.length === 0 ? 'No customers registered yet' : 'No customers found matching your filters'}
                 </TableCell>
               </TableRow>
             )}

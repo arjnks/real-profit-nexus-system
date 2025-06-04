@@ -1,153 +1,187 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue, 
-} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { Loader2, User, Phone, UserCheck } from 'lucide-react';
 
 const Register = () => {
-  const navigate = useNavigate();
-  const { customers, addCustomer, getNextAvailableCode } = useData();
-  
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [parentCode, setParentCode] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    parentCode: ''
+  });
   const [isLoading, setIsLoading] = useState(false);
-
-  // Get available parent codes (active customers only)
-  const availableParents = customers.filter(customer => !customer.isPending);
+  const { login } = useAuth();
+  const { addCustomer, customers, getNextAvailableCode } = useData();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
-      // Validate parent code if provided
-      if (parentCode && !availableParents.some(c => c.code === parentCode)) {
-        toast.error('Invalid parent code selected');
+      // Validate phone number
+      if (formData.phone.length < 10) {
+        toast.error('Please enter a valid phone number');
         setIsLoading(false);
         return;
       }
-      
+
       // Check if phone number already exists
-      const existingCustomer = customers.find(c => c.phone === phone);
+      const existingCustomer = customers.find(c => c.phone === formData.phone);
       if (existingCustomer) {
         toast.error('Phone number already registered');
         setIsLoading(false);
         return;
       }
+
+      // Validate parent code if provided
+      if (formData.parentCode && formData.parentCode !== 'A100') {
+        const parentExists = customers.find(c => c.code === formData.parentCode);
+        if (!parentExists) {
+          toast.error('Invalid parent code');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Get next available code
+      const newCode = getNextAvailableCode();
       
-      // Generate next available code
-      const customerCode = getNextAvailableCode();
-      
-      // Add customer as active (no pending status)
+      // Add customer immediately (no approval needed)
+      console.log('Adding new customer:', {
+        name: formData.name,
+        phone: formData.phone,
+        code: newCode,
+        parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null
+      });
+
       addCustomer({
-        name,
-        phone,
-        code: customerCode,
-        parentCode: parentCode || 'A100', // Default to admin if no parent selected
-        isReserved: false,
-        isPending: false, // Customer is immediately active
+        name: formData.name,
+        phone: formData.phone,
+        code: newCode,
+        parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
+        isReserved: false
       });
+
+      // Auto-login the customer
+      const loginSuccess = await login(formData.phone, '');
       
-      toast.success('Registration successful!', {
-        description: 'You can now login with your phone number.',
-      });
-      
-      navigate('/login');
+      if (loginSuccess) {
+        toast.success(`Registration successful! Your customer code is ${newCode}`);
+        navigate('/dashboard');
+      } else {
+        toast.error('Registration successful but login failed. Please try logging in.');
+        navigate('/login');
+      }
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error('Registration failed. Please try again.');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
   return (
     <Layout>
-      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-realprofit-blue">
-              Join Real Profit
-            </CardTitle>
-            <CardDescription>
-              Create your account to start shopping and earning rewards
-            </CardDescription>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
+            <p className="text-sm text-muted-foreground text-center">
+              Join Real Profit and start earning rewards
+            </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="w-full"
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  className="w-full"
-                />
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="parentCode">Referral Code (Optional)</Label>
-                <Select value={parentCode} onValueChange={setParentCode}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select referral code (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableParents.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.code}>
-                        {customer.code} - {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">
-                  Enter a referral code if you were referred by an existing member
+                <Label htmlFor="parentCode">Parent Code (Optional)</Label>
+                <div className="relative">
+                  <UserCheck className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="parentCode"
+                    name="parentCode"
+                    type="text"
+                    placeholder="Enter parent code (optional)"
+                    value={formData.parentCode}
+                    onChange={handleInputChange}
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  If you were referred by someone, enter their customer code
                 </p>
               </div>
-              
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating Account...' : 'Create Account'}
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
               </Button>
             </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link to="/login" className="font-medium text-realprofit-blue hover:underline">
+                  Sign in
+                </Link>
+              </p>
+            </div>
           </CardContent>
-          <CardFooter className="text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="text-realprofit-blue hover:underline">
-                Sign in here
-              </Link>
-            </p>
-          </CardFooter>
         </Card>
       </div>
     </Layout>
