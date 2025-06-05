@@ -8,16 +8,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Loader2, User, Phone, UserCheck } from 'lucide-react';
+import { Loader2, User, Phone, Lock, UserCheck } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    password: '',
+    confirmPassword: '',
     parentCode: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { login } = useAuth();
   const { addCustomer, customers, getNextAvailableCode } = useData();
   const navigate = useNavigate();
@@ -25,11 +29,31 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
 
     try {
+      // Validate form data
+      if (!formData.name || !formData.phone || !formData.password) {
+        setError('Please fill in all required fields');
+        setIsLoading(false);
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        setIsLoading(false);
+        return;
+      }
+
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long');
+        setIsLoading(false);
+        return;
+      }
+
       // Validate phone number
       if (formData.phone.length < 10) {
-        toast.error('Please enter a valid phone number');
+        setError('Please enter a valid phone number');
         setIsLoading(false);
         return;
       }
@@ -37,7 +61,7 @@ const Register = () => {
       // Check if phone number already exists
       const existingCustomer = customers.find(c => c.phone === formData.phone);
       if (existingCustomer) {
-        toast.error('Phone number already registered');
+        setError('Phone number already registered');
         setIsLoading(false);
         return;
       }
@@ -46,11 +70,16 @@ const Register = () => {
       if (formData.parentCode && formData.parentCode !== 'A100') {
         const parentExists = customers.find(c => c.code === formData.parentCode);
         if (!parentExists) {
-          toast.error('Invalid parent code');
+          setError('Invalid parent code');
           setIsLoading(false);
           return;
         }
       }
+
+      // Hash password
+      const bcrypt = await import('bcryptjs');
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(formData.password, saltRounds);
 
       // Get next available code
       const newCode = getNextAvailableCode();
@@ -58,29 +87,34 @@ const Register = () => {
       console.log('Registering new customer with code:', newCode);
 
       // Create and add customer
-      addCustomer({
+      const newCustomer = await addCustomer({
         name: formData.name,
         phone: formData.phone,
         code: newCode,
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
-        isReserved: false
+        isReserved: false,
+        passwordHash: passwordHash
       });
 
-      console.log('Customer added successfully');
+      if (newCustomer) {
+        console.log('Customer added successfully');
 
-      // Auto-login the customer
-      const loginSuccess = await login(formData.phone, '');
-      
-      if (loginSuccess) {
-        toast.success(`Registration successful! Your customer code is ${newCode}`);
-        navigate('/dashboard');
+        // Auto-login the customer
+        const loginResult = await login(formData.phone, formData.password, false);
+        
+        if (loginResult.success) {
+          toast.success(`Registration successful! Your customer code is ${newCode}`);
+          navigate('/');
+        } else {
+          toast.success(`Registration successful! Your customer code is ${newCode}. Please login.`);
+          navigate('/login');
+        }
       } else {
-        toast.error('Registration successful but login failed. Please try logging in.');
-        navigate('/login');
+        setError('Registration failed. Please try again.');
       }
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('Registration failed. Please try again.');
+      setError('Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +139,12 @@ const Register = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
@@ -132,6 +172,40 @@ const Register = () => {
                     type="tel"
                     placeholder="Enter your phone number"
                     value={formData.phone}
+                    onChange={handleInputChange}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
                     onChange={handleInputChange}
                     className="pl-10"
                     required

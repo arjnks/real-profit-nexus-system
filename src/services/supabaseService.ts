@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Product, Service, Order, Offer } from '@/contexts/DataContext';
 
@@ -26,6 +25,7 @@ export class SupabaseService {
       parent_code: customer.parentCode,
       is_reserved: customer.isReserved || false,
       is_pending: customer.isPending || false,
+      password_hash: customer.passwordHash,
     };
 
     const { data, error } = await supabase
@@ -70,6 +70,38 @@ export class SupabaseService {
     }
 
     return true;
+  }
+
+  // Customer authentication
+  async authenticateCustomer(phone: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: 'Invalid phone number or password' };
+    }
+
+    // For now, we'll use simple password comparison
+    // In production, you'd use bcrypt to compare hashed passwords
+    const bcrypt = await import('bcryptjs');
+    const isValidPassword = await bcrypt.compare(password, data.password_hash);
+
+    if (!isValidPassword) {
+      return { success: false, error: 'Invalid phone number or password' };
+    }
+
+    return { 
+      success: true, 
+      user: { 
+        id: data.id, 
+        phone: data.phone, 
+        name: data.name, 
+        role: 'customer' 
+      } 
+    };
   }
 
   // Product operations
@@ -262,6 +294,7 @@ export class SupabaseService {
       monthlySpent: data.monthly_spent || {},
       accumulatedPointMoney: parseFloat(data.accumulated_point_money),
       lastMLMDistribution: data.last_mlm_distribution,
+      passwordHash: data.password_hash,
     };
   }
 
@@ -281,6 +314,7 @@ export class SupabaseService {
     if (customer.monthlySpent !== undefined) dbCustomer.monthly_spent = customer.monthlySpent;
     if (customer.accumulatedPointMoney !== undefined) dbCustomer.accumulated_point_money = customer.accumulatedPointMoney;
     if (customer.lastMLMDistribution !== undefined) dbCustomer.last_mlm_distribution = customer.lastMLMDistribution;
+    if (customer.passwordHash !== undefined) dbCustomer.password_hash = customer.passwordHash;
     
     return dbCustomer;
   }

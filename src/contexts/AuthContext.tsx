@@ -1,20 +1,19 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 
 interface AuthUser {
   id: string;
-  username: string;
+  username?: string;
+  phone?: string;
   name: string;
   role: string;
-  phone?: string;
-  code?: string;
-  tier?: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (identifier: string, password: string, isAdmin?: boolean) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -35,26 +34,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for existing session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('admin_user');
+    const storedUser = localStorage.getItem('auth_user');
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error('Error parsing stored user:', error);
-        localStorage.removeItem('admin_user');
+        localStorage.removeItem('auth_user');
       }
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (identifier: string, password: string, isAdmin: boolean = false) => {
     setIsLoading(true);
     try {
-      const result = await supabaseService.authenticateAdmin(username, password);
+      let result;
+      
+      if (isAdmin) {
+        // Admin login using username
+        result = await supabaseService.authenticateAdmin(identifier, password);
+      } else {
+        // Customer login using phone
+        result = await supabaseService.authenticateCustomer(identifier, password);
+      }
       
       if (result.success && result.user) {
         setUser(result.user);
-        localStorage.setItem('admin_user', JSON.stringify(result.user));
+        localStorage.setItem('auth_user', JSON.stringify(result.user));
         return { success: true };
       } else {
         return { success: false, error: result.error || 'Authentication failed' };
@@ -69,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('admin_user');
+    localStorage.removeItem('auth_user');
   };
 
   const isAuthenticated = !!user;
