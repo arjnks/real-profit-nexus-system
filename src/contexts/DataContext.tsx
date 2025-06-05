@@ -93,7 +93,7 @@ interface DataContextType {
   orders: Order[];
   offers: Offer[];
   isLoading: boolean;
-  addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => Promise<void>;
+  addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => Promise<Customer | null>;
   updateCustomer: (id: string, customerData: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
   addProduct: (product: Omit<Product, "id">) => Promise<void>;
@@ -317,14 +317,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Add a new customer
-  const addCustomer = async (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => {
+  const addCustomer = async (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">): Promise<Customer | null> => {
     console.log('Adding customer:', customer);
     const newCustomer = await supabaseService.addCustomer(customer);
     
     if (newCustomer) {
       setCustomers(prev => [...prev, newCustomer]);
       console.log('Customer added successfully');
+      return newCustomer;
     }
+    return null;
   };
 
   // Update an existing customer

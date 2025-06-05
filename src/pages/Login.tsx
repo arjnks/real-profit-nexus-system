@@ -222,12 +222,6 @@ const Login = () => {
                     disabled={isSubmitting}
                   />
                 </div>
-
-                <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-                  <strong>Default Admin:</strong><br />
-                  Username: admin123<br />
-                  Password: admin123
-                </div>
               </CardContent>
               <CardFooter>
                 <Button 

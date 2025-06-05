@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,30 +87,27 @@ const Register = () => {
       console.log('Registering new customer with code:', newCode);
 
       // Create and add customer
-      const newCustomer = await addCustomer({
+      await addCustomer({
         name: formData.name,
         phone: formData.phone,
         code: newCode,
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
         isReserved: false,
+        isPending: false,
         passwordHash: passwordHash
       });
 
-      if (newCustomer) {
-        console.log('Customer added successfully');
+      console.log('Customer added successfully');
 
-        // Auto-login the customer
-        const loginResult = await login(formData.phone, formData.password, false);
-        
-        if (loginResult.success) {
-          toast.success(`Registration successful! Your customer code is ${newCode}`);
-          navigate('/');
-        } else {
-          toast.success(`Registration successful! Your customer code is ${newCode}. Please login.`);
-          navigate('/login');
-        }
+      // Auto-login the customer
+      const loginResult = await login(formData.phone, formData.password, false);
+      
+      if (loginResult.success) {
+        toast.success(`Registration successful! Your customer code is ${newCode}`);
+        navigate('/');
       } else {
-        setError('Registration failed. Please try again.');
+        toast.success(`Registration successful! Your customer code is ${newCode}. Please login.`);
+        navigate('/login');
       }
     } catch (error) {
       console.error('Registration error:', error);
