@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -10,11 +11,16 @@ import { Search, ShoppingCart, Filter, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Shop = () => {
-  const { products, offers, calculatePointsForProduct } = useData();
+  const { products, offers, customers, calculatePointsForProduct } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<{ product: any; quantity: number }[]>([]);
+
+  // Get customer data if user is a customer
+  const customer = user?.role === 'customer' && user?.id 
+    ? customers.find(c => c.id === user.id) 
+    : null;
 
   // Filter products based on search term
   const filteredProducts = products.filter(product =>
@@ -23,7 +29,7 @@ const Shop = () => {
   );
 
   // Get relevant offers for the current user's tier
-  const userOffers = user?.tier
+  const userOffers = customer?.tier
     ? offers.filter(offer => {
         const tierRanking = {
           Bronze: 1,
@@ -32,7 +38,7 @@ const Shop = () => {
           Platinum: 4,
           Diamond: 5
         };
-        const userRanking = tierRanking[user.tier as keyof typeof tierRanking];
+        const userRanking = tierRanking[customer.tier as keyof typeof tierRanking];
         const offerRanking = tierRanking[offer.minTier as keyof typeof tierRanking];
         return userRanking >= offerRanking;
       })

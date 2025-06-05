@@ -52,6 +52,7 @@ const Checkout = () => {
     );
   }
 
+  // Get customer data from DataContext
   const customer = customers.find(c => c.id === user.id);
   const subtotal = cart.reduce((sum: number, item: any) => sum + (item.product.price * item.quantity), 0);
   
@@ -91,8 +92,8 @@ const Checkout = () => {
       const orderId = addOrder({
         customerId: user.id,
         customerName: customer?.name || user.name || '',
-        customerPhone: customer?.phone || user.phone || '',
-        customerCode: customer?.code || user.code || '',
+        customerPhone: customer?.phone || '',
+        customerCode: customer?.code || '',
         products: orderProducts,
         totalAmount: subtotal,
         pointsUsed: pointsDiscount,

@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu,
@@ -14,12 +15,18 @@ import { User, LogOut, Settings, ShoppingCart } from 'lucide-react';
 
 const Header = () => {
   const { user, logout } = useAuth();
+  const { customers } = useData();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
+  // Get customer data if user is a customer
+  const customer = user?.role === 'customer' && user?.id 
+    ? customers.find(c => c.id === user.id) 
+    : null;
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -73,11 +80,11 @@ const Header = () => {
                   <DropdownMenuContent align="end" className="w-56 bg-white">
                     <div className="px-3 py-2">
                       <p className="text-sm font-medium">{user.name || user.username}</p>
-                      {user.role === 'customer' && user.code && (
-                        <p className="text-xs text-gray-500">Code: {user.code}</p>
+                      {user.role === 'customer' && customer?.code && (
+                        <p className="text-xs text-gray-500">Code: {customer.code}</p>
                       )}
-                      {user.role === 'customer' && user.tier && (
-                        <p className="text-xs text-gray-500">Tier: {user.tier}</p>
+                      {user.role === 'customer' && customer?.tier && (
+                        <p className="text-xs text-gray-500">Tier: {customer.tier}</p>
                       )}
                     </div>
                     <DropdownMenuSeparator />

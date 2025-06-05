@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 
@@ -7,6 +6,9 @@ interface AuthUser {
   username: string;
   name: string;
   role: string;
+  phone?: string;
+  code?: string;
+  tier?: string;
 }
 
 interface AuthContextType {
