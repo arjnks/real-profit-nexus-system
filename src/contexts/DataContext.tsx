@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabaseService } from '@/services/supabaseService';
 
@@ -102,8 +103,8 @@ interface DataContextType {
   addService: (service: Omit<Service, "id">) => Promise<void>;
   updateService: (id: string, serviceData: Partial<Service>) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
-  addOrder: (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => string;
-  updateOrder: (id: string, orderData: Partial<Order>) => void;
+  addOrder: (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => Promise<string>;
+  updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
   getNextAvailableCode: () => string;
   awardPoints: (customerId: string, pointMoney: number, orderId?: string) => void;
   reserveCode: (code: string, name: string, phone: string) => void;
@@ -138,17 +139,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Loading data from Supabase...');
       
-      const [customersData, productsData, servicesData] = await Promise.all([
+      const [customersData, productsData, servicesData, ordersData] = await Promise.all([
         supabaseService.getCustomers(),
         supabaseService.getProducts(),
         supabaseService.getServices(),
+        supabaseService.getOrders(),
       ]);
 
-      console.log('Data loaded:', { customers: customersData.length, products: productsData.length, services: servicesData.length });
+      console.log('Data loaded:', { 
+        customers: customersData.length, 
+        products: productsData.length, 
+        services: servicesData.length,
+        orders: ordersData.length
+      });
 
       setCustomers(customersData);
       setProducts(productsData);
       setServices(servicesData);
+      setOrders(ordersData);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -436,10 +444,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Add a new order (keeping the same localStorage logic for now)
-  const addOrder = (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => {
-    const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
-    
+  // Add a new order - now using database
+  const addOrder = async (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<string> => {
     let totalPointMoney = 0;
     order.products.forEach(product => {
       const productData = products.find(p => p.id === product.productId);
@@ -449,70 +455,74 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
     
-    const newOrder: Order = {
+    const orderWithPoints = {
       ...order,
-      id: orderId,
-      orderDate: new Date().toISOString(),
       points: totalPointMoney,
-      isPendingApproval: true,
-      isPointsAwarded: false,
-      deliveryApproved: false,
-      pointsApproved: false,
       mlmDistributionLog: [],
     };
     
-    setOrders(prev => [...prev, newOrder]);
-    return orderId;
+    const newOrder = await supabaseService.addOrder(orderWithPoints);
+    
+    if (newOrder) {
+      setOrders(prev => [...prev, newOrder]);
+      return newOrder.id;
+    }
+    
+    throw new Error('Failed to create order');
   };
 
-  // Update an existing order (keeping the same localStorage logic for now)
-  const updateOrder = (id: string, orderData: Partial<Order>) => {
-    setOrders(prev =>
-      prev.map(order => {
-        if (order.id === id) {
-          const updated = { ...order, ...orderData };
-          
-          // If order status is being changed to 'confirmed' and points haven't been awarded yet
-          if (orderData.status === 'confirmed' && !order.isPointsAwarded && order.customerId) {
-            console.log(`Order ${id} confirmed, awarding points to customer ${order.customerId}`);
+  // Update an existing order - now using database
+  const updateOrder = async (id: string, orderData: Partial<Order>) => {
+    const success = await supabaseService.updateOrder(id, orderData);
+    
+    if (success) {
+      setOrders(prev =>
+        prev.map(order => {
+          if (order.id === id) {
+            const updated = { ...order, ...orderData };
             
-            // Award points with order ID for tracking MLM distribution
-            awardPoints(order.customerId, order.points, id);
+            // If order status is being changed to 'confirmed' and points haven't been awarded yet
+            if (orderData.status === 'confirmed' && !order.isPointsAwarded && order.customerId) {
+              console.log(`Order ${id} confirmed, awarding points to customer ${order.customerId}`);
+              
+              // Award points with order ID for tracking MLM distribution
+              awardPoints(order.customerId, order.points, id);
+              
+              updated.isPointsAwarded = true;
+              updated.deliveryApproved = false;
+              
+              // Update customer's total spent
+              const currentMonth = new Date().toISOString().substring(0, 7);
+              setCustomers(prevCustomers =>
+                prevCustomers.map(customer => {
+                  if (customer.id === order.customerId) {
+                    const updatedCustomer = {
+                      ...customer,
+                      totalSpent: customer.totalSpent + order.amountPaid,
+                      monthlySpent: {
+                        ...customer.monthlySpent,
+                        [currentMonth]: (customer.monthlySpent[currentMonth] || 0) + order.amountPaid
+                      }
+                    };
+                    // Update in database
+                    supabaseService.updateCustomer(customer.id, updatedCustomer);
+                    return updatedCustomer;
+                  }
+                  return customer;
+                })
+              );
+            }
             
-            updated.isPointsAwarded = true;
-            updated.deliveryApproved = false;
+            if (orderData.status === 'delivered') {
+              updated.deliveryApproved = true;
+            }
             
-            // Update customer's total spent
-            const currentMonth = new Date().toISOString().substring(0, 7);
-            setCustomers(prevCustomers =>
-              prevCustomers.map(customer => {
-                if (customer.id === order.customerId) {
-                  const updatedCustomer = {
-                    ...customer,
-                    totalSpent: customer.totalSpent + order.amountPaid,
-                    monthlySpent: {
-                      ...customer.monthlySpent,
-                      [currentMonth]: (customer.monthlySpent[currentMonth] || 0) + order.amountPaid
-                    }
-                  };
-                  // Update in database
-                  supabaseService.updateCustomer(customer.id, updatedCustomer);
-                  return updatedCustomer;
-                }
-                return customer;
-              })
-            );
+            return updated;
           }
-          
-          if (orderData.status === 'delivered') {
-            updated.deliveryApproved = true;
-          }
-          
-          return updated;
-        }
-        return order;
-      })
-    );
+          return order;
+        })
+      );
+    }
   };
 
   return (

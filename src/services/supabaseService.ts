@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Product, Service, Order, Offer } from '@/contexts/DataContext';
 
@@ -244,6 +245,90 @@ export class SupabaseService {
     return true;
   }
 
+  // Order operations
+  async getOrders(): Promise<Order[]> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching orders:', error);
+      return [];
+    }
+    
+    return data.map(this.mapOrderFromDB);
+  }
+
+  async addOrder(order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<Order | null> {
+    const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
+    
+    const dbOrder = {
+      id: orderId,
+      customer_id: order.customerId,
+      customer_name: order.customerName,
+      customer_phone: order.customerPhone,
+      customer_code: order.customerCode,
+      products: order.products,
+      total_amount: order.totalAmount,
+      points_used: order.pointsUsed,
+      amount_paid: order.amountPaid,
+      points: order.points || 0,
+      status: order.status,
+      payment_method: order.paymentMethod,
+      pincode: order.pincode,
+      is_pending_approval: true,
+      is_points_awarded: false,
+      delivery_approved: false,
+      points_approved: false,
+      used_points_discount: order.usedPointsDiscount,
+      mlm_distribution_log: order.mlmDistributionLog || [],
+    };
+
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([dbOrder])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding order:', error);
+      return null;
+    }
+
+    return this.mapOrderFromDB(data);
+  }
+
+  async updateOrder(id: string, orderData: Partial<Order>): Promise<boolean> {
+    const dbOrder = this.mapOrderToDB(orderData);
+    
+    const { error } = await supabase
+      .from('orders')
+      .update(dbOrder)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating order:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  async deleteOrder(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting order:', error);
+      return false;
+    }
+
+    return true;
+  }
+
   // Admin authentication
   async authenticateAdmin(username: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
     try {
@@ -394,6 +479,56 @@ export class SupabaseService {
     if (service.isActive !== undefined) dbService.is_active = service.isActive;
     
     return dbService;
+  }
+
+  private mapOrderFromDB(data: any): Order {
+    return {
+      id: data.id,
+      customerId: data.customer_id,
+      customerName: data.customer_name,
+      customerPhone: data.customer_phone,
+      customerCode: data.customer_code,
+      products: data.products,
+      totalAmount: parseFloat(data.total_amount),
+      pointsUsed: data.points_used,
+      amountPaid: parseFloat(data.amount_paid),
+      points: data.points,
+      status: data.status,
+      paymentMethod: data.payment_method,
+      pincode: data.pincode,
+      orderDate: data.order_date,
+      isPendingApproval: data.is_pending_approval,
+      isPointsAwarded: data.is_points_awarded,
+      deliveryApproved: data.delivery_approved,
+      pointsApproved: data.points_approved,
+      usedPointsDiscount: data.used_points_discount,
+      mlmDistributionLog: data.mlm_distribution_log,
+    };
+  }
+
+  private mapOrderToDB(order: Partial<Order>): any {
+    const dbOrder: any = {};
+    
+    if (order.customerId !== undefined) dbOrder.customer_id = order.customerId;
+    if (order.customerName !== undefined) dbOrder.customer_name = order.customerName;
+    if (order.customerPhone !== undefined) dbOrder.customer_phone = order.customerPhone;
+    if (order.customerCode !== undefined) dbOrder.customer_code = order.customerCode;
+    if (order.products !== undefined) dbOrder.products = order.products;
+    if (order.totalAmount !== undefined) dbOrder.total_amount = order.totalAmount;
+    if (order.pointsUsed !== undefined) dbOrder.points_used = order.pointsUsed;
+    if (order.amountPaid !== undefined) dbOrder.amount_paid = order.amountPaid;
+    if (order.points !== undefined) dbOrder.points = order.points;
+    if (order.status !== undefined) dbOrder.status = order.status;
+    if (order.paymentMethod !== undefined) dbOrder.payment_method = order.paymentMethod;
+    if (order.pincode !== undefined) dbOrder.pincode = order.pincode;
+    if (order.isPendingApproval !== undefined) dbOrder.is_pending_approval = order.isPendingApproval;
+    if (order.isPointsAwarded !== undefined) dbOrder.is_points_awarded = order.isPointsAwarded;
+    if (order.deliveryApproved !== undefined) dbOrder.delivery_approved = order.deliveryApproved;
+    if (order.pointsApproved !== undefined) dbOrder.points_approved = order.pointsApproved;
+    if (order.usedPointsDiscount !== undefined) dbOrder.used_points_discount = order.usedPointsDiscount;
+    if (order.mlmDistributionLog !== undefined) dbOrder.mlm_distribution_log = order.mlmDistributionLog;
+    
+    return dbOrder;
   }
 }
 
