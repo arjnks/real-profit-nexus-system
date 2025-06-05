@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ const ImageUploader = ({ value, onChange, className, label = "Image" }: ImageUpl
   const [isUploading, setIsUploading] = useState(false);
   const [useUrl, setUseUrl] = useState(!!value && !value.startsWith('data:'));
   const [previewUrl, setPreviewUrl] = useState<string>(value);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -46,10 +47,19 @@ const ImageUploader = ({ value, onChange, className, label = "Image" }: ImageUpl
     setPreviewUrl(url);
   };
 
-  const toggleMode = () => {
-    setUseUrl(!useUrl);
+  const handleUploadClick = () => {
+    if (useUrl) {
+      setUseUrl(false);
+      onChange('');
+      setPreviewUrl('');
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleUrlModeClick = () => {
     if (!useUrl) {
-      // Switching to URL mode
+      setUseUrl(true);
       onChange('');
       setPreviewUrl('');
     }
@@ -64,7 +74,7 @@ const ImageUploader = ({ value, onChange, className, label = "Image" }: ImageUpl
           type="button" 
           variant={useUrl ? "outline" : "default"} 
           size="sm"
-          onClick={() => !useUrl && toggleMode()}
+          onClick={handleUploadClick}
         >
           <Upload className="w-4 h-4 mr-2" />
           Upload
@@ -73,7 +83,7 @@ const ImageUploader = ({ value, onChange, className, label = "Image" }: ImageUpl
           type="button" 
           variant={useUrl ? "default" : "outline"} 
           size="sm"
-          onClick={() => useUrl && toggleMode()}
+          onClick={handleUrlModeClick}
         >
           <LinkIcon className="w-4 h-4 mr-2" />
           URL
@@ -90,11 +100,12 @@ const ImageUploader = ({ value, onChange, className, label = "Image" }: ImageUpl
       ) : (
         <div className="space-y-2">
           <Input
+            ref={fileInputRef}
             id="image-upload"
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="cursor-pointer"
+            className="hidden"
           />
           {isUploading && (
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
