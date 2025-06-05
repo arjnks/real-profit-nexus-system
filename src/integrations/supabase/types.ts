@@ -53,6 +53,7 @@ export type Database = {
           monthly_spent: Json
           name: string
           parent_code: string | null
+          password_hash: string | null
           phone: string
           points: number
           tier: string
@@ -72,6 +73,7 @@ export type Database = {
           monthly_spent?: Json
           name: string
           parent_code?: string | null
+          password_hash?: string | null
           phone: string
           points?: number
           tier?: string
@@ -91,6 +93,7 @@ export type Database = {
           monthly_spent?: Json
           name?: string
           parent_code?: string | null
+          password_hash?: string | null
           phone?: string
           points?: number
           tier?: string

@@ -9,15 +9,16 @@ export type Customer = {
   code: string;
   points: number;
   miniCoins: number;
-  tier: "Bronze" | "Silver" | "Gold" | "Diamond";
+  tier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond';
   parentCode: string | null;
   joinedDate: string;
-  isReserved?: boolean;
-  isPending?: boolean;
+  isReserved: boolean;
+  isPending: boolean;
   totalSpent: number;
-  monthlySpent: { [month: string]: number };
+  monthlySpent: Record<string, number>;
   accumulatedPointMoney: number;
-  lastMLMDistribution?: string; // Track last MLM distribution
+  lastMLMDistribution?: string;
+  passwordHash?: string;
 };
 
 export type Product = {
