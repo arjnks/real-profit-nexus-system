@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabaseService } from '@/services/supabaseService';
 
 // Types
 export type Customer = {
@@ -91,15 +92,15 @@ interface DataContextType {
   orders: Order[];
   offers: Offer[];
   isLoading: boolean;
-  addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => void;
-  updateCustomer: (id: string, customerData: Partial<Customer>) => void;
-  deleteCustomer: (id: string) => void;
-  addProduct: (product: Omit<Product, "id">) => void;
-  updateProduct: (id: string, productData: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  addService: (service: Omit<Service, "id">) => void;
-  updateService: (id: string, serviceData: Partial<Service>) => void;
-  deleteService: (id: string) => void;
+  addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => Promise<void>;
+  updateCustomer: (id: string, customerData: Partial<Customer>) => Promise<void>;
+  deleteCustomer: (id: string) => Promise<void>;
+  addProduct: (product: Omit<Product, "id">) => Promise<void>;
+  updateProduct: (id: string, productData: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  addService: (service: Omit<Service, "id">) => Promise<void>;
+  updateService: (id: string, serviceData: Partial<Service>) => Promise<void>;
+  deleteService: (id: string) => Promise<void>;
   addOrder: (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => string;
   updateOrder: (id: string, orderData: Partial<Order>) => void;
   getNextAvailableCode: () => string;
@@ -109,6 +110,7 @@ interface DataContextType {
   calculatePointsForProduct: (mrp: number, sellingPrice: number) => number;
   moveCustomerInMLM: (customerId: string, newParentCode: string | null) => void;
   getMLMPath: (customerCode: string) => string[];
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -129,92 +131,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load data from localStorage on mount
+  // Load data from Supabase on mount
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      console.log('Loading data from Supabase...');
+      
+      const [customersData, productsData, servicesData] = await Promise.all([
+        supabaseService.getCustomers(),
+        supabaseService.getProducts(),
+        supabaseService.getServices(),
+      ]);
+
+      console.log('Data loaded:', { customers: customersData.length, products: productsData.length, services: servicesData.length });
+
+      setCustomers(customersData);
+      setProducts(productsData);
+      setServices(servicesData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = () => {
-      try {
-        const storedCustomers = localStorage.getItem("realprofit_customers");
-        const storedProducts = localStorage.getItem("realprofit_products");
-        const storedServices = localStorage.getItem("realprofit_services");
-        const storedOrders = localStorage.getItem("realprofit_orders");
-        const storedOffers = localStorage.getItem("realprofit_offers");
-
-        if (storedCustomers) {
-          const customers = JSON.parse(storedCustomers);
-          console.log('Loading customers from localStorage:', customers.length);
-          const migratedCustomers = customers.map((customer: Customer) => ({
-            ...customer,
-            accumulatedPointMoney: customer.accumulatedPointMoney || 0,
-            lastMLMDistribution: customer.lastMLMDistribution || null,
-            isPending: false // Ensure all existing customers are active
-          }));
-          setCustomers(migratedCustomers);
-        }
-        
-        if (storedProducts) {
-          const products = JSON.parse(storedProducts);
-          const migratedProducts = products.map((product: Product) => ({
-            ...product,
-            tierDiscounts: product.tierDiscounts || {
-              Bronze: 2,
-              Silver: 3,
-              Gold: 4,
-              Diamond: 5
-            }
-          }));
-          setProducts(migratedProducts);
-        }
-        if (storedServices) setServices(JSON.parse(storedServices));
-        if (storedOrders) {
-          const orders = JSON.parse(storedOrders);
-          const migratedOrders = orders.map((order: Order) => ({
-            ...order,
-            mlmDistributionLog: order.mlmDistributionLog || []
-          }));
-          setOrders(migratedOrders);
-        }
-        if (storedOffers) setOffers(JSON.parse(storedOffers));
-      } catch (error) {
-        console.error('Error loading data from localStorage:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadData();
   }, []);
 
-  // Save to localStorage whenever data changes - with immediate effect
-  useEffect(() => {
-    if (!isLoading) {
-      console.log('Saving customers to localStorage:', customers.length);
-      localStorage.setItem("realprofit_customers", JSON.stringify(customers));
-    }
-  }, [customers, isLoading]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem("realprofit_products", JSON.stringify(products));
-    }
-  }, [products, isLoading]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem("realprofit_services", JSON.stringify(services));
-    }
-  }, [services, isLoading]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem("realprofit_orders", JSON.stringify(orders));
-    }
-  }, [orders, isLoading]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem("realprofit_offers", JSON.stringify(offers));
-    }
-  }, [offers, isLoading]);
+  const refreshData = async () => {
+    await loadData();
+  };
 
   // Calculate point money based on MRP vs Selling Price difference
   const calculatePointsForProduct = (mrp: number, sellingPrice: number): number => {
@@ -239,29 +186,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Move customer in MLM structure
-  const moveCustomerInMLM = (customerId: string, newParentCode: string | null) => {
-    setCustomers(prev => {
-      const newCustomers = prev.map(customer => ({ ...customer }));
-      const customerIndex = newCustomers.findIndex(c => c.id === customerId);
-      
-      if (customerIndex === -1) return prev;
-      
-      // Validate new parent exists (except for A100 or null)
-      if (newParentCode && newParentCode !== 'A100') {
-        const parentExists = newCustomers.some(c => c.code === newParentCode);
-        if (!parentExists) {
-          console.error(`Parent code ${newParentCode} doesn't exist`);
-          return prev;
-        }
-      }
-      
-      newCustomers[customerIndex] = {
-        ...newCustomers[customerIndex],
-        parentCode: newParentCode === 'A100' ? null : newParentCode
-      };
-      
-      return newCustomers;
+  const moveCustomerInMLM = async (customerId: string, newParentCode: string | null) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    const success = await supabaseService.updateCustomer(customerId, {
+      parentCode: newParentCode === 'A100' ? null : newParentCode
     });
+
+    if (success) {
+      setCustomers(prev =>
+        prev.map(c =>
+          c.id === customerId
+            ? { ...c, parentCode: newParentCode === 'A100' ? null : newParentCode }
+            : c
+        )
+      );
+    }
   };
 
   // Get next available sequential code
@@ -325,189 +266,174 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(`Customer ${customer.code}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
       
       // Update customer with new points and remaining accumulated money
-      newCustomers[customerIndex] = {
+      const updatedCustomer = {
         ...customer,
         points: customer.points + newPoints,
         accumulatedPointMoney: remainingMoney,
         tier: calculateTier(customer.points + newPoints),
         lastMLMDistribution: orderId ? new Date().toISOString() : customer.lastMLMDistribution
       };
+
+      newCustomers[customerIndex] = updatedCustomer;
+
+      // Update in database
+      supabaseService.updateCustomer(customerId, updatedCustomer);
       
-      // Track MLM distribution log for the order
-      const mlmDistributionLog: string[] = [];
-      
-      // Distribute ₹1 to each of the 5 parent levels for each point earned
+      // Distribute mini coins to MLM network
       if (newPoints > 0) {
         const mlmPath = getMLMPath(customer.code);
-        
-        mlmDistributionLog.push(`Customer ${customer.code} earned ${newPoints} points from ₹${pointMoney} point money`);
         
         mlmPath.forEach((parentCode, level) => {
           const parentIndex = newCustomers.findIndex(c => c.code === parentCode);
           if (parentIndex !== -1) {
             const miniCoinsToAdd = newPoints;
             
-            newCustomers[parentIndex] = {
+            const updatedParent = {
               ...newCustomers[parentIndex],
               miniCoins: newCustomers[parentIndex].miniCoins + miniCoinsToAdd,
               lastMLMDistribution: new Date().toISOString()
             };
-            
-            mlmDistributionLog.push(`Level ${level + 1}: ${parentCode} received ${miniCoinsToAdd} mini coins`);
-            
+
             // Convert mini coins to points (5 mini coins = 1 point)
-            if (newCustomers[parentIndex].miniCoins >= 5) {
-              const parentNewPoints = Math.floor(newCustomers[parentIndex].miniCoins / 5);
-              newCustomers[parentIndex] = {
-                ...newCustomers[parentIndex],
-                points: newCustomers[parentIndex].points + parentNewPoints,
-                miniCoins: newCustomers[parentIndex].miniCoins % 5,
-                tier: calculateTier(newCustomers[parentIndex].points + parentNewPoints)
-              };
+            if (updatedParent.miniCoins >= 5) {
+              const parentNewPoints = Math.floor(updatedParent.miniCoins / 5);
+              updatedParent.points = updatedParent.points + parentNewPoints;
+              updatedParent.miniCoins = updatedParent.miniCoins % 5;
+              updatedParent.tier = calculateTier(updatedParent.points);
               
-              mlmDistributionLog.push(`Level ${level + 1}: ${parentCode} converted ${parentNewPoints} points from mini coins`);
               console.log(`Parent ${parentCode} at level ${level + 1} received ${miniCoinsToAdd} mini coins, converted ${parentNewPoints} points`);
             }
+
+            newCustomers[parentIndex] = updatedParent;
+            // Update in database
+            supabaseService.updateCustomer(updatedParent.id, updatedParent);
           }
         });
       }
       
-      // Update the order with MLM distribution log
-      if (orderId) {
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.id === orderId 
-              ? { ...order, mlmDistributionLog }
-              : order
-          )
-        );
-      }
-      
       return newCustomers;
     });
   };
 
-  // Add a new customer (now immediately active)
-  const addCustomer = (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => {
-    const newCustomer: Customer = {
-      ...customer,
-      id: `cust_${Date.now()}`,
-      joinedDate: new Date().toISOString(),
-      points: 0,
-      miniCoins: 0,
-      tier: 'Bronze',
-      totalSpent: 0,
-      monthlySpent: {},
-      accumulatedPointMoney: 0,
-      isPending: false, // Immediately active
-    };
+  // Add a new customer
+  const addCustomer = async (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => {
+    console.log('Adding customer:', customer);
+    const newCustomer = await supabaseService.addCustomer(customer);
     
-    console.log('Adding customer to state:', newCustomer);
-    setCustomers(prev => {
-      const newCustomers = [...prev, newCustomer];
-      console.log('New customers array length:', newCustomers.length);
-      return newCustomers;
-    });
+    if (newCustomer) {
+      setCustomers(prev => [...prev, newCustomer]);
+      console.log('Customer added successfully');
+    }
   };
 
   // Update an existing customer
-  const updateCustomer = (id: string, customerData: Partial<Customer>) => {
-    setCustomers(prev =>
-      prev.map(customer => {
-        if (customer.id === id) {
-          const updated = { ...customer, ...customerData };
-          if (customerData.points !== undefined) {
-            updated.tier = calculateTier(updated.points);
+  const updateCustomer = async (id: string, customerData: Partial<Customer>) => {
+    const success = await supabaseService.updateCustomer(id, customerData);
+    
+    if (success) {
+      setCustomers(prev =>
+        prev.map(customer => {
+          if (customer.id === id) {
+            const updated = { ...customer, ...customerData };
+            if (customerData.points !== undefined) {
+              updated.tier = calculateTier(updated.points);
+            }
+            return updated;
           }
-          return updated;
-        }
-        return customer;
-      })
-    );
+          return customer;
+        })
+      );
+    }
   };
 
   // Delete a customer
-  const deleteCustomer = (id: string) => {
-    setCustomers(prev => prev.filter(customer => customer.id !== id));
+  const deleteCustomer = async (id: string) => {
+    const success = await supabaseService.deleteCustomer(id);
+    
+    if (success) {
+      setCustomers(prev => prev.filter(customer => customer.id !== id));
+    }
   };
 
   // Reserve a code
-  const reserveCode = (code: string, name: string, phone: string) => {
-    const newCustomer: Customer = {
-      id: `reserved_${Date.now()}`,
+  const reserveCode = async (code: string, name: string, phone: string) => {
+    await addCustomer({
       name,
       phone,
       code,
-      points: 0,
-      miniCoins: 0,
-      tier: 'Bronze',
       parentCode: null,
-      joinedDate: new Date().toISOString(),
       isReserved: true,
       isPending: false,
-      totalSpent: 0,
-      monthlySpent: {},
-      accumulatedPointMoney: 0,
-    };
-    
-    setCustomers(prev => [...prev, newCustomer]);
+    });
   };
 
   // Add a new product
-  const addProduct = (product: Omit<Product, "id">) => {
-    const newProduct: Product = {
-      ...product,
-      id: `prod_${Date.now()}`,
-      tierDiscounts: product.tierDiscounts || {
-        Bronze: 2,
-        Silver: 3,
-        Gold: 4,
-        Diamond: 5
-      }
-    };
+  const addProduct = async (product: Omit<Product, "id">) => {
+    console.log('Adding product:', product);
+    const newProduct = await supabaseService.addProduct(product);
     
-    setProducts(prev => [...prev, newProduct]);
+    if (newProduct) {
+      setProducts(prev => [...prev, newProduct]);
+      console.log('Product added successfully');
+    }
   };
 
   // Update an existing product
-  const updateProduct = (id: string, productData: Partial<Product>) => {
-    setProducts(prev =>
-      prev.map(product =>
-        product.id === id ? { ...product, ...productData } : product
-      )
-    );
+  const updateProduct = async (id: string, productData: Partial<Product>) => {
+    const success = await supabaseService.updateProduct(id, productData);
+    
+    if (success) {
+      setProducts(prev =>
+        prev.map(product =>
+          product.id === id ? { ...product, ...productData } : product
+        )
+      );
+    }
   };
 
   // Delete a product
-  const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(product => product.id !== id));
+  const deleteProduct = async (id: string) => {
+    const success = await supabaseService.deleteProduct(id);
+    
+    if (success) {
+      setProducts(prev => prev.filter(product => product.id !== id));
+    }
   };
 
   // Add a new service
-  const addService = (service: Omit<Service, "id">) => {
-    const newService: Service = {
-      ...service,
-      id: `service_${Date.now()}`,
-    };
+  const addService = async (service: Omit<Service, "id">) => {
+    console.log('Adding service:', service);
+    const newService = await supabaseService.addService(service);
     
-    setServices(prev => [...prev, newService]);
+    if (newService) {
+      setServices(prev => [...prev, newService]);
+      console.log('Service added successfully');
+    }
   };
 
   // Update an existing service
-  const updateService = (id: string, serviceData: Partial<Service>) => {
-    setServices(prev =>
-      prev.map(service =>
-        service.id === id ? { ...service, ...serviceData } : service
-      )
-    );
+  const updateService = async (id: string, serviceData: Partial<Service>) => {
+    const success = await supabaseService.updateService(id, serviceData);
+    
+    if (success) {
+      setServices(prev =>
+        prev.map(service =>
+          service.id === id ? { ...service, ...serviceData } : service
+        )
+      );
+    }
   };
 
   // Delete a service
-  const deleteService = (id: string) => {
-    setServices(prev => prev.filter(service => service.id !== id));
+  const deleteService = async (id: string) => {
+    const success = await supabaseService.deleteService(id);
+    
+    if (success) {
+      setServices(prev => prev.filter(service => service.id !== id));
+    }
   };
 
-  // Add a new order
+  // Add a new order (keeping the same localStorage logic for now)
   const addOrder = (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => {
     const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
     
@@ -536,7 +462,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return orderId;
   };
 
-  // Update an existing order
+  // Update an existing order (keeping the same localStorage logic for now)
   const updateOrder = (id: string, orderData: Partial<Order>) => {
     setOrders(prev =>
       prev.map(order => {
@@ -558,7 +484,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCustomers(prevCustomers =>
               prevCustomers.map(customer => {
                 if (customer.id === order.customerId) {
-                  return {
+                  const updatedCustomer = {
                     ...customer,
                     totalSpent: customer.totalSpent + order.amountPaid,
                     monthlySpent: {
@@ -566,6 +492,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                       [currentMonth]: (customer.monthlySpent[currentMonth] || 0) + order.amountPaid
                     }
                   };
+                  // Update in database
+                  supabaseService.updateCustomer(customer.id, updatedCustomer);
+                  return updatedCustomer;
                 }
                 return customer;
               })
@@ -610,6 +539,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         calculatePointsForProduct,
         moveCustomerInMLM,
         getMLMPath,
+        refreshData,
       }}
     >
       {children}

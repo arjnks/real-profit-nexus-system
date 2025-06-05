@@ -1,32 +1,29 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  role?: "admin" | "customer" | null;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, role }) => {
-  const { user, isLoading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
 
-  // If auth is still loading, show nothing
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
   }
 
-  // If not logged in, redirect to login
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // If role is specified and user doesn't have that role, redirect
-  if (role && user.role !== role) {
-    // Redirect admin to admin dashboard, customers to home
-    const redirectPath = user.role === "admin" ? "/admin/dashboard" : "/";
-    return <Navigate to={redirectPath} replace />;
-  }
-
-  // Otherwise, render the protected component
   return <>{children}</>;
 };
 

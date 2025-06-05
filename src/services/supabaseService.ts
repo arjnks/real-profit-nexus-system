@@ -1,0 +1,343 @@
+
+import { supabase } from '@/integrations/supabase/client';
+import { Customer, Product, Service, Order, Offer } from '@/contexts/DataContext';
+
+export class SupabaseService {
+  // Customer operations
+  async getCustomers(): Promise<Customer[]> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching customers:', error);
+      return [];
+    }
+    
+    return data.map(this.mapCustomerFromDB);
+  }
+
+  async addCustomer(customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">): Promise<Customer | null> {
+    const dbCustomer = {
+      name: customer.name,
+      phone: customer.phone,
+      code: customer.code,
+      parent_code: customer.parentCode,
+      is_reserved: customer.isReserved || false,
+      is_pending: customer.isPending || false,
+    };
+
+    const { data, error } = await supabase
+      .from('customers')
+      .insert([dbCustomer])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding customer:', error);
+      return null;
+    }
+
+    return this.mapCustomerFromDB(data);
+  }
+
+  async updateCustomer(id: string, customerData: Partial<Customer>): Promise<boolean> {
+    const dbCustomer = this.mapCustomerToDB(customerData);
+    
+    const { error } = await supabase
+      .from('customers')
+      .update(dbCustomer)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating customer:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  async deleteCustomer(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting customer:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  // Product operations
+  async getProducts(): Promise<Product[]> {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching products:', error);
+      return [];
+    }
+    
+    return data.map(this.mapProductFromDB);
+  }
+
+  async addProduct(product: Omit<Product, "id">): Promise<Product | null> {
+    const dbProduct = {
+      name: product.name,
+      price: product.price,
+      mrp: product.mrp,
+      image: product.image,
+      description: product.description,
+      category: product.category,
+      in_stock: product.inStock,
+      tier_discounts: product.tierDiscounts,
+    };
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([dbProduct])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding product:', error);
+      return null;
+    }
+
+    return this.mapProductFromDB(data);
+  }
+
+  async updateProduct(id: string, productData: Partial<Product>): Promise<boolean> {
+    const dbProduct = this.mapProductToDB(productData);
+    
+    const { error } = await supabase
+      .from('products')
+      .update(dbProduct)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating product:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  async deleteProduct(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting product:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  // Service operations
+  async getServices(): Promise<Service[]> {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching services:', error);
+      return [];
+    }
+    
+    return data.map(this.mapServiceFromDB);
+  }
+
+  async addService(service: Omit<Service, "id">): Promise<Service | null> {
+    const dbService = {
+      title: service.title,
+      description: service.description,
+      price: service.price,
+      image: service.image,
+      category: service.category,
+      is_active: service.isActive,
+    };
+
+    const { data, error } = await supabase
+      .from('services')
+      .insert([dbService])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding service:', error);
+      return null;
+    }
+
+    return this.mapServiceFromDB(data);
+  }
+
+  async updateService(id: string, serviceData: Partial<Service>): Promise<boolean> {
+    const dbService = this.mapServiceToDB(serviceData);
+    
+    const { error } = await supabase
+      .from('services')
+      .update(dbService)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating service:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  async deleteService(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('services')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting service:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  // Admin authentication
+  async authenticateAdmin(username: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('username', username)
+      .single();
+
+    if (error || !data) {
+      return { success: false, error: 'Invalid username or password' };
+    }
+
+    // For now, we'll use simple password comparison
+    // In production, you'd use bcrypt to compare hashed passwords
+    const bcrypt = await import('bcryptjs');
+    const isValidPassword = await bcrypt.compare(password, data.password_hash);
+
+    if (!isValidPassword) {
+      return { success: false, error: 'Invalid username or password' };
+    }
+
+    return { 
+      success: true, 
+      user: { 
+        id: data.id, 
+        username: data.username, 
+        name: data.name, 
+        role: data.role 
+      } 
+    };
+  }
+
+  // Mapping functions
+  private mapCustomerFromDB(data: any): Customer {
+    return {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      code: data.code,
+      points: data.points,
+      miniCoins: data.mini_coins,
+      tier: data.tier as Customer['tier'],
+      parentCode: data.parent_code,
+      joinedDate: data.joined_date,
+      isReserved: data.is_reserved,
+      isPending: data.is_pending,
+      totalSpent: parseFloat(data.total_spent),
+      monthlySpent: data.monthly_spent || {},
+      accumulatedPointMoney: parseFloat(data.accumulated_point_money),
+      lastMLMDistribution: data.last_mlm_distribution,
+    };
+  }
+
+  private mapCustomerToDB(customer: Partial<Customer>): any {
+    const dbCustomer: any = {};
+    
+    if (customer.name !== undefined) dbCustomer.name = customer.name;
+    if (customer.phone !== undefined) dbCustomer.phone = customer.phone;
+    if (customer.code !== undefined) dbCustomer.code = customer.code;
+    if (customer.points !== undefined) dbCustomer.points = customer.points;
+    if (customer.miniCoins !== undefined) dbCustomer.mini_coins = customer.miniCoins;
+    if (customer.tier !== undefined) dbCustomer.tier = customer.tier;
+    if (customer.parentCode !== undefined) dbCustomer.parent_code = customer.parentCode;
+    if (customer.isReserved !== undefined) dbCustomer.is_reserved = customer.isReserved;
+    if (customer.isPending !== undefined) dbCustomer.is_pending = customer.isPending;
+    if (customer.totalSpent !== undefined) dbCustomer.total_spent = customer.totalSpent;
+    if (customer.monthlySpent !== undefined) dbCustomer.monthly_spent = customer.monthlySpent;
+    if (customer.accumulatedPointMoney !== undefined) dbCustomer.accumulated_point_money = customer.accumulatedPointMoney;
+    if (customer.lastMLMDistribution !== undefined) dbCustomer.last_mlm_distribution = customer.lastMLMDistribution;
+    
+    return dbCustomer;
+  }
+
+  private mapProductFromDB(data: any): Product {
+    return {
+      id: data.id,
+      name: data.name,
+      price: parseFloat(data.price),
+      mrp: parseFloat(data.mrp),
+      image: data.image,
+      description: data.description,
+      category: data.category,
+      inStock: data.in_stock,
+      tierDiscounts: data.tier_discounts,
+    };
+  }
+
+  private mapProductToDB(product: Partial<Product>): any {
+    const dbProduct: any = {};
+    
+    if (product.name !== undefined) dbProduct.name = product.name;
+    if (product.price !== undefined) dbProduct.price = product.price;
+    if (product.mrp !== undefined) dbProduct.mrp = product.mrp;
+    if (product.image !== undefined) dbProduct.image = product.image;
+    if (product.description !== undefined) dbProduct.description = product.description;
+    if (product.category !== undefined) dbProduct.category = product.category;
+    if (product.inStock !== undefined) dbProduct.in_stock = product.inStock;
+    if (product.tierDiscounts !== undefined) dbProduct.tier_discounts = product.tierDiscounts;
+    
+    return dbProduct;
+  }
+
+  private mapServiceFromDB(data: any): Service {
+    return {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      image: data.image,
+      category: data.category,
+      isActive: data.is_active,
+    };
+  }
+
+  private mapServiceToDB(service: Partial<Service>): any {
+    const dbService: any = {};
+    
+    if (service.title !== undefined) dbService.title = service.title;
+    if (service.description !== undefined) dbService.description = service.description;
+    if (service.price !== undefined) dbService.price = service.price;
+    if (service.image !== undefined) dbService.image = service.image;
+    if (service.category !== undefined) dbService.category = service.category;
+    if (service.isActive !== undefined) dbService.is_active = service.isActive;
+    
+    return dbService;
+  }
+}
+
+export const supabaseService = new SupabaseService();
