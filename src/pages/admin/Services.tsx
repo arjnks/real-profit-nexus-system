@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import ImageUploader from '@/components/ImageUploader';
 import { Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -183,15 +184,11 @@ const Services = () => {
                   rows={3}
                 />
               </div>
-              <div>
-                <Label htmlFor="image">Image URL (Optional)</Label>
-                <Input
-                  id="image"
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
+              <ImageUploader
+                value={image}
+                onChange={setImage}
+                label="Service Image"
+              />
               <div className="flex items-center space-x-2">
                 <Switch
                   id="isActive"
@@ -350,15 +347,11 @@ const Services = () => {
                 rows={3}
               />
             </div>
-            <div>
-              <Label htmlFor="edit-image">Image URL</Label>
-              <Input
-                id="edit-image"
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
+            <ImageUploader
+              value={image}
+              onChange={setImage}
+              label="Service Image"
+            />
             <div className="flex items-center space-x-2">
               <Switch
                 id="edit-isActive"
