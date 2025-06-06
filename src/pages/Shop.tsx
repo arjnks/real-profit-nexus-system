@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,7 +58,21 @@ const Shop = () => {
       navigate('/login');
       return;
     }
-    navigate('/checkout');
+    
+    // Convert cart items to the format expected by checkout page
+    const cartItems = getCartItems(products).map(item => ({
+      product: {
+        id: item.productId,
+        name: item.name,
+        price: item.price,
+        mrp: item.mrp
+      },
+      quantity: item.quantity
+    }));
+
+    navigate('/checkout', { 
+      state: { cart: cartItems }
+    });
   };
 
   const getStockBadge = (stockQuantity: number) => {
