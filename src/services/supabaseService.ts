@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Product, Service, Order, Offer } from '@/contexts/DataContext';
 
@@ -124,6 +125,7 @@ export class SupabaseService {
       name: product.name,
       price: product.price,
       mrp: product.mrp,
+      dummy_price: product.dummyPrice,
       image: product.image,
       description: product.description,
       category: product.category,
@@ -435,6 +437,7 @@ export class SupabaseService {
       name: data.name,
       price: parseFloat(data.price),
       mrp: parseFloat(data.mrp),
+      dummyPrice: data.dummy_price ? parseFloat(data.dummy_price) : undefined,
       image: data.image,
       description: data.description,
       category: data.category,
@@ -449,6 +452,7 @@ export class SupabaseService {
     if (product.name !== undefined) dbProduct.name = product.name;
     if (product.price !== undefined) dbProduct.price = product.price;
     if (product.mrp !== undefined) dbProduct.mrp = product.mrp;
+    if (product.dummyPrice !== undefined) dbProduct.dummy_price = product.dummyPrice;
     if (product.image !== undefined) dbProduct.image = product.image;
     if (product.description !== undefined) dbProduct.description = product.description;
     if (product.category !== undefined) dbProduct.category = product.category;
