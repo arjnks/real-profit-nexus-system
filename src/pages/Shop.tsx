@@ -7,6 +7,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Search, ShoppingCart, Filter, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -161,8 +162,18 @@ const Shop = () => {
                 <h3 className="font-semibold text-lg">{product.name}</h3>
                 <p className="text-sm text-gray-600 mt-1">{product.description}</p>
                 <div className="mt-2">
-                  <span className="text-realprofit-blue font-bold">₹{product.mrp.toFixed(2)}</span>
-                  <span className="text-xs text-gray-500 ml-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    {product.dummyPrice && (
+                      <span className="text-gray-400 line-through text-sm">₹{product.dummyPrice.toFixed(2)}</span>
+                    )}
+                    <span className="text-realprofit-blue font-bold">₹{product.mrp.toFixed(2)}</span>
+                    {product.dummyPrice && (
+                      <Badge variant="destructive" className="text-xs">
+                        OFFER
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500">
                     Earn ₹{calculatePointsForProduct(product.mrp || product.price, product.price)} point money
                   </span>
                 </div>

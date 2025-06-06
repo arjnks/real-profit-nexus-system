@@ -22,8 +22,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import ImageUploader from '@/components/ImageUploader';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Products = () => {
@@ -37,6 +38,7 @@ const Products = () => {
   const [name, setName] = useState('');
   const [mrp, setMrp] = useState('');
   const [price, setPrice] = useState('');
+  const [dummyPrice, setDummyPrice] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [image, setImage] = useState('');
@@ -52,6 +54,7 @@ const Products = () => {
     setName('');
     setMrp('');
     setPrice('');
+    setDummyPrice('');
     setDescription('');
     setCategory('');
     setImage('');
@@ -67,9 +70,15 @@ const Products = () => {
 
     const mrpValue = parseFloat(mrp);
     const priceValue = parseFloat(price);
+    const dummyPriceValue = dummyPrice ? parseFloat(dummyPrice) : undefined;
 
     if (priceValue > mrpValue) {
       toast.error('Company Profit Price cannot be higher than MRP');
+      return;
+    }
+
+    if (dummyPriceValue && dummyPriceValue <= mrpValue) {
+      toast.error('Dummy price should be higher than MRP to show as an offer');
       return;
     }
 
@@ -77,6 +86,7 @@ const Products = () => {
       name,
       mrp: mrpValue,
       price: priceValue,
+      dummyPrice: dummyPriceValue,
       description,
       category,
       image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200',
@@ -105,9 +115,15 @@ const Products = () => {
 
     const mrpValue = parseFloat(mrp);
     const priceValue = parseFloat(price);
+    const dummyPriceValue = dummyPrice ? parseFloat(dummyPrice) : undefined;
 
     if (priceValue > mrpValue) {
       toast.error('Company Profit Price cannot be higher than MRP');
+      return;
+    }
+
+    if (dummyPriceValue && dummyPriceValue <= mrpValue) {
+      toast.error('Dummy price should be higher than MRP to show as an offer');
       return;
     }
 
@@ -115,6 +131,7 @@ const Products = () => {
       name,
       mrp: mrpValue,
       price: priceValue,
+      dummyPrice: dummyPriceValue,
       description,
       category,
       image: image || editingProduct.image
@@ -141,6 +158,7 @@ const Products = () => {
     setName(product.name);
     setMrp(product.mrp?.toString() || product.price.toString());
     setPrice(product.price.toString());
+    setDummyPrice(product.dummyPrice?.toString() || '');
     setDescription(product.description);
     setCategory(product.category);
     setImage(product.image);
@@ -162,7 +180,7 @@ const Products = () => {
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
               <DialogDescription>
-                Add a new product to your inventory with MRP and selling price
+                Add a new product to your inventory with pricing details
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -174,6 +192,18 @@ const Products = () => {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter product name"
                 />
+              </div>
+              <div>
+                <Label htmlFor="dummyPrice">Dummy Price (Optional) ₹</Label>
+                <Input
+                  id="dummyPrice"
+                  type="number"
+                  step="0.01"
+                  value={dummyPrice}
+                  onChange={(e) => setDummyPrice(e.target.value)}
+                  placeholder="Higher price to show as 'was' price"
+                />
+                <p className="text-xs text-gray-500 mt-1">This will show as crossed-out price to make MRP look like an offer</p>
               </div>
               <div>
                 <Label htmlFor="mrp">Maximum Retail Price (MRP) ₹</Label>
@@ -255,6 +285,7 @@ const Products = () => {
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
+              <TableHead>Dummy Price</TableHead>
               <TableHead>MRP (Display Price)</TableHead>
               <TableHead>Company Price</TableHead>
               <TableHead>Point Money/Unit</TableHead>
@@ -275,6 +306,19 @@ const Products = () => {
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>
+                  <TableCell>
+                    {product.dummyPrice ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">₹{product.dummyPrice.toFixed(2)}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          <Tag className="h-3 w-3 mr-1" />
+                          Offer
+                        </Badge>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="font-bold text-blue-600">₹{product.mrp.toFixed(2)}</TableCell>
                   <TableCell>₹{product.price.toFixed(2)}</TableCell>
                   <TableCell className="text-green-600 font-medium">
@@ -305,7 +349,7 @@ const Products = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                   No products found
                 </TableCell>
               </TableRow>
@@ -320,7 +364,7 @@ const Products = () => {
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>
-              Update product details with MRP and selling price
+              Update product details with pricing information
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -332,6 +376,18 @@ const Products = () => {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter product name"
               />
+            </div>
+            <div>
+              <Label htmlFor="edit-dummyPrice">Dummy Price (Optional) ₹</Label>
+              <Input
+                id="edit-dummyPrice"
+                type="number"
+                step="0.01"
+                value={dummyPrice}
+                onChange={(e) => setDummyPrice(e.target.value)}
+                placeholder="Higher price to show as 'was' price"
+              />
+              <p className="text-xs text-gray-500 mt-1">This will show as crossed-out price to make MRP look like an offer</p>
             </div>
             <div>
               <Label htmlFor="edit-mrp">Maximum Retail Price (MRP) ₹</Label>
