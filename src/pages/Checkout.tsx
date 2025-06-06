@@ -53,7 +53,8 @@ const Checkout = () => {
 
   // Get customer data from DataContext
   const customer = customers.find(c => c.id === user.id);
-  const subtotal = cart.reduce((sum: number, item: any) => sum + (item.product.price * item.quantity), 0);
+  // Use MRP (display price) for all calculations
+  const subtotal = cart.reduce((sum: number, item: any) => sum + (item.product.mrp * item.quantity), 0);
   const totalAmount = subtotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +76,7 @@ const Checkout = () => {
       const orderProducts = cart.map((item: any) => ({
         productId: item.product.id,
         name: item.product.name,
-        price: item.product.price,
+        price: item.product.mrp, // Use MRP as the price for the order
         quantity: item.quantity
       }));
 
@@ -129,7 +130,7 @@ const Checkout = () => {
                       <h4 className="font-medium">{item.product.name}</h4>
                       <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                     </div>
-                    <span className="font-medium">₹{(item.product.price * item.quantity).toFixed(2)}</span>
+                    <span className="font-medium">₹{(item.product.mrp * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
                 
