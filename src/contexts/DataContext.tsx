@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabaseService } from '@/services/supabaseService';
 
@@ -264,7 +263,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (points >= 160) return 'Diamond';
     if (points >= 80) return 'Gold';
     if (points >= 40) return 'Silver';
-    if (points >= 20) return 'Bronze';
+    if (points >= 12) return 'Bronze'; // Changed from 20 to 12
     return 'Bronze';
   };
 

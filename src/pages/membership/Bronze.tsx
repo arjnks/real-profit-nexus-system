@@ -24,7 +24,7 @@ const MembershipBronze = () => {
   ];
 
   const requirements = [
-    'Minimum 20 points to achieve Bronze club',
+    'Minimum 12 points to achieve Bronze club', // Changed from 20 to 12
     'Complete profile verification',
     'Make at least one successful purchase'
   ];
@@ -50,7 +50,7 @@ const MembershipBronze = () => {
               <Award className="h-8 w-8 text-amber-700" />
               <div>
                 <h2 className="text-2xl font-bold text-amber-800">Bronze Club</h2>
-                <p className="text-amber-700">Entry Level • 20-39 Points</p>
+                <p className="text-amber-700">Entry Level • 12-39 Points</p> {/* Updated point range */}
               </div>
             </div>
           </div>
