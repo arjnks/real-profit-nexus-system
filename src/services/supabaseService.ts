@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Product, Service, Order, Offer } from '@/contexts/DataContext';
 
@@ -263,6 +262,9 @@ export class SupabaseService {
   async addOrder(order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<Order | null> {
     const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
     
+    // Calculate points based on products - we'll set to 0 for now as it should be calculated in DataContext
+    const calculatedPoints = 0;
+    
     const dbOrder = {
       id: orderId,
       customer_id: order.customerId,
@@ -273,7 +275,7 @@ export class SupabaseService {
       total_amount: order.totalAmount,
       points_used: order.pointsUsed,
       amount_paid: order.amountPaid,
-      points: order.points || 0,
+      points: calculatedPoints,
       status: order.status,
       payment_method: order.paymentMethod,
       pincode: order.pincode,
