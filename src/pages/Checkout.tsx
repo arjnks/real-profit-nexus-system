@@ -22,11 +22,10 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { addOrder, customers, calculateTierBenefits } = useData();
+  const { addOrder, customers } = useData();
   
   const [pincode, setPincode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
-  const [usePoints, setUsePoints] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const allowedPincodes = ['680305', '680684', '680683'];
@@ -55,16 +54,7 @@ const Checkout = () => {
   // Get customer data from DataContext
   const customer = customers.find(c => c.id === user.id);
   const subtotal = cart.reduce((sum: number, item: any) => sum + (item.product.price * item.quantity), 0);
-  
-  // Calculate points discount if using points
-  let pointsDiscount = 0;
-  if (usePoints && customer) {
-    const tierBenefit = calculateTierBenefits(customer.tier);
-    const maxPointsUsable = Math.floor((subtotal * tierBenefit) / 100);
-    pointsDiscount = Math.min(maxPointsUsable, customer.points);
-  }
-
-  const totalAmount = subtotal - pointsDiscount;
+  const totalAmount = subtotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,12 +86,12 @@ const Checkout = () => {
         customerCode: customer?.code || '',
         products: orderProducts,
         totalAmount: subtotal,
-        pointsUsed: pointsDiscount,
+        pointsUsed: 0,
         amountPaid: totalAmount,
         status: 'pending',
         paymentMethod,
         pincode: pincode.trim(),
-        usedPointsDiscount: pointsDiscount > 0
+        usedPointsDiscount: false
       });
 
       toast.success('Order placed successfully!', {
@@ -144,16 +134,6 @@ const Checkout = () => {
                 ))}
                 
                 <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
-                  </div>
-                  {pointsDiscount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Points Discount:</span>
-                      <span>-₹{pointsDiscount.toFixed(2)}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
                     <span>₹{totalAmount.toFixed(2)}</span>
@@ -203,28 +183,6 @@ const Checkout = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {customer && customer.points > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="usePoints"
-                        checked={usePoints}
-                        onChange={(e) => setUsePoints(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <Label htmlFor="usePoints" className="text-sm">
-                        Use available points ({customer.points} points available)
-                      </Label>
-                    </div>
-                    {usePoints && (
-                      <p className="text-xs text-gray-500">
-                        You can use up to ₹{Math.min(Math.floor((subtotal * calculateTierBenefits(customer.tier)) / 100), customer.points)} from your points balance
-                      </p>
-                    )}
-                  </div>
-                )}
                 
                 <Button
                   type="submit"

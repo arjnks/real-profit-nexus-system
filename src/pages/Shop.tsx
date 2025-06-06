@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -201,9 +202,6 @@ const Shop = () => {
                         Save ₹{(product.dummyPrice - product.mrp).toFixed(2)}
                       </Badge>
                     )}
-                  </div>
-                  <div className="text-sm text-green-600">
-                    Earn ₹{Math.floor(product.mrp - product.price)} point money
                   </div>
                   <div className="text-sm text-gray-600">
                     Stock: {product.stockQuantity} available

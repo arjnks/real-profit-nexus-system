@@ -4,14 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { 
@@ -77,7 +69,7 @@ const CustomerDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-4 mb-8">
+        <div className="grid gap-6 md:grid-cols-3 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -117,20 +109,6 @@ const CustomerDashboard = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Spent</p>
                   <p className="text-lg font-semibold text-gray-900">₹{customer?.totalSpent?.toFixed(2) || '0.00'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Package className="h-8 w-8 text-orange-500" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Orders</p>
-                  <p className="text-lg font-semibold text-gray-900">{customerOrders.length}</p>
                 </div>
               </div>
             </CardContent>

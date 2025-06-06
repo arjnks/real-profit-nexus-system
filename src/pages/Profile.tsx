@@ -67,7 +67,7 @@ const Profile = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Trophy className="h-5 w-5 mr-2" />
-                Account Status
+                Membership Status
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
