@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabaseService } from '@/services/supabaseService';
 
@@ -27,6 +26,7 @@ export type Product = {
   name: string;
   price: number;
   mrp: number;
+  dummyPrice?: number;
   image: string;
   description: string;
   category: string;
