@@ -165,6 +165,12 @@ const Products = () => {
     setIsEditDialogOpen(true);
   };
 
+  // Open add dialog (for quick add buttons)
+  const openAddDialog = () => {
+    resetForm();
+    setIsAddDialogOpen(true);
+  };
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
@@ -295,62 +301,92 @@ const Products = () => {
           </TableHeader>
           <TableBody>
             {filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <img 
-                      src={product.image} 
-                      alt={product.name}
-                      className="w-12 h-12 object-cover rounded"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.category}</TableCell>
-                  <TableCell>
-                    {product.dummyPrice ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500">₹{product.dummyPrice.toFixed(2)}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          <Tag className="h-3 w-3 mr-1" />
-                          Offer
-                        </Badge>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-bold text-blue-600">₹{product.mrp.toFixed(2)}</TableCell>
-                  <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                  <TableCell className="text-green-600 font-medium">
-                    ₹{calculatePointsForProduct(product.mrp || product.price, product.price)}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">{product.description}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8"
-                        onClick={() => openEditDialog(product)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-red-600"
-                        onClick={() => handleDeleteProduct(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              <>
+                {filteredProducts.map((product, index) => (
+                  <React.Fragment key={product.id}>
+                    <TableRow>
+                      <TableCell>
+                        <img 
+                          src={product.image} 
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>
+                        {product.dummyPrice ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">₹{product.dummyPrice.toFixed(2)}</span>
+                            <Badge variant="secondary" className="text-xs">
+                              <Tag className="h-3 w-3 mr-1" />
+                              Offer
+                            </Badge>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-bold text-blue-600">₹{product.mrp.toFixed(2)}</TableCell>
+                      <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        ₹{calculatePointsForProduct(product.mrp || product.price, product.price)}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">{product.description}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => openEditDialog(product)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-red-600"
+                            onClick={() => handleDeleteProduct(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {/* Add Product Row */}
+                    <TableRow className="border-0">
+                      <TableCell colSpan={9} className="py-2">
+                        <div className="flex justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={openAddDialog}
+                            className="border-dashed border-2 hover:border-solid hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Another Product
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                ))}
+              </>
             ) : (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
-                  No products found
+                  <div className="space-y-4">
+                    <p>No products found</p>
+                    <Button
+                      variant="outline"
+                      onClick={openAddDialog}
+                      className="border-dashed border-2 hover:border-solid hover:bg-blue-50 text-blue-600 hover:text-blue-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Product
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
