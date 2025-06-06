@@ -5,31 +5,57 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ImageUploader from '@/components/ImageUploader';
-import { Edit, Save, X } from 'lucide-react';
+import { Edit, Save, X, Plus, Trash2 } from 'lucide-react';
+
+interface ClubImage {
+  id: string;
+  image: string;
+  title: string;
+  description: string;
+  price: string;
+}
 
 interface ClubTierCardProps {
   title: string;
-  image: string;
-  price: string;
+  images: ClubImage[];
   color: string;
-  onUpdate: (image: string, price: string) => void;
+  onUpdate: (images: ClubImage[]) => void;
   isAdmin?: boolean;
 }
 
-const ClubTierCard = ({ title, image, price, color, onUpdate, isAdmin = false }: ClubTierCardProps) => {
+const ClubTierCard = ({ title, images = [], color, onUpdate, isAdmin = false }: ClubTierCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editImage, setEditImage] = useState(image);
-  const [editPrice, setEditPrice] = useState(price);
+  const [editImages, setEditImages] = useState<ClubImage[]>(images);
 
   const handleSave = () => {
-    onUpdate(editImage, editPrice);
+    onUpdate(editImages);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditImage(image);
-    setEditPrice(price);
+    setEditImages(images);
     setIsEditing(false);
+  };
+
+  const addNewImage = () => {
+    const newImage: ClubImage = {
+      id: Date.now().toString(),
+      image: '',
+      title: '',
+      description: '',
+      price: ''
+    };
+    setEditImages([...editImages, newImage]);
+  };
+
+  const removeImage = (id: string) => {
+    setEditImages(editImages.filter(img => img.id !== id));
+  };
+
+  const updateImage = (id: string, field: keyof ClubImage, value: string) => {
+    setEditImages(editImages.map(img => 
+      img.id === id ? { ...img, [field]: value } : img
+    ));
   };
 
   if (isEditing && isAdmin) {
@@ -40,20 +66,67 @@ const ClubTierCard = ({ title, image, price, color, onUpdate, isAdmin = false }:
           <CardTitle className={`text-${color.replace('gray-400', 'gray-600')}`}>{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ImageUploader
-            value={editImage}
-            onChange={setEditImage}
-            label="Club Image"
-          />
-          <div>
-            <Label htmlFor={`price-${title}`}>Selling Price</Label>
-            <Input
-              id={`price-${title}`}
-              value={editPrice}
-              onChange={(e) => setEditPrice(e.target.value)}
-              placeholder="Enter price"
-            />
-          </div>
+          {editImages.map((img, index) => (
+            <div key={img.id} className="p-4 border rounded-lg space-y-3">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium">Image {index + 1}</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeImage(img.id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <ImageUploader
+                value={img.image}
+                onChange={(value) => updateImage(img.id, 'image', value)}
+                label="Image"
+              />
+              
+              <div>
+                <Label htmlFor={`title-${img.id}`}>Title</Label>
+                <Input
+                  id={`title-${img.id}`}
+                  value={img.title}
+                  onChange={(e) => updateImage(img.id, 'title', e.target.value)}
+                  placeholder="Enter title"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor={`description-${img.id}`}>Description</Label>
+                <Input
+                  id={`description-${img.id}`}
+                  value={img.description}
+                  onChange={(e) => updateImage(img.id, 'description', e.target.value)}
+                  placeholder="Enter description"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor={`price-${img.id}`}>Price</Label>
+                <Input
+                  id={`price-${img.id}`}
+                  value={img.price}
+                  onChange={(e) => updateImage(img.id, 'price', e.target.value)}
+                  placeholder="Enter price"
+                />
+              </div>
+            </div>
+          ))}
+          
+          <Button
+            onClick={addNewImage}
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Another Image
+          </Button>
+          
           <div className="flex space-x-2">
             <Button onClick={handleSave} size="sm" className="flex-1">
               <Save className="w-4 h-4 mr-2" />
@@ -86,21 +159,34 @@ const ClubTierCard = ({ title, image, price, color, onUpdate, isAdmin = false }:
           </Button>
         )}
       </CardHeader>
-      <CardContent className="text-center">
-        {image && (
-          <div className="mb-4">
-            <img
-              src={image}
-              alt={`${title} club`}
-              className="w-full h-32 object-cover rounded-md"
-            />
-          </div>
-        )}
-        {price && (
-          <div>
-            <p className="text-2xl font-bold mb-2">{price}</p>
-            <p className="text-sm text-gray-600">Special Price</p>
-          </div>
+      <CardContent className="space-y-4">
+        {images.length > 0 ? (
+          images.map((img, index) => (
+            <div key={img.id} className="border rounded-lg p-3">
+              {img.image && (
+                <div className="mb-3">
+                  <img
+                    src={img.image}
+                    alt={img.title || `${title} image ${index + 1}`}
+                    className="w-full h-32 object-cover rounded-md"
+                  />
+                </div>
+              )}
+              {img.title && (
+                <h4 className="font-semibold text-sm mb-1">{img.title}</h4>
+              )}
+              {img.description && (
+                <p className="text-sm text-gray-600 mb-2">{img.description}</p>
+              )}
+              {img.price && (
+                <div className="text-right">
+                  <p className="text-lg font-bold text-green-600">{img.price}</p>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500 text-sm">No images added yet</p>
         )}
       </CardContent>
     </Card>

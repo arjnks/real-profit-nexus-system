@@ -3,19 +3,32 @@ import React, { useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import ClubTierCard from '@/components/ClubTierCard';
 
+interface ClubImage {
+  id: string;
+  image: string;
+  title: string;
+  description: string;
+  price: string;
+}
+
 const ClubManagement = () => {
   // State for club tier data - in a real app, this would come from a database
-  const [clubTiers, setClubTiers] = useState({
-    bronze: { image: '', price: '' },
-    silver: { image: '', price: '' },
-    gold: { image: '', price: '' },
-    diamond: { image: '', price: '' }
+  const [clubTiers, setClubTiers] = useState<{
+    bronze: ClubImage[];
+    silver: ClubImage[];
+    gold: ClubImage[];
+    diamond: ClubImage[];
+  }>({
+    bronze: [],
+    silver: [],
+    gold: [],
+    diamond: []
   });
 
-  const handleClubTierUpdate = (tier: string, image: string, price: string) => {
+  const handleClubTierUpdate = (tier: string, images: ClubImage[]) => {
     setClubTiers(prev => ({
       ...prev,
-      [tier]: { image, price }
+      [tier]: images
     }));
   };
 
@@ -32,37 +45,33 @@ const ClubManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <ClubTierCard
             title="Bronze"
-            image={clubTiers.bronze.image}
-            price={clubTiers.bronze.price}
+            images={clubTiers.bronze}
             color="amber-700"
-            onUpdate={(image, price) => handleClubTierUpdate('bronze', image, price)}
+            onUpdate={(images) => handleClubTierUpdate('bronze', images)}
             isAdmin={true}
           />
           
           <ClubTierCard
             title="Silver"
-            image={clubTiers.silver.image}
-            price={clubTiers.silver.price}
+            images={clubTiers.silver}
             color="gray-400"
-            onUpdate={(image, price) => handleClubTierUpdate('silver', image, price)}
+            onUpdate={(images) => handleClubTierUpdate('silver', images)}
             isAdmin={true}
           />
           
           <ClubTierCard
             title="Gold"
-            image={clubTiers.gold.image}
-            price={clubTiers.gold.price}
+            images={clubTiers.gold}
             color="yellow-500"
-            onUpdate={(image, price) => handleClubTierUpdate('gold', image, price)}
+            onUpdate={(images) => handleClubTierUpdate('gold', images)}
             isAdmin={true}
           />
           
           <ClubTierCard
             title="Diamond"
-            image={clubTiers.diamond.image}
-            price={clubTiers.diamond.price}
+            images={clubTiers.diamond}
             color="blue-500"
-            onUpdate={(image, price) => handleClubTierUpdate('diamond', image, price)}
+            onUpdate={(images) => handleClubTierUpdate('diamond', images)}
             isAdmin={true}
           />
         </div>
@@ -70,8 +79,8 @@ const ClubManagement = () => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-medium text-blue-900 mb-2">How it works</h3>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Upload attractive images for each club tier to showcase benefits</li>
-            <li>• Set special selling prices to highlight value propositions</li>
+            <li>• Upload multiple attractive images for each club tier to showcase benefits</li>
+            <li>• Add individual titles, descriptions, and prices for each image</li>
             <li>• These will be displayed on the homepage to attract new customers</li>
             <li>• Changes are saved automatically when you click Save</li>
           </ul>
