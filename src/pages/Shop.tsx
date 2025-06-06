@@ -2,20 +2,33 @@
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/hooks/useCart';
 import Layout from '@/components/Layout';
+import CartSummary from '@/components/CartSummary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Search, Plus, Minus, Package, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, Package, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const Shop = () => {
-  const { products } = useData();
+  const { products, isLoading, refreshData } = useData();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<{ [key: string]: number }>({});
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const {
+    cart,
+    addToCart,
+    removeFromCart,
+    getTotalItems,
+    getCartItems,
+    getTotalPrice
+  } = useCart();
 
   // Filter products
   const filteredProducts = products.filter(product => {
@@ -28,53 +41,25 @@ const Shop = () => {
   // Get unique categories
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
 
-  // Add to cart
-  const addToCart = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshData();
+      toast.success('Products refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh products');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
-    if (product.stockQuantity === 0) {
-      toast.error('This product is out of stock');
+  const handleCheckout = () => {
+    if (!user) {
+      toast.error('Please login to proceed with checkout');
+      navigate('/login');
       return;
     }
-
-    const currentQuantity = cart[productId] || 0;
-    if (currentQuantity >= product.stockQuantity) {
-      toast.error(`Only ${product.stockQuantity} items available in stock`);
-      return;
-    }
-
-    setCart(prev => ({
-      ...prev,
-      [productId]: currentQuantity + 1
-    }));
-    toast.success('Added to cart');
-  };
-
-  // Remove from cart
-  const removeFromCart = (productId: string) => {
-    setCart(prev => {
-      const newCart = { ...prev };
-      if (newCart[productId] > 1) {
-        newCart[productId] -= 1;
-      } else {
-        delete newCart[productId];
-      }
-      return newCart;
-    });
-  };
-
-  // Get total items in cart
-  const getTotalItems = () => {
-    return Object.values(cart).reduce((sum, quantity) => sum + quantity, 0);
-  };
-
-  // Calculate total price using MRP
-  const getTotalPrice = () => {
-    return Object.entries(cart).reduce((sum, [productId, quantity]) => {
-      const product = products.find(p => p.id === productId);
-      return sum + (product ? product.mrp * quantity : 0);
-    }, 0);
+    navigate('/checkout');
   };
 
   const getStockBadge = (stockQuantity: number) => {
@@ -103,20 +88,44 @@ const Shop = () => {
     return null;
   };
 
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="h-8 w-8 animate-spin mr-3" />
+            <span className="text-lg">Loading products...</span>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Shop</h1>
-          {getTotalItems() > 0 && (
-            <Button className="relative">
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Cart ({getTotalItems()})
-              <Badge className="absolute -top-2 -right-2 bg-red-500">
-                {getTotalItems()}
-              </Badge>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
+            {getTotalItems() > 0 && (
+              <Button className="relative" onClick={handleCheckout}>
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Cart ({getTotalItems()})
+                <Badge className="absolute -top-2 -right-2 bg-red-500">
+                  {getTotalItems()}
+                </Badge>
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Search and Filter */}
@@ -153,6 +162,10 @@ const Shop = () => {
                   src={product.image} 
                   alt={product.name}
                   className="w-full h-48 object-cover rounded-md mb-2"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder.svg';
+                  }}
                 />
                 <CardTitle className="text-lg">{product.name}</CardTitle>
                 <p className="text-sm text-muted-foreground">{product.description}</p>
@@ -202,7 +215,7 @@ const Shop = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => addToCart(product.id)}
+                      onClick={() => addToCart(product)}
                       disabled={cart[product.id] >= product.stockQuantity}
                     >
                       <Plus className="h-4 w-4" />
@@ -211,7 +224,7 @@ const Shop = () => {
                 ) : (
                   <Button 
                     className="w-full" 
-                    onClick={() => addToCart(product.id)}
+                    onClick={() => addToCart(product)}
                   >
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     Add to Cart
@@ -224,35 +237,23 @@ const Shop = () => {
 
         {filteredProducts.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No products found matching your criteria.</p>
+            <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-lg">
+              {searchTerm || selectedCategory !== 'all' 
+                ? 'No products found matching your criteria.' 
+                : 'No products available at the moment.'}
+            </p>
           </div>
         )}
 
         {/* Cart Summary */}
-        {getTotalItems() > 0 && (
-          <div className="fixed bottom-4 right-4 bg-white border rounded-lg shadow-lg p-4 min-w-[300px]">
-            <h3 className="font-semibold mb-2">Cart Summary</h3>
-            <div className="space-y-1 text-sm">
-              {Object.entries(cart).map(([productId, quantity]) => {
-                const product = products.find(p => p.id === productId);
-                return product ? (
-                  <div key={productId} className="flex justify-between">
-                    <span>{product.name} x{quantity}</span>
-                    <span>₹{(product.mrp * quantity).toFixed(2)}</span>
-                  </div>
-                ) : null;
-              })}
-            </div>
-            <div className="border-t pt-2 mt-2">
-              <div className="flex justify-between font-semibold">
-                <span>Total: ₹{getTotalPrice().toFixed(2)}</span>
-              </div>
-              <Button className="w-full mt-2" disabled={!user}>
-                {user ? 'Proceed to Checkout' : 'Login to Checkout'}
-              </Button>
-            </div>
-          </div>
-        )}
+        <CartSummary
+          cartItems={getCartItems(products)}
+          totalPrice={getTotalPrice(products)}
+          totalItems={getTotalItems()}
+          onCheckout={handleCheckout}
+          isLoggedIn={!!user}
+        />
       </div>
     </Layout>
   );
