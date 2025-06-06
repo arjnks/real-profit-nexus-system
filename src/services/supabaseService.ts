@@ -262,11 +262,10 @@ export class SupabaseService {
     return data.map(this.mapOrderFromDB);
   }
 
-  async addOrder(order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<Order | null> {
+  async addOrder(order: Omit<Order, "id" | "orderDate" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<Order | null> {
     const orderId = `ORD${Math.floor(10000 + Math.random() * 90000)}`;
     
-    // Calculate points based on products - we'll set to 0 for now as it should be calculated in DataContext
-    const calculatedPoints = 0;
+    console.log(`Creating order ${orderId} with ${order.points} point money`);
     
     const dbOrder = {
       id: orderId,
@@ -278,7 +277,7 @@ export class SupabaseService {
       total_amount: order.totalAmount,
       points_used: order.pointsUsed,
       amount_paid: order.amountPaid,
-      points: calculatedPoints,
+      points: order.points, // Use the calculated points from the order
       status: order.status,
       payment_method: order.paymentMethod,
       pincode: order.pincode,
@@ -301,6 +300,7 @@ export class SupabaseService {
       return null;
     }
 
+    console.log(`Order ${orderId} created successfully with ${data.points} point money`);
     return this.mapOrderFromDB(data);
   }
 

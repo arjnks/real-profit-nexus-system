@@ -468,17 +468,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Add a new order - now using database
+  // Add a new order - now properly calculating point money
   const addOrder = async (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<string> => {
     let totalPointMoney = 0;
+    
+    // Calculate point money based on MRP vs selling price difference
     order.products.forEach(product => {
       const productData = products.find(p => p.id === product.productId);
       if (productData) {
-        // Use MRP vs selling price (product.price in the order) for point money calculation
+        // Calculate point money: MRP - selling price (product.price in the order)
         const pointMoneyPerUnit = calculatePointsForProduct(productData.mrp, product.price);
         totalPointMoney += pointMoneyPerUnit * product.quantity;
+        console.log(`Product ${productData.name}: MRP ₹${productData.mrp}, Selling ₹${product.price}, Point Money per unit: ₹${pointMoneyPerUnit}, Quantity: ${product.quantity}`);
       }
     });
+    
+    console.log(`Order total point money calculated: ₹${totalPointMoney}`);
     
     const orderWithPoints = {
       ...order,
