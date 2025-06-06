@@ -22,7 +22,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { addOrder, customers } = useData();
+  const { addOrder, customers, products } = useData();
   
   const [pincode, setPincode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
@@ -53,7 +53,7 @@ const Checkout = () => {
 
   // Get customer data from DataContext
   const customer = customers.find(c => c.id === user.id);
-  // Use MRP (display price) for all calculations
+  // Use MRP (display price) for customer display
   const subtotal = cart.reduce((sum: number, item: any) => sum + (item.product.mrp * item.quantity), 0);
   const totalAmount = subtotal;
 
@@ -73,22 +73,26 @@ const Checkout = () => {
     setIsLoading(true);
 
     try {
-      const orderProducts = cart.map((item: any) => ({
-        productId: item.product.id,
-        name: item.product.name,
-        price: item.product.mrp, // Use MRP as the price for the order
-        quantity: item.quantity
-      }));
+      const orderProducts = cart.map((item: any) => {
+        // Get the actual product data to access the real selling price
+        const productData = products.find(p => p.id === item.product.id);
+        return {
+          productId: item.product.id,
+          name: item.product.name,
+          price: productData?.price || item.product.price, // Use actual selling price, not MRP
+          quantity: item.quantity
+        };
+      });
 
-      const orderId = addOrder({
+      const orderId = await addOrder({
         customerId: user.id,
         customerName: customer?.name || user.name || '',
         customerPhone: customer?.phone || '',
         customerCode: customer?.code || '',
         products: orderProducts,
-        totalAmount: subtotal,
+        totalAmount: subtotal, // Customer still pays MRP
         pointsUsed: 0,
-        amountPaid: totalAmount,
+        amountPaid: totalAmount, // Customer pays MRP
         status: 'pending',
         paymentMethod,
         pincode: pincode.trim(),
