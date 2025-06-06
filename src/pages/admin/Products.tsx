@@ -24,7 +24,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import ImageUploader from '@/components/ImageUploader';
-import { Plus, Search, Edit, Trash2, Tag } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Tag, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Products = () => {
@@ -42,6 +42,7 @@ const Products = () => {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [image, setImage] = useState('');
+  const [stockQuantity, setStockQuantity] = useState('');
 
   // Filter products
   const filteredProducts = products.filter(product =>
@@ -58,12 +59,13 @@ const Products = () => {
     setDescription('');
     setCategory('');
     setImage('');
+    setStockQuantity('');
     setEditingProduct(null);
   };
 
   // Handle add product
   const handleAddProduct = () => {
-    if (!name || !mrp || !price || !description || !category) {
+    if (!name || !mrp || !price || !description || !category || !stockQuantity) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -71,6 +73,7 @@ const Products = () => {
     const mrpValue = parseFloat(mrp);
     const priceValue = parseFloat(price);
     const dummyPriceValue = dummyPrice ? parseFloat(dummyPrice) : undefined;
+    const stockValue = parseInt(stockQuantity);
 
     if (priceValue > mrpValue) {
       toast.error('Company Profit Price cannot be higher than MRP');
@@ -82,6 +85,11 @@ const Products = () => {
       return;
     }
 
+    if (stockValue < 0) {
+      toast.error('Stock quantity cannot be negative');
+      return;
+    }
+
     addProduct({
       name,
       mrp: mrpValue,
@@ -90,7 +98,8 @@ const Products = () => {
       description,
       category,
       image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200',
-      inStock: true,
+      inStock: stockValue > 0,
+      stockQuantity: stockValue,
       tierDiscounts: {
         Bronze: 2,
         Silver: 3,
@@ -108,7 +117,7 @@ const Products = () => {
 
   // Handle edit product
   const handleEditProduct = () => {
-    if (!editingProduct || !name || !mrp || !price || !description || !category) {
+    if (!editingProduct || !name || !mrp || !price || !description || !category || stockQuantity === '') {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -116,6 +125,7 @@ const Products = () => {
     const mrpValue = parseFloat(mrp);
     const priceValue = parseFloat(price);
     const dummyPriceValue = dummyPrice ? parseFloat(dummyPrice) : undefined;
+    const stockValue = parseInt(stockQuantity);
 
     if (priceValue > mrpValue) {
       toast.error('Company Profit Price cannot be higher than MRP');
@@ -127,6 +137,11 @@ const Products = () => {
       return;
     }
 
+    if (stockValue < 0) {
+      toast.error('Stock quantity cannot be negative');
+      return;
+    }
+
     updateProduct(editingProduct.id, {
       name,
       mrp: mrpValue,
@@ -134,7 +149,9 @@ const Products = () => {
       dummyPrice: dummyPriceValue,
       description,
       category,
-      image: image || editingProduct.image
+      image: image || editingProduct.image,
+      inStock: stockValue > 0,
+      stockQuantity: stockValue
     });
 
     const points = calculatePointsForProduct(mrpValue, priceValue);
@@ -162,13 +179,26 @@ const Products = () => {
     setDescription(product.description);
     setCategory(product.category);
     setImage(product.image);
+    setStockQuantity(product.stockQuantity?.toString() || '0');
     setIsEditDialogOpen(true);
   };
 
-  // Open add dialog (for quick add buttons)
+  // Open add dialog
   const openAddDialog = () => {
     resetForm();
     setIsAddDialogOpen(true);
+  };
+
+  const getStockBadge = (stockQuantity: number) => {
+    if (stockQuantity === 0) {
+      return <Badge variant="destructive" className="text-xs">Out of Stock</Badge>;
+    } else if (stockQuantity === 1) {
+      return <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">Only 1 Left</Badge>;
+    } else if (stockQuantity <= 10) {
+      return <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-600">Low Stock</Badge>;
+    } else {
+      return <Badge variant="outline" className="text-xs text-green-600 border-green-600">In Stock</Badge>;
+    }
   };
 
   return (
@@ -177,7 +207,7 @@ const Products = () => {
         <h1 className="text-2xl font-bold tracking-tight">Products</h1>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={openAddDialog}>
               <Plus className="mr-2 h-4 w-4" />
               Add Product
             </Button>
@@ -239,6 +269,17 @@ const Products = () => {
                 )}
               </div>
               <div>
+                <Label htmlFor="stockQuantity">Stock Quantity</Label>
+                <Input
+                  id="stockQuantity"
+                  type="number"
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value)}
+                  placeholder="Enter stock quantity"
+                  min="0"
+                />
+              </div>
+              <div>
                 <Label htmlFor="category">Category</Label>
                 <Input
                   id="category"
@@ -294,6 +335,7 @@ const Products = () => {
               <TableHead>Dummy Price</TableHead>
               <TableHead>MRP (Display Price)</TableHead>
               <TableHead>Company Price</TableHead>
+              <TableHead>Stock</TableHead>
               <TableHead>Point Money/Unit</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Actions</TableHead>
@@ -301,81 +343,68 @@ const Products = () => {
           </TableHeader>
           <TableBody>
             {filteredProducts.length > 0 ? (
-              <>
-                {filteredProducts.map((product, index) => (
-                  <React.Fragment key={product.id}>
-                    <TableRow>
-                      <TableCell>
-                        <img 
-                          src={product.image} 
-                          alt={product.name}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{product.category}</TableCell>
-                      <TableCell>
-                        {product.dummyPrice ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500">₹{product.dummyPrice.toFixed(2)}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              <Tag className="h-3 w-3 mr-1" />
-                              Offer
-                            </Badge>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-bold text-blue-600">₹{product.mrp.toFixed(2)}</TableCell>
-                      <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                      <TableCell className="text-green-600 font-medium">
-                        ₹{calculatePointsForProduct(product.mrp || product.price, product.price)}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">{product.description}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-red-600"
-                            onClick={() => handleDeleteProduct(product.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    {/* Add Product Row */}
-                    <TableRow className="border-0">
-                      <TableCell colSpan={9} className="py-2">
-                        <div className="flex justify-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={openAddDialog}
-                            className="border-dashed border-2 hover:border-solid hover:bg-blue-50 text-blue-600 hover:text-blue-700"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Another Product
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                ))}
-              </>
+              filteredProducts.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.category}</TableCell>
+                  <TableCell>
+                    {product.dummyPrice ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">₹{product.dummyPrice.toFixed(2)}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          <Tag className="h-3 w-3 mr-1" />
+                          Offer
+                        </Badge>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-bold text-blue-600">₹{product.mrp.toFixed(2)}</TableCell>
+                  <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium">{product.stockQuantity || 0}</span>
+                      {getStockBadge(product.stockQuantity || 0)}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-green-600 font-medium">
+                    ₹{calculatePointsForProduct(product.mrp || product.price, product.price)}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate">{product.description}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => openEditDialog(product)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-red-600"
+                        onClick={() => handleDeleteProduct(product.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-6 text-muted-foreground">
                   <div className="space-y-4">
                     <p>No products found</p>
                     <Button
@@ -451,6 +480,17 @@ const Products = () => {
                   Point money per unit: ₹{calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
                 </p>
               )}
+            </div>
+            <div>
+              <Label htmlFor="edit-stockQuantity">Stock Quantity</Label>
+              <Input
+                id="edit-stockQuantity"
+                type="number"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(e.target.value)}
+                placeholder="Enter stock quantity"
+                min="0"
+              />
             </div>
             <div>
               <Label htmlFor="edit-category">Category</Label>

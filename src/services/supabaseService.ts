@@ -130,6 +130,7 @@ export class SupabaseService {
       description: product.description,
       category: product.category,
       in_stock: product.inStock,
+      stock_quantity: product.stockQuantity,
       tier_discounts: product.tierDiscounts,
     };
 
@@ -442,6 +443,7 @@ export class SupabaseService {
       description: data.description,
       category: data.category,
       inStock: data.in_stock,
+      stockQuantity: data.stock_quantity || 0,
       tierDiscounts: data.tier_discounts,
     };
   }
@@ -457,6 +459,7 @@ export class SupabaseService {
     if (product.description !== undefined) dbProduct.description = product.description;
     if (product.category !== undefined) dbProduct.category = product.category;
     if (product.inStock !== undefined) dbProduct.in_stock = product.inStock;
+    if (product.stockQuantity !== undefined) dbProduct.stock_quantity = product.stockQuantity;
     if (product.tierDiscounts !== undefined) dbProduct.tier_discounts = product.tierDiscounts;
     
     return dbProduct;

@@ -240,6 +240,7 @@ export type Database = {
           mrp: number
           name: string
           price: number
+          stock_quantity: number
           tier_discounts: Json
           updated_at: string
         }
@@ -254,6 +255,7 @@ export type Database = {
           mrp: number
           name: string
           price: number
+          stock_quantity?: number
           tier_discounts?: Json
           updated_at?: string
         }
@@ -268,6 +270,7 @@ export type Database = {
           mrp?: number
           name?: string
           price?: number
+          stock_quantity?: number
           tier_discounts?: Json
           updated_at?: string
         }

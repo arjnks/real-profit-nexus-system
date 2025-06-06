@@ -1,10 +1,10 @@
+
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
   TableBody, 
@@ -14,369 +14,302 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue, 
-} from '@/components/ui/select';
-import { Search, Plus, Minus, ShoppingCart } from 'lucide-react';
-import { toast } from 'sonner';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Search, Eye, Package, Clock, CheckCircle, XCircle, Truck, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
 
 const Purchases = () => {
-  const { customers, products, addOrder } = useData();
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [cart, setCart] = useState<any[]>([]);
-  const [pincode, setPincode] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
+  const { orders, customers } = useData();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const allowedPincodes = ['680305', '680684', '680683'];
-
-  // Filter customers for search
-  const filteredCustomers = customers.filter(customer => 
-    !customer.isPending && (
-      customer.code.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      customer.phone.includes(customerSearch)
-    )
+  // Filter orders
+  const filteredOrders = orders.filter(order =>
+    order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.customerPhone.includes(searchTerm) ||
+    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.customerCode?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate point money and actual points that will be awarded
-  const calculateOrderRewards = () => {
-    if (!selectedCustomer || cart.length === 0) return { pointMoney: 0, actualPoints: 0, remainingMoney: 0 };
-    
-    let totalPointMoney = 0;
-    cart.forEach(item => {
-      const product = products.find(p => p.id === item.productId);
-      if (product) {
-        const pointMoneyPerUnit = Math.max(0, Math.floor(product.mrp - product.price));
-        totalPointMoney += pointMoneyPerUnit * item.quantity;
-      }
-    });
-    
-    const totalAccumulated = selectedCustomer.accumulatedPointMoney + totalPointMoney;
-    const actualPoints = Math.floor(totalAccumulated / 5);
-    const remainingMoney = totalAccumulated % 5;
-    
-    return { pointMoney: totalPointMoney, actualPoints, remainingMoney };
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { variant: 'outline', icon: Clock, color: 'text-yellow-600' },
+      confirmed: { variant: 'secondary', icon: CheckCircle, color: 'text-blue-600' },
+      shipped: { variant: 'secondary', icon: Truck, color: 'text-purple-600' },
+      delivered: { variant: 'default', icon: CheckCircle, color: 'text-green-600' },
+      cancelled: { variant: 'destructive', icon: XCircle, color: 'text-red-600' },
+      refunded: { variant: 'outline', icon: XCircle, color: 'text-gray-600' }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
+
+    return (
+      <Badge variant={config.variant as any} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
   };
 
-  // Add product to cart
-  const addToCart = (product: any) => {
-    const existingItem = cart.find(item => item.productId === product.id);
-    if (existingItem) {
-      setCart(cart.map(item => 
-        item.productId === product.id 
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
-    } else {
-      setCart([...cart, {
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: 1
-      }]);
-    }
+  const getCustomerByCode = (code: string | undefined) => {
+    if (!code) return null;
+    return customers.find(c => c.code === code);
   };
 
-  // Update cart quantity
-  const updateQuantity = (productId: string, change: number) => {
-    setCart(cart.map(item => {
-      if (item.productId === productId) {
-        const newQuantity = item.quantity + change;
-        return newQuantity <= 0 ? null : { ...item, quantity: newQuantity };
-      }
-      return item;
-    }).filter(Boolean));
+  const openOrderDetails = (order: any) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
   };
 
-  // Calculate totals
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  
-  // Calculate how much customer can pay with points
-  let pointsDiscount = 0;
-  let maxPointsUsable = 0;
-  if (selectedCustomer) {
-    const tierBenefit = selectedCustomer.tier === 'Diamond' ? 70 :
-                      selectedCustomer.tier === 'Gold' ? 30 :
-                      selectedCustomer.tier === 'Silver' ? 20 : 10;
-    maxPointsUsable = Math.floor((subtotal * tierBenefit) / 100);
-    pointsDiscount = Math.min(maxPointsUsable, selectedCustomer.points);
-  }
-
-  const totalAmount = subtotal - pointsDiscount;
-  const rewardCalculation = calculateOrderRewards();
-
-  // Handle order submission
-  const handleSubmitOrder = () => {
-    if (!selectedCustomer) {
-      toast.error('Please select a customer');
-      return;
-    }
-    
-    if (cart.length === 0) {
-      toast.error('Please add items to cart');
-      return;
-    }
-    
-    if (!pincode) {
-      toast.error('Please enter pincode');
-      return;
-    }
-
-    if (!allowedPincodes.includes(pincode)) {
-      toast.error(`Delivery not available for this pincode. Available pincodes: ${allowedPincodes.join(', ')}`);
-      return;
-    }
-
-    const orderId = addOrder({
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-      customerPhone: selectedCustomer.phone,
-      customerCode: selectedCustomer.code,
-      products: cart,
-      totalAmount: subtotal,
-      pointsUsed: pointsDiscount,
-      amountPaid: totalAmount,
-      status: 'pending',
-      paymentMethod,
-      pincode,
-      usedPointsDiscount: pointsDiscount > 0
-    });
-
-    const { pointMoney, actualPoints, remainingMoney } = rewardCalculation;
-    toast.success(`Order ${orderId} created successfully! Customer will earn ${actualPoints} points from ₹${pointMoney} point money. ₹${remainingMoney} will remain for next purchase.`);
-    
-    // Reset form
-    setCart([]);
-    setPincode('');
-    setSelectedCustomer(null);
-    setCustomerSearch('');
+  const calculateSubtotal = (products: any[]) => {
+    return products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
   };
 
   return (
     <AdminLayout>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Purchase History</h1>
+          <p className="text-muted-foreground">
+            View all customer orders and purchase history
+          </p>
+        </div>
+      </div>
+
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Create Purchase</h1>
-        <p className="text-muted-foreground">
-          Create new orders for customers
-        </p>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by customer name, phone, order ID, or customer code..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Customer Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Customer</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by code, name or phone..."
-                  className="pl-8"
-                  value={customerSearch}
-                  onChange={(e) => setCustomerSearch(e.target.value)}
-                />
-              </div>
-              
-              {customerSearch && (
-                <div className="max-h-40 overflow-y-auto border rounded-md">
-                  {filteredCustomers.map(customer => (
-                    <div
-                      key={customer.id}
-                      className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                      onClick={() => {
-                        setSelectedCustomer(customer);
-                        setCustomerSearch('');
-                      }}
-                    >
-                      <div className="font-medium">{customer.name}</div>
-                      <div className="text-sm text-gray-500">{customer.code} • {customer.phone}</div>
-                      <div className="text-xs text-gray-400">
-                        {customer.tier} • {customer.points} points • ₹{customer.accumulatedPointMoney} accumulated
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Customer Code</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Products</TableHead>
+              <TableHead>Total Amount</TableHead>
+              <TableHead>Amount Paid</TableHead>
+              <TableHead>Points Earned</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Order Date</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredOrders.length > 0 ? (
+              filteredOrders.map((order) => {
+                const customer = getCustomerByCode(order.customerCode);
+                return (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{order.customerName}</span>
+                        {customer && (
+                          <Badge variant="outline" className="text-xs w-fit">
+                            {customer.tier}
+                          </Badge>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {selectedCustomer && (
-                <div className="p-3 bg-green-50 rounded-md border border-green-200">
-                  <div className="font-medium text-green-800">{selectedCustomer.name}</div>
-                  <div className="text-sm text-green-700">{selectedCustomer.code} • {selectedCustomer.phone}</div>
-                  <div className="text-xs text-green-600">
-                    {selectedCustomer.tier} • {selectedCustomer.points} points • ₹{selectedCustomer.accumulatedPointMoney} accumulated
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="font-mono">
+                        {order.customerCode || 'N/A'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{order.customerPhone}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-gray-500" />
+                        <span>{order.products.length} item(s)</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">₹{order.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell className="text-green-600 font-medium">₹{order.amountPaid.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-600 font-medium">₹{order.points}</span>
+                        {order.isPointsAwarded && (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                            Awarded
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(order.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {format(new Date(order.orderDate), 'MMM dd, yyyy')}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openOrderDetails(order)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={11} className="text-center py-6 text-muted-foreground">
+                  No orders found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        {/* Product Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {products.map(product => (
-                <div key={product.id} className="flex items-center justify-between p-2 border rounded">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-12 h-12 object-cover rounded"
-                    />
+      {/* Order Details Dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Order Details - {selectedOrder?.id}</DialogTitle>
+            <DialogDescription>
+              Complete information about this order
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-6">
+              {/* Customer Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Customer Information</h3>
+                  <div className="space-y-2 text-sm">
                     <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-gray-500">
-                        ₹{product.price} • +₹{Math.max(0, Math.floor(product.mrp - product.price))} point money
-                      </div>
+                      <span className="font-medium">Name:</span> {selectedOrder.customerName}
+                    </div>
+                    <div>
+                      <span className="font-medium">Phone:</span> {selectedOrder.customerPhone}
+                    </div>
+                    <div>
+                      <span className="font-medium">Customer Code:</span> 
+                      <Badge variant="secondary" className="ml-2">
+                        {selectedOrder.customerCode || 'N/A'}
+                      </Badge>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => addToCart(product)}
-                    disabled={!product.inStock}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                
+                <div>
+                  <h3 className="font-semibold mb-2">Order Information</h3>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="font-medium">Order Date:</span> {format(new Date(selectedOrder.orderDate), 'MMM dd, yyyy HH:mm')}
+                    </div>
+                    <div>
+                      <span className="font-medium">Status:</span> 
+                      <span className="ml-2">{getStatusBadge(selectedOrder.status)}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">Payment Method:</span> {selectedOrder.paymentMethod.toUpperCase()}
+                    </div>
+                    <div>
+                      <span className="font-medium">Pincode:</span> {selectedOrder.pincode}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-      {/* Cart */}
-      {cart.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Shopping Cart</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {cart.map(item => (
-                <div key={item.productId} className="flex items-center justify-between p-2 border rounded">
-                  <div>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-gray-500">₹{item.price} each</div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateQuantity(item.productId, -1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="mx-2">{item.quantity}</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateQuantity(item.productId, 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <span className="ml-4 font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
+              {/* Products */}
+              <div>
+                <h3 className="font-semibold mb-2">Products Ordered</h3>
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Subtotal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.products.map((product: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                          <TableCell>{product.quantity}</TableCell>
+                          <TableCell>₹{(product.price * product.quantity).toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              ))}
-              
-              <div className="border-t pt-4">
-                <div className="space-y-2">
+              </div>
+
+              {/* Order Summary */}
+              <div className="border rounded-md p-4 bg-gray-50">
+                <h3 className="font-semibold mb-3">Order Summary</h3>
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
+                    <span>₹{calculateSubtotal(selectedOrder.products).toFixed(2)}</span>
                   </div>
-                  {selectedCustomer && pointsDiscount > 0 && (
+                  {selectedOrder.pointsUsed > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Points Discount:</span>
-                      <span>-₹{pointsDiscount.toFixed(2)}</span>
+                      <span>Points Used:</span>
+                      <span>-₹{selectedOrder.pointsUsed.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total:</span>
-                    <span>₹{totalAmount.toFixed(2)}</span>
+                  <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                    <span>Total Amount:</span>
+                    <span>₹{selectedOrder.totalAmount.toFixed(2)}</span>
                   </div>
-                  
-                  {selectedCustomer && rewardCalculation.pointMoney > 0 && (
-                    <div className="bg-blue-50 p-3 rounded-md border border-blue-200 mt-3">
-                      <div className="text-sm font-medium text-blue-800">Reward Calculation:</div>
-                      <div className="text-xs text-blue-700 mt-1">
-                        Point Money Earned: ₹{rewardCalculation.pointMoney}<br/>
-                        Actual Points: {rewardCalculation.actualPoints} (after adding to ₹{selectedCustomer.accumulatedPointMoney} accumulated)<br/>
-                        Remaining: ₹{rewardCalculation.remainingMoney}
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex justify-between font-semibold text-green-600">
+                    <span>Amount Paid:</span>
+                    <span>₹{selectedOrder.amountPaid.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-blue-600">
+                    <span>Points Earned:</span>
+                    <span>₹{selectedOrder.points} {selectedOrder.isPointsAwarded ? '(Awarded)' : '(Pending)'}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Order Details */}
-      {cart.length > 0 && selectedCustomer && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Order Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="pincode">Pincode</Label>
-                <Input
-                  id="pincode"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
-                  placeholder="Enter pincode"
-                />
-                {allowedPincodes.includes(pincode) && (
-                  <p className="text-sm text-green-600">
-                    ✓ Delivery available • UPI ID: deepchandran911@okaxis
-                  </p>
-                )}
-                {pincode && !allowedPincodes.includes(pincode) && (
-                  <p className="text-sm text-red-600">
-                    ✗ Delivery not available for this pincode. Available: {allowedPincodes.join(', ')}
-                  </p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={(value: 'cod' | 'upi') => setPaymentMethod(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cod">Cash on Delivery</SelectItem>
-                    <SelectItem value="upi">UPI Payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2 md:col-span-2">
-                <Button
-                  onClick={handleSubmitOrder}
-                  className="w-full"
-                  disabled={!pincode || !allowedPincodes.includes(pincode)}
-                >
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  Create Order
-                </Button>
-              </div>
+              {/* MLM Distribution Log */}
+              {selectedOrder.mlmDistributionLog && selectedOrder.mlmDistributionLog.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">MLM Distribution Log</h3>
+                  <div className="bg-gray-50 p-3 rounded-md text-sm">
+                    {selectedOrder.mlmDistributionLog.map((log: string, index: number) => (
+                      <div key={index}>{log}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

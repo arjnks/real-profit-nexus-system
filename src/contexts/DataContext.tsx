@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabaseService } from '@/services/supabaseService';
 
@@ -31,6 +32,7 @@ export type Product = {
   description: string;
   category: string;
   inStock: boolean;
+  stockQuantity: number;
   tierDiscounts: {
     Bronze: number;
     Silver: number;
@@ -74,7 +76,7 @@ export type Order = {
   deliveryApproved: boolean;
   pointsApproved: boolean;
   usedPointsDiscount?: boolean;
-  mlmDistributionLog?: string[]; // Track MLM distribution for this order
+  mlmDistributionLog?: string[];
 };
 
 export type Offer = {
@@ -113,6 +115,7 @@ interface DataContextType {
   moveCustomerInMLM: (customerId: string, newParentCode: string | null) => void;
   getMLMPath: (customerCode: string) => string[];
   refreshData: () => Promise<void>;
+  updateProductStock: (productId: string, quantityPurchased: number) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -176,6 +179,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const calculatePointsForProduct = (mrp: number, sellingPrice: number): number => {
     const difference = mrp - sellingPrice;
     return Math.max(0, Math.floor(difference));
+  };
+
+  // Update product stock after purchase
+  const updateProductStock = async (productId: string, quantityPurchased: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const newStockQuantity = Math.max(0, product.stockQuantity - quantityPurchased);
+    const success = await supabaseService.updateProduct(productId, {
+      stockQuantity: newStockQuantity,
+      inStock: newStockQuantity > 0
+    });
+
+    if (success) {
+      setProducts(prev =>
+        prev.map(p =>
+          p.id === productId
+            ? { ...p, stockQuantity: newStockQuantity, inStock: newStockQuantity > 0 }
+            : p
+        )
+      );
+    }
   };
 
   // Get MLM path (5 levels up from a customer)
@@ -511,6 +536,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   return customer;
                 })
               );
+
+              // Update product stock quantities
+              order.products.forEach(async (product) => {
+                await updateProductStock(product.productId, product.quantity);
+              });
             }
             
             if (orderData.status === 'delivered') {
@@ -553,6 +583,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         moveCustomerInMLM,
         getMLMPath,
         refreshData,
+        updateProductStock,
       }}
     >
       {children}
