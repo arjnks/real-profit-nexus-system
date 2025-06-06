@@ -255,8 +255,8 @@ const Products = () => {
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>MRP</TableHead>
-              <TableHead>Selling Price</TableHead>
+              <TableHead>MRP (Display Price)</TableHead>
+              <TableHead>Company Price</TableHead>
               <TableHead>Point Money/Unit</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Actions</TableHead>
@@ -275,7 +275,7 @@ const Products = () => {
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>
-                  <TableCell>₹{(product.mrp || product.price).toFixed(2)}</TableCell>
+                  <TableCell className="font-bold text-blue-600">₹{product.mrp.toFixed(2)}</TableCell>
                   <TableCell>₹{product.price.toFixed(2)}</TableCell>
                   <TableCell className="text-green-600 font-medium">
                     ₹{calculatePointsForProduct(product.mrp || product.price, product.price)}

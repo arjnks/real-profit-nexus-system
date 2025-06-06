@@ -61,9 +61,9 @@ const Shop = () => {
     toast.success(`Added ${product.name} to cart`);
   };
 
-  // Calculate cart total
+  // Calculate cart total using MRP
   const cartTotal = cart.reduce(
-    (total, item) => total + item.product.price * item.quantity,
+    (total, item) => total + item.product.mrp * item.quantity,
     0
   );
 
@@ -161,7 +161,7 @@ const Shop = () => {
                 <h3 className="font-semibold text-lg">{product.name}</h3>
                 <p className="text-sm text-gray-600 mt-1">{product.description}</p>
                 <div className="mt-2">
-                  <span className="text-realprofit-blue font-bold">₹{product.price.toFixed(2)}</span>
+                  <span className="text-realprofit-blue font-bold">₹{product.mrp.toFixed(2)}</span>
                   <span className="text-xs text-gray-500 ml-2">
                     Earn ₹{calculatePointsForProduct(product.mrp || product.price, product.price)} point money
                   </span>
@@ -204,7 +204,7 @@ const Shop = () => {
               {cart.map(item => (
                 <div key={item.product.id} className="flex justify-between items-center mb-2">
                   <span className="text-sm">{item.product.name} × {item.quantity}</span>
-                  <span className="text-sm font-medium">₹{(item.product.price * item.quantity).toFixed(2)}</span>
+                  <span className="text-sm font-medium">₹{(item.product.mrp * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
             </div>
