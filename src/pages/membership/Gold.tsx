@@ -21,7 +21,7 @@ const MembershipGold = () => {
     'Use up to 30% of product value as points',
     'Access to exclusive Gold product catalog',
     'VIP customer support with dedicated agent',
-    'Exclusive Gold tier offers and early access',
+    'Exclusive Gold club offers and early access',
     'Premium referral rewards and bonuses',
     'Monthly VIP newsletter with insider tips',
     'Invitation to exclusive member events',
@@ -46,17 +46,17 @@ const MembershipGold = () => {
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Gold Membership</h1>
           <p className="text-xl text-gray-600">
-            Experience premium benefits and VIP treatment with Gold tier
+            Experience premium benefits and VIP treatment with Gold club
           </p>
         </div>
 
-        {/* Tier Badge */}
+        {/* Club Badge */}
         <div className="flex justify-center mb-8">
           <div className="bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg px-8 py-4 border border-yellow-300">
             <div className="flex items-center space-x-3">
               <Gem className="h-8 w-8 text-yellow-700" />
               <div>
-                <h2 className="text-2xl font-bold text-yellow-800">Gold Tier</h2>
+                <h2 className="text-2xl font-bold text-yellow-800">Gold Club</h2>
                 <p className="text-yellow-700">Premium Level • 80-159 Points</p>
               </div>
             </div>
@@ -110,10 +110,10 @@ const MembershipGold = () => {
           </Card>
         </div>
 
-        {/* Tier Comparison */}
+        {/* Club Comparison */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Gold vs Lower Tiers</CardTitle>
+            <CardTitle>Gold vs Lower Clubs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -188,7 +188,7 @@ const MembershipGold = () => {
                 <Gem className="h-6 w-6 text-yellow-500 mt-1" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Premium Catalog</h3>
-                  <p className="text-gray-600 text-sm">Access to exclusive Gold-tier products and limited editions</p>
+                  <p className="text-gray-600 text-sm">Access to exclusive Gold-club products and limited editions</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
@@ -202,26 +202,26 @@ const MembershipGold = () => {
           </CardContent>
         </Card>
 
-        {/* Next Tier Preview */}
+        {/* Next Club Preview */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>The Ultimate: Diamond Tier</CardTitle>
+            <CardTitle>The Ultimate: Diamond Club</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Diamond Tier Benefits</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Diamond Club Benefits</h3>
                 <p className="text-gray-600">Unlock the ultimate experience with 160+ points</p>
                 <ul className="mt-2 text-sm text-gray-500">
                   <li>• Use up to 70% of product value as points</li>
                   <li>• Personal shopping assistant</li>
                   <li>• Exclusive Diamond member privileges</li>
-                  <li>• Highest tier referral commissions</li>
+                  <li>• Highest club referral commissions</li>
                 </ul>
               </div>
               <Button asChild>
                 <Link to="/membership/diamond">
-                  View Diamond Tier
+                  View Diamond Club
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>

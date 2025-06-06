@@ -23,7 +23,7 @@ const MembershipDiamond = () => {
     'Use up to 70% of product value as points',
     'Access to exclusive Diamond product catalog',
     'Personal shopping assistant and concierge service',
-    'Ultra-exclusive Diamond tier offers and first access',
+    'Ultra-exclusive Diamond club offers and first access',
     'Maximum referral rewards and leadership bonuses',
     'VIP monthly newsletter with market insights',
     'Exclusive access to Diamond member events and retreats',
@@ -35,7 +35,7 @@ const MembershipDiamond = () => {
 
   const requirements = [
     'Accumulate 160+ points total',
-    'Maintain top-tier monthly activity',
+    'Maintain top-club monthly activity',
     'Complete Diamond elite verification',
     'Lead a team of at least 5 active referrals',
     'Demonstrate leadership in the community'
@@ -55,13 +55,13 @@ const MembershipDiamond = () => {
           </p>
         </div>
 
-        {/* Tier Badge */}
+        {/* Club Badge */}
         <div className="flex justify-center mb-8">
           <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-blue-100 rounded-lg px-8 py-4 border border-blue-300">
             <div className="flex items-center space-x-3">
               <Diamond className="h-8 w-8 text-blue-700" />
               <div>
-                <h2 className="text-2xl font-bold text-blue-800">Diamond Tier</h2>
+                <h2 className="text-2xl font-bold text-blue-800">Diamond Club</h2>
                 <p className="text-blue-700">Ultimate Level • 160+ Points</p>
               </div>
               <Sparkles className="h-8 w-8 text-purple-500" />
@@ -116,10 +116,10 @@ const MembershipDiamond = () => {
           </Card>
         </div>
 
-        {/* Complete Tier Comparison */}
+        {/* Complete Club Comparison */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Complete Tier Comparison</CardTitle>
+            <CardTitle>Complete Club Comparison</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -243,7 +243,7 @@ const MembershipDiamond = () => {
                   <Crown className="h-6 w-6 text-purple-600" />
                 </div>
                 <h3 className="font-semibold mb-2">Elite Recognition</h3>
-                <p className="text-sm text-gray-600">Recognition as a top-tier member with exclusive status and privileges</p>
+                <p className="text-sm text-gray-600">Recognition as a top-club member with exclusive status and privileges</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -260,7 +260,7 @@ const MembershipDiamond = () => {
         <div className="text-center mt-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Achieve Diamond Excellence</h2>
           <p className="text-gray-600 mb-8">
-            Join the most elite tier of Real Profit membership and unlock unprecedented benefits
+            Join the most elite club of Real Profit membership and unlock unprecedented benefits
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">

@@ -20,7 +20,7 @@ const MembershipSilver = () => {
     'Use up to 20% of product value as points',
     'Access to premium product catalog',
     'Priority customer support',
-    'Exclusive Silver tier offers and discounts',
+    'Exclusive Silver club offers and discounts',
     'Enhanced referral rewards',
     'Monthly exclusive deals newsletter',
     'Early access to new products'
@@ -42,17 +42,17 @@ const MembershipSilver = () => {
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Silver Membership</h1>
           <p className="text-xl text-gray-600">
-            Unlock enhanced benefits and priority support with Silver tier
+            Unlock enhanced benefits and priority support with Silver club
           </p>
         </div>
 
-        {/* Tier Badge */}
+        {/* Club Badge */}
         <div className="flex justify-center mb-8">
           <div className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg px-8 py-4 border border-gray-300">
             <div className="flex items-center space-x-3">
               <Crown className="h-8 w-8 text-gray-700" />
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">Silver Tier</h2>
+                <h2 className="text-2xl font-bold text-gray-800">Silver Club</h2>
                 <p className="text-gray-700">Intermediate Level • 40-79 Points</p>
               </div>
             </div>
@@ -148,15 +148,15 @@ const MembershipSilver = () => {
           </CardContent>
         </Card>
 
-        {/* Next Tier Preview */}
+        {/* Next Club Preview */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Ready for Gold Tier?</CardTitle>
+            <CardTitle>Ready for Gold Club?</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Gold Tier Benefits</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Gold Club Benefits</h3>
                 <p className="text-gray-600">Unlock premium rewards with 80+ points</p>
                 <ul className="mt-2 text-sm text-gray-500">
                   <li>• Use up to 30% of product value as points</li>
@@ -167,7 +167,7 @@ const MembershipSilver = () => {
               </div>
               <Button asChild>
                 <Link to="/membership/gold">
-                  View Gold Tier
+                  View Gold Club
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
