@@ -1,32 +1,12 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart, Users, Award, Mail, Star, Gift } from 'lucide-react';
-import ClubTierCard from '@/components/ClubTierCard';
-import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-
-  // State for club tier data - in a real app, this would come from a database
-  const [clubTiers, setClubTiers] = useState({
-    bronze: { image: '', price: '' },
-    silver: { image: '', price: '' },
-    gold: { image: '', price: '' },
-    diamond: { image: '', price: '' }
-  });
-
-  const handleClubTierUpdate = (tier: string, image: string, price: string) => {
-    setClubTiers(prev => ({
-      ...prev,
-      [tier]: { image, price }
-    }));
-  };
-
   return (
     <Layout>
       {/* Hero Section */}
@@ -235,60 +215,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-
-      {/* Admin Club Management Section */}
-      {isAdmin && (
-        <section className="py-16 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Club Management
-              </h2>
-              <p className="text-xl text-gray-600">
-                Manage club tier images and special prices
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <ClubTierCard
-                title="Bronze"
-                image={clubTiers.bronze.image}
-                price={clubTiers.bronze.price}
-                color="amber-700"
-                onUpdate={(image, price) => handleClubTierUpdate('bronze', image, price)}
-                isAdmin={isAdmin}
-              />
-              
-              <ClubTierCard
-                title="Silver"
-                image={clubTiers.silver.image}
-                price={clubTiers.silver.price}
-                color="gray-400"
-                onUpdate={(image, price) => handleClubTierUpdate('silver', image, price)}
-                isAdmin={isAdmin}
-              />
-              
-              <ClubTierCard
-                title="Gold"
-                image={clubTiers.gold.image}
-                price={clubTiers.gold.price}
-                color="yellow-500"
-                onUpdate={(image, price) => handleClubTierUpdate('gold', image, price)}
-                isAdmin={isAdmin}
-              />
-              
-              <ClubTierCard
-                title="Diamond"
-                image={clubTiers.diamond.image}
-                price={clubTiers.diamond.price}
-                color="blue-500"
-                onUpdate={(image, price) => handleClubTierUpdate('diamond', image, price)}
-                isAdmin={isAdmin}
-              />
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Contact Section */}
       <section className="py-16 bg-realprofit-lightBlue">
