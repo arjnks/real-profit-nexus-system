@@ -30,6 +30,7 @@ import AdminServices from "./pages/admin/Services";
 import Purchases from "./pages/admin/Purchases";
 import Requests from "./pages/admin/Requests";
 import MLMTree from "./pages/admin/MLMTree";
+import ClubManagement from "./pages/admin/ClubManagement";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -69,6 +70,7 @@ function App() {
                 <Route path="/admin/services" element={<ProtectedRoute><AdminServices /></ProtectedRoute>} />
                 <Route path="/admin/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
                 <Route path="/admin/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
+                <Route path="/admin/club-management" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
                 <Route path="/admin/mlm-tree" element={<ProtectedRoute><MLMTree /></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
