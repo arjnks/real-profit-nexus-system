@@ -474,7 +474,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     order.products.forEach(product => {
       const productData = products.find(p => p.id === product.productId);
       if (productData) {
-        const pointMoneyPerUnit = calculatePointsForProduct(productData.mrp, productData.price);
+        // Use MRP vs selling price (product.price in the order) for point money calculation
+        const pointMoneyPerUnit = calculatePointsForProduct(productData.mrp, product.price);
         totalPointMoney += pointMoneyPerUnit * product.quantity;
       }
     });
