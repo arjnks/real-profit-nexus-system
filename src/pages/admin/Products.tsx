@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ import { Plus, Search, Edit, Trash2, Tag, Package, FolderPlus } from 'lucide-rea
 import { toast } from 'sonner';
 
 const Products = () => {
-  const { products, categories, addProduct, updateProduct, deleteProduct, addCategory, calculatePointsForProduct } = useData();
+  const { products, categories, addProduct, updateProduct, deleteProduct, addCategory, calculatePointsForProduct, refreshData } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -55,6 +55,11 @@ const Products = () => {
   // Category form state
   const [categoryName, setCategoryName] = useState('');
   const [categoryDescription, setCategoryDescription] = useState('');
+
+  // Load data on component mount
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   // Filter products
   const filteredProducts = products.filter(product =>
@@ -96,6 +101,8 @@ const Products = () => {
       toast.success('Category added successfully');
       resetCategoryForm();
       setIsCategoryDialogOpen(false);
+      // Refresh data to get updated categories
+      await refreshData();
     } catch (error) {
       toast.error('Failed to add category');
     }
@@ -367,7 +374,7 @@ const Products = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white z-50">
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.name}>
                           {cat.name}
@@ -590,7 +597,7 @@ const Products = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white z-50">
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.name}>
                       {cat.name}
