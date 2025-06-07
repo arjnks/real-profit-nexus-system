@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -152,7 +151,7 @@ const ClubTierDisplay = () => {
                         <img 
                           src={item.image_url} 
                           alt={item.title}
-                          className="w-full h-20 object-cover rounded mb-2"
+                          className="w-full h-auto object-contain rounded mb-2"
                         />
                       )}
                       <h4 className="font-semibold text-sm">{item.title}</h4>
