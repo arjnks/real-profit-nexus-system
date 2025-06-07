@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ClubTierData {
@@ -23,6 +24,18 @@ const ClubTierDisplay = () => {
     silver: [],
     gold: [],
     diamond: []
+  });
+
+  const [expandedTiers, setExpandedTiers] = useState<{
+    bronze: boolean;
+    silver: boolean;
+    gold: boolean;
+    diamond: boolean;
+  }>({
+    bronze: false,
+    silver: false,
+    gold: false,
+    diamond: false
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -76,14 +89,18 @@ const ClubTierDisplay = () => {
     }
   };
 
-  const getTierDiscountPercentage = (tier: string) => {
-    switch (tier.toLowerCase()) {
-      case 'bronze': return '10%';
-      case 'silver': return '20%';
-      case 'gold': return '30%';
-      case 'diamond': return '70%';
-      default: return '0%';
+  const toggleExpanded = (tier: keyof typeof expandedTiers) => {
+    setExpandedTiers(prev => ({
+      ...prev,
+      [tier]: !prev[tier]
+    }));
+  };
+
+  const getDisplayedItems = (tierData: ClubTierData[], tierKey: keyof typeof expandedTiers) => {
+    if (tierData.length <= 5 || expandedTiers[tierKey]) {
+      return tierData;
     }
+    return tierData.slice(0, 5);
   };
 
   if (isLoading) {
@@ -96,7 +113,6 @@ const ClubTierDisplay = () => {
               <CardTitle className={`text-${getTierColor(tier)}`}>{tier}</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-2xl font-bold mb-2">{getTierDiscountPercentage(tier)}</p>
               <p className="text-sm text-gray-600">Points discount privilege</p>
               <div className="mt-4 text-sm text-gray-500">
                 Loading content...
@@ -114,6 +130,9 @@ const ClubTierDisplay = () => {
         const tierData = clubTiers[tier as keyof typeof clubTiers];
         const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
         const color = getTierColor(tier);
+        const displayedItems = getDisplayedItems(tierData, tier as keyof typeof expandedTiers);
+        const hasMoreItems = tierData.length > 5;
+        const isExpanded = expandedTiers[tier as keyof typeof expandedTiers];
         
         return (
           <Card key={tier} className={`border-2 border-${color}`}>
@@ -122,13 +141,12 @@ const ClubTierDisplay = () => {
               <CardTitle className={`text-${color}`}>{tierName}</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-2xl font-bold mb-2">{getTierDiscountPercentage(tier)}</p>
-              <p className="text-sm text-gray-600">Points discount privilege</p>
+              <p className="text-sm text-gray-600 mb-4">Points discount privilege</p>
               
               {/* Display dynamic content from club management */}
               {tierData.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  {tierData.slice(0, 2).map((item, index) => (
+                <div className="space-y-3">
+                  {displayedItems.map((item) => (
                     <div key={item.id} className="text-left">
                       {item.image_url && (
                         <img 
@@ -142,8 +160,16 @@ const ClubTierDisplay = () => {
                       <p className="text-sm font-bold text-green-600">{item.price}</p>
                     </div>
                   ))}
-                  {tierData.length > 2 && (
-                    <p className="text-xs text-gray-500">+{tierData.length - 2} more offers</p>
+                  
+                  {hasMoreItems && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleExpanded(tier as keyof typeof expandedTiers)}
+                      className="w-full mt-3"
+                    >
+                      {isExpanded ? 'Show Less' : `Show More (${tierData.length - 5} more)`}
+                    </Button>
                   )}
                 </div>
               )}
