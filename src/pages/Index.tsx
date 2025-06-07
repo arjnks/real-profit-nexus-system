@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import ClubTierDisplay from '@/components/ClubTierDisplay';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart, Users, Award, Mail, Star, Gift } from 'lucide-react';
@@ -156,7 +156,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Club Benefits Section */}
+      {/* Club Benefits Section - Updated to use dynamic data */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -168,51 +168,7 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card className="border-2 border-amber-700">
-              <CardHeader className="text-center">
-                <div className="w-12 h-12 bg-amber-700 rounded-full mx-auto mb-2"></div>
-                <CardTitle className="text-amber-700">Bronze</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-2xl font-bold mb-2">10%</p>
-                <p className="text-sm text-gray-600">Points discount privilege</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-2 border-gray-400">
-              <CardHeader className="text-center">
-                <div className="w-12 h-12 bg-gray-400 rounded-full mx-auto mb-2"></div>
-                <CardTitle className="text-gray-600">Silver</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-2xl font-bold mb-2">20%</p>
-                <p className="text-sm text-gray-600">Points discount privilege</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-2 border-yellow-500">
-              <CardHeader className="text-center">
-                <div className="w-12 h-12 bg-yellow-500 rounded-full mx-auto mb-2"></div>
-                <CardTitle className="text-yellow-600">Gold</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-2xl font-bold mb-2">30%</p>
-                <p className="text-sm text-gray-600">Points discount privilege</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-2 border-blue-500">
-              <CardHeader className="text-center">
-                <div className="w-12 h-12 bg-blue-500 rounded-full mx-auto mb-2"></div>
-                <CardTitle className="text-blue-600">Diamond</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-2xl font-bold mb-2">70%</p>
-                <p className="text-sm text-gray-600">Points discount privilege</p>
-              </CardContent>
-            </Card>
-          </div>
+          <ClubTierDisplay />
         </div>
       </section>
 
