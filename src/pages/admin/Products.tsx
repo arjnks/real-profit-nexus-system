@@ -21,17 +21,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import ImageUploader from '@/components/ImageUploader';
-import { Plus, Search, Edit, Trash2, Tag, Package } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Tag, Package, FolderPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Products = () => {
-  const { products, addProduct, updateProduct, deleteProduct, calculatePointsForProduct } = useData();
+  const { products, categories, addProduct, updateProduct, deleteProduct, addCategory, calculatePointsForProduct } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
   // Form state
@@ -43,6 +51,10 @@ const Products = () => {
   const [category, setCategory] = useState('');
   const [image, setImage] = useState('');
   const [stockQuantity, setStockQuantity] = useState('');
+
+  // Category form state
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryDescription, setCategoryDescription] = useState('');
 
   // Filter products
   const filteredProducts = products.filter(product =>
@@ -61,6 +73,32 @@ const Products = () => {
     setImage('');
     setStockQuantity('');
     setEditingProduct(null);
+  };
+
+  // Reset category form
+  const resetCategoryForm = () => {
+    setCategoryName('');
+    setCategoryDescription('');
+  };
+
+  // Handle add category
+  const handleAddCategory = async () => {
+    if (!categoryName.trim()) {
+      toast.error('Please enter a category name');
+      return;
+    }
+
+    try {
+      await addCategory({
+        name: categoryName.trim(),
+        description: categoryDescription.trim() || undefined
+      });
+      toast.success('Category added successfully');
+      resetCategoryForm();
+      setIsCategoryDialogOpen(false);
+    } catch (error) {
+      toast.error('Failed to add category');
+    }
   };
 
   // Handle add product
@@ -205,112 +243,166 @@ const Products = () => {
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Products</h1>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openAddDialog}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
-              <DialogDescription>
-                Add a new product to your inventory with pricing details
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Product Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter product name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="dummyPrice">Dummy Price (Optional) ₹</Label>
-                <Input
-                  id="dummyPrice"
-                  type="number"
-                  step="0.01"
-                  value={dummyPrice}
-                  onChange={(e) => setDummyPrice(e.target.value)}
-                  placeholder="Higher price to show as 'was' price"
-                />
-                <p className="text-xs text-gray-500 mt-1">This will show as crossed-out price to make MRP look like an offer</p>
-              </div>
-              <div>
-                <Label htmlFor="mrp">Maximum Retail Price (MRP) ₹</Label>
-                <Input
-                  id="mrp"
-                  type="number"
-                  step="0.01"
-                  value={mrp}
-                  onChange={(e) => setMrp(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <Label htmlFor="price">Company Profit Price (Selling Price) ₹</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-                {mrp && price && (
-                  <p className="text-sm text-green-600 mt-1">
-                    Point money per unit: ₹{calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="stockQuantity">Stock Quantity</Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  value={stockQuantity}
-                  onChange={(e) => setStockQuantity(e.target.value)}
-                  placeholder="Enter stock quantity"
-                  min="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g., Fruits, Dairy, Bakery"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter product description"
-                />
-              </div>
-              <ImageUploader
-                value={image}
-                onChange={setImage}
-                label="Product Image"
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
+        <div className="flex gap-2">
+          <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
+                <FolderPlus className="mr-2 h-4 w-4" />
+                Add Category
               </Button>
-              <Button onClick={handleAddProduct}>Add Product</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Category</DialogTitle>
+                <DialogDescription>
+                  Create a new product category for better organization
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="categoryName">Category Name</Label>
+                  <Input
+                    id="categoryName"
+                    value={categoryName}
+                    onChange={(e) => setCategoryName(e.target.value)}
+                    placeholder="Enter category name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="categoryDescription">Description (Optional)</Label>
+                  <Input
+                    id="categoryDescription"
+                    value={categoryDescription}
+                    onChange={(e) => setCategoryDescription(e.target.value)}
+                    placeholder="Enter category description"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddCategory}>Add Category</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+                <DialogDescription>
+                  Add a new product to your inventory with pricing details
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Product Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter product name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dummyPrice">Dummy Price (Optional) ₹</Label>
+                  <Input
+                    id="dummyPrice"
+                    type="number"
+                    step="0.01"
+                    value={dummyPrice}
+                    onChange={(e) => setDummyPrice(e.target.value)}
+                    placeholder="Higher price to show as 'was' price"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">This will show as crossed-out price to make MRP look like an offer</p>
+                </div>
+                <div>
+                  <Label htmlFor="mrp">Maximum Retail Price (MRP) ₹</Label>
+                  <Input
+                    id="mrp"
+                    type="number"
+                    step="0.01"
+                    value={mrp}
+                    onChange={(e) => setMrp(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="price">Company Profit Price (Selling Price) ₹</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  {mrp && price && (
+                    <p className="text-sm text-green-600 mt-1">
+                      Point money per unit: ₹{calculatePointsForProduct(parseFloat(mrp) || 0, parseFloat(price) || 0)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="stockQuantity">Stock Quantity</Label>
+                  <Input
+                    id="stockQuantity"
+                    type="number"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    placeholder="Enter stock quantity"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {categories.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">No categories available. Please add a category first.</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Enter product description"
+                  />
+                </div>
+                <ImageUploader
+                  value={image}
+                  onChange={setImage}
+                  label="Product Image"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddProduct}>Add Product</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="mb-6">
@@ -409,7 +501,7 @@ const Products = () => {
                     <p>No products found</p>
                     <Button
                       variant="outline"
-                      onClick={openAddDialog}
+                      onClick={() => { resetForm(); setIsAddDialogOpen(true); }}
                       className="border-dashed border-2 hover:border-solid hover:bg-blue-50 text-blue-600 hover:text-blue-700"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -494,12 +586,18 @@ const Products = () => {
             </div>
             <div>
               <Label htmlFor="edit-category">Category</Label>
-              <Input
-                id="edit-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="e.g., Fruits, Dairy, Bakery"
-              />
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="edit-description">Description</Label>

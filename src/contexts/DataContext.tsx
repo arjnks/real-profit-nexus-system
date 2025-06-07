@@ -21,6 +21,14 @@ export type Customer = {
   passwordHash?: string;
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -90,6 +98,7 @@ export type Offer = {
 
 interface DataContextType {
   customers: Customer[];
+  categories: Category[];
   products: Product[];
   services: Service[];
   orders: Order[];
@@ -98,6 +107,9 @@ interface DataContextType {
   addCustomer: (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => Promise<Customer | null>;
   updateCustomer: (id: string, customerData: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  addCategory: (category: Omit<Category, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateCategory: (id: string, categoryData: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
   addProduct: (product: Omit<Product, "id">) => Promise<void>;
   updateProduct: (id: string, productData: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -129,6 +141,7 @@ export const useData = () => {
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -141,21 +154,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Loading data from Supabase...');
       
-      const [customersData, productsData, servicesData, ordersData] = await Promise.all([
+      const [customersData, categoriesData, productsData, servicesData, ordersData] = await Promise.all([
         supabaseService.getCustomers(),
+        supabaseService.getCategories(),
         supabaseService.getProducts(),
         supabaseService.getServices(),
         supabaseService.getOrders(),
       ]);
 
       console.log('Data loaded:', { 
-        customers: customersData.length, 
+        customers: customersData.length,
+        categories: categoriesData.length, 
         products: productsData.length, 
         services: servicesData.length,
         orders: ordersData.length
       });
 
       setCustomers(customersData);
+      setCategories(categoriesData);
       setProducts(productsData);
       setServices(servicesData);
       setOrders(ordersData);
@@ -402,6 +418,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Add a new category
+  const addCategory = async (category: Omit<Category, "id" | "createdAt" | "updatedAt">) => {
+    console.log('Adding category:', category);
+    const newCategory = await supabaseService.addCategory(category);
+    
+    if (newCategory) {
+      setCategories(prev => [...prev, newCategory]);
+      console.log('Category added successfully');
+    }
+  };
+
+  // Update an existing category
+  const updateCategory = async (id: string, categoryData: Partial<Category>) => {
+    const success = await supabaseService.updateCategory(id, categoryData);
+    
+    if (success) {
+      setCategories(prev =>
+        prev.map(category =>
+          category.id === id ? { ...category, ...categoryData } : category
+        )
+      );
+    }
+  };
+
+  // Delete a category
+  const deleteCategory = async (id: string) => {
+    const success = await supabaseService.deleteCategory(id);
+    
+    if (success) {
+      setCategories(prev => prev.filter(category => category.id !== id));
+    }
+  };
+
   // Add a new product
   const addProduct = async (product: Omit<Product, "id">) => {
     console.log('Adding product:', product);
@@ -564,6 +613,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <DataContext.Provider
       value={{
         customers,
+        categories,
         products,
         services,
         orders,
@@ -572,6 +622,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addCustomer,
         updateCustomer,
         deleteCustomer,
+        addCategory,
+        updateCategory,
+        deleteCategory,
         addProduct,
         updateProduct,
         deleteProduct,

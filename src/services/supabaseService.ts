@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Customer, Product, Service, Order, Offer } from '@/contexts/DataContext';
+import type { Customer, Product, Service, Order, Category } from '@/contexts/DataContext';
 
 export class SupabaseService {
   // Customer operations
@@ -130,7 +129,7 @@ export class SupabaseService {
       description: product.description,
       category: product.category,
       in_stock: product.inStock,
-      stock_quantity: product.stockQuantity,
+      stockQuantity: product.stockQuantity,
       tier_discounts: product.tierDiscounts,
     };
 
@@ -386,6 +385,104 @@ export class SupabaseService {
     } catch (error) {
       console.error('Admin authentication error:', error);
       return { success: false, error: 'An error occurred during login' };
+    }
+  }
+
+  // Category methods
+  async getCategories(): Promise<Category[]> {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        return [];
+      }
+
+      return data.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+    } catch (error) {
+      console.error('Error in getCategories:', error);
+      return [];
+    }
+  }
+
+  async addCategory(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category | null> {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({
+          name: category.name,
+          description: category.description
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding category:', error);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+    } catch (error) {
+      console.error('Error in addCategory:', error);
+      return null;
+    }
+  }
+
+  async updateCategory(id: string, categoryData: Partial<Category>): Promise<boolean> {
+    try {
+      const updateData: any = {};
+      
+      if (categoryData.name !== undefined) updateData.name = categoryData.name;
+      if (categoryData.description !== undefined) updateData.description = categoryData.description;
+
+      const { error } = await supabase
+        .from('categories')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating category:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updateCategory:', error);
+      return false;
+    }
+  }
+
+  async deleteCategory(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting category:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in deleteCategory:', error);
+      return false;
     }
   }
 
