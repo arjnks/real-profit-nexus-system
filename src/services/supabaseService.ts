@@ -1,6 +1,15 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Product, Service, Order, Offer } from '@/contexts/DataContext';
+
+interface ClubTier {
+  id: string;
+  tierName: string;
+  imageUrl: string;
+  title: string;
+  description: string;
+  price: string;
+  displayOrder: number;
+}
 
 export class SupabaseService {
   // Customer operations
@@ -389,6 +398,73 @@ export class SupabaseService {
     }
   }
 
+  // Club tier operations
+  async getClubTiers(): Promise<ClubTier[]> {
+    const { data, error } = await supabase
+      .from('club_tiers')
+      .select('*')
+      .order('tier_name', { ascending: true })
+      .order('display_order', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching club tiers:', error);
+      return [];
+    }
+    
+    return data.map(this.mapClubTierFromDB);
+  }
+
+  async getClubTiersByTier(tierName: string): Promise<ClubTier[]> {
+    const { data, error } = await supabase
+      .from('club_tiers')
+      .select('*')
+      .eq('tier_name', tierName.toLowerCase())
+      .order('display_order', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching club tiers by tier:', error);
+      return [];
+    }
+    
+    return data.map(this.mapClubTierFromDB);
+  }
+
+  async saveClubTiers(tierName: string, tiers: Omit<ClubTier, 'id' | 'tierName'>[]): Promise<boolean> {
+    try {
+      // First delete existing tiers for this tier name
+      await supabase
+        .from('club_tiers')
+        .delete()
+        .eq('tier_name', tierName.toLowerCase());
+
+      // Then insert new tiers
+      if (tiers.length > 0) {
+        const tiersToInsert = tiers.map((tier, index) => ({
+          tier_name: tierName.toLowerCase(),
+          image_url: tier.imageUrl,
+          title: tier.title,
+          description: tier.description,
+          price: tier.price,
+          display_order: index,
+        }));
+
+        const { error } = await supabase
+          .from('club_tiers')
+          .insert(tiersToInsert);
+
+        if (error) {
+          console.error('Error saving club tiers:', error);
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving club tiers:', error);
+      return false;
+    }
+  }
+
   // Mapping functions
   private mapCustomerFromDB(data: any): Customer {
     return {
@@ -538,6 +614,18 @@ export class SupabaseService {
     if (order.mlmDistributionLog !== undefined) dbOrder.mlm_distribution_log = order.mlmDistributionLog;
     
     return dbOrder;
+  }
+
+  private mapClubTierFromDB(data: any): ClubTier {
+    return {
+      id: data.id,
+      tierName: data.tier_name,
+      imageUrl: data.image_url,
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      displayOrder: data.display_order,
+    };
   }
 }
 
