@@ -1,5 +1,10 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Service, Order, Category } from '@/contexts/DataContext';
+
+// Get the Supabase URL and key from the client configuration
+const SUPABASE_URL = "https://dcqmbvucslwgnslxdnor.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjcW1idnVjc2x3Z25zbHhkbm9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMTgxNjQsImV4cCI6MjA2NDY5NDE2NH0.Hx7DXyfIrp6ET3mNE517ojxrZCV8yabeBS9uzVL7Vho";
 
 export class SupabaseService {
   // Customer operations
@@ -388,18 +393,21 @@ export class SupabaseService {
     }
   }
 
-  // Category methods - Using raw SQL queries to avoid TypeScript issues
+  // Category methods - Using direct table access instead of RPC
   async getCategories(): Promise<Category[]> {
     try {
-      const { data, error } = await supabase.rpc('get_categories');
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
 
       if (error) {
-        console.error('Error fetching categories with RPC, trying direct query:', error);
-        // Fallback to direct query
-        const response = await fetch(`${supabase.supabaseUrl}/rest/v1/categories?order=name`, {
+        console.error('Error fetching categories:', error);
+        // Fallback to direct fetch request
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?order=name`, {
           headers: {
-            'apikey': supabase.supabaseKey,
-            'Authorization': `Bearer ${supabase.supabaseKey}`,
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
           },
         });
@@ -419,7 +427,13 @@ export class SupabaseService {
         }));
       }
 
-      return data || [];
+      return data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
     } catch (error) {
       console.error('Error in getCategories:', error);
       return [];
@@ -428,34 +442,55 @@ export class SupabaseService {
 
   async addCategory(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category | null> {
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/categories`, {
-        method: 'POST',
-        headers: {
-          'apikey': supabase.supabaseKey,
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{
           name: category.name,
           description: category.description
-        })
-      });
+        }])
+        .select()
+        .single();
 
-      if (!response.ok) {
-        console.error('Failed to add category');
-        return null;
+      if (error) {
+        console.error('Error adding category:', error);
+        // Fallback to direct fetch request
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            name: category.name,
+            description: category.description
+          })
+        });
+
+        if (!response.ok) {
+          console.error('Failed to add category');
+          return null;
+        }
+
+        const responseData = await response.json();
+        const newCategory = responseData[0];
+
+        return {
+          id: newCategory.id,
+          name: newCategory.name,
+          description: newCategory.description,
+          createdAt: newCategory.created_at,
+          updatedAt: newCategory.updated_at
+        };
       }
 
-      const data = await response.json();
-      const newCategory = data[0];
-
       return {
-        id: newCategory.id,
-        name: newCategory.name,
-        description: newCategory.description,
-        createdAt: newCategory.created_at,
-        updatedAt: newCategory.updated_at
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
       };
     } catch (error) {
       console.error('Error in addCategory:', error);
@@ -470,17 +505,28 @@ export class SupabaseService {
       if (categoryData.name !== undefined) updateData.name = categoryData.name;
       if (categoryData.description !== undefined) updateData.description = categoryData.description;
 
-      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/categories?id=eq.${id}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': supabase.supabaseKey,
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData)
-      });
+      const { error } = await supabase
+        .from('categories')
+        .update(updateData)
+        .eq('id', id);
 
-      return response.ok;
+      if (error) {
+        console.error('Error updating category:', error);
+        // Fallback to direct fetch request
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?id=eq.${id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        return response.ok;
+      }
+
+      return true;
     } catch (error) {
       console.error('Error in updateCategory:', error);
       return false;
@@ -489,15 +535,26 @@ export class SupabaseService {
 
   async deleteCategory(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/categories?id=eq.${id}`, {
-        method: 'DELETE',
-        headers: {
-          'apikey': supabase.supabaseKey,
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
-        }
-      });
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
 
-      return response.ok;
+      if (error) {
+        console.error('Error deleting category:', error);
+        // Fallback to direct fetch request
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?id=eq.${id}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          }
+        });
+
+        return response.ok;
+      }
+
+      return true;
     } catch (error) {
       console.error('Error in deleteCategory:', error);
       return false;
@@ -660,11 +717,11 @@ export const supabaseService = new SupabaseService();
 
 export const createCategory = async (categoryData: { name: string; description?: string }) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create_category`, {
+    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/create_category`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify(categoryData),
     });
@@ -682,10 +739,10 @@ export const createCategory = async (categoryData: { name: string; description?:
 
 export const getCategories = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get_categories`, {
+    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/get_categories`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
     });
 
@@ -702,11 +759,11 @@ export const getCategories = async () => {
 
 export const updateCategory = async (id: string, categoryData: { name: string; description?: string }) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update_category`, {
+    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/update_category`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ id, ...categoryData }),
     });
@@ -724,11 +781,11 @@ export const updateCategory = async (id: string, categoryData: { name: string; d
 
 export const deleteCategory = async (id: string) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete_category`, {
+    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/delete_category`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ id }),
     });
