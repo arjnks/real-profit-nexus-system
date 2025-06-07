@@ -1,86 +1,239 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Users, Award, Leaf } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShoppingCart, Users, Award, Mail, Star, Gift } from 'lucide-react';
 
 const Index = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-realprofit-blue to-blue-600 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Welcome to RealProfit
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 text-blue-100">
-            Your gateway to exclusive products, services, and rewards
-          </p>
-          <div className="space-x-4">
-            <Button asChild size="lg" className="bg-white text-realprofit-blue hover:bg-gray-100">
-              <a href="/shop">Shop Now</a>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-realprofit-blue">
-              <a href="/register">Join Club</a>
-            </Button>
+      <section className="bg-gradient-to-br from-realprofit-blue to-realprofit-green text-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+              Real Profit Supermarket
+            </h1>
+            <p className="text-xl md:text-2xl mb-8 opacity-90">
+              Quality products, loyalty rewards, and community growth
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="bg-white text-realprofit-blue hover:bg-gray-100">
+                <Link to="/shop">
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Shop Now
+                </Link>
+              </Button>
+              <Button asChild size="lg" className="bg-realprofit-green text-white hover:bg-realprofit-green/90">
+                <Link to="/register">
+                  <Users className="mr-2 h-5 w-5" />
+                  Register Now
+                </Link>
+              </Button>
+              <Button asChild size="lg" className="bg-realprofit-gold text-white hover:bg-realprofit-gold/90">
+                <Link to="/login">
+                  Login Now
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Malayalam System Description */}
+      <section className="py-16 bg-gradient-to-r from-blue-50 to-green-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+              ഞങ്ങളുടെ സിസ്റ്റം എങ്ങനെ പ്രവർത്തിക്കുന്നു
+            </h2>
+            <div className="bg-white rounded-lg shadow-lg p-8 text-left max-w-3xl mx-auto">
+              <div className="space-y-6 text-lg leading-relaxed text-gray-700">
+                <p className="text-xl font-semibold text-realprofit-blue mb-4 text-center">
+                  റിയൽ പ്രോഫിറ്റ് സൂപ്പർമാർക്കറ്റ് - ഒരു പുതിയ അനുഭവം
+                </p>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="flex items-start space-x-3">
+                    <Star className="h-6 w-6 text-yellow-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-realprofit-blue">പോയിന്റ് സിസ്റ്റം</h4>
+                      <p className="text-base">വാങ്ങുന്ന ഓരോ ഉൽപ്പാദനത്തിനും പോയിന്റുകൾ ലഭിക്കും.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <Award className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-realprofit-blue">ക്ലബ് സിസ്റ്റം</h4>
+                      <p className="text-base">ബ്രോൺസ്, സിൽവർ, ഗോൾഡ്, ഡയമണ്ട് - നാല് ക്ലബ്ബുകൾ.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <Gift className="h-6 w-6 text-purple-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-realprofit-blue">പോയിന്റ് റിഡീം</h4>
+                      <p className="text-base">സമ്പാദിച്ച പോയിന്റുകൾ ഡിസ്കൗണ്ടായി ഉപയോഗിക്കാം.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <ShoppingCart className="h-6 w-6 text-blue-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-realprofit-blue">ഗുണനിലവാര ഉൽപ്പാദനങ്ങൾ</h4>
+                      <p className="text-base">പുതിയ പച്ചക്കറികളും മികച്ച ഉൽപ്പാദനങ്ങളും.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-realprofit-blue to-realprofit-green text-white p-6 rounded-lg mt-6">
+                  <h4 className="font-bold text-lg mb-3 text-center">എങ്ങനെ ആരംഭിക്കാം?</h4>
+                  <div className="text-center space-y-2">
+                    <p>1. രജിസ്റ്റർ ചെയ്യുക</p>
+                    <p>2. ഉൽപ്പാദനങ്ങൾ വാങ്ങുക</p>
+                    <p>3. പോയിന്റുകൾ സമ്പാദിക്കുക</p>
+                    <p>4. ഡിസ്കൗണ്ട് ലഭിക്കുക</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-16">
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose RealProfit?</h2>
-            <p className="text-lg text-gray-600">Discover the benefits of being part of our community</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Why Choose Real Profit?
+            </h2>
+            <p className="text-xl text-gray-600">
+              Experience the best in quality, rewards, and community
+            </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-realprofit-blue rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShoppingBag className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Quality Products</h3>
-              <p className="text-gray-600">Curated selection of premium products at competitive prices</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="text-center">
+              <CardHeader>
+                <ShoppingCart className="h-12 w-12 mx-auto text-realprofit-blue mb-4" />
+                <CardTitle>Premium Quality Products</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Fresh groceries, daily essentials, and quality products sourced from trusted suppliers
+                </CardDescription>
+              </CardContent>
+            </Card>
             
-            <div className="text-center">
-              <div className="w-16 h-16 bg-realprofit-blue rounded-full flex items-center justify-center mx-auto mb-4">
-                <Award className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Rewards Program</h3>
-              <p className="text-gray-600">Earn points with every purchase and redeem for exciting rewards</p>
-            </div>
+            <Card className="text-center">
+              <CardHeader>
+                <Award className="h-12 w-12 mx-auto text-realprofit-green mb-4" />
+                <CardTitle>Loyalty Rewards</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Earn points with every purchase and unlock exclusive discounts based on your club
+                </CardDescription>
+              </CardContent>
+            </Card>
             
-            <div className="text-center">
-              <div className="w-16 h-16 bg-realprofit-blue rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Community</h3>
-              <p className="text-gray-600">Join a thriving community of like-minded individuals</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-realprofit-blue rounded-full flex items-center justify-center mx-auto mb-4">
-                <Leaf className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Sustainable</h3>
-              <p className="text-gray-600">Committed to environmental responsibility and ethical practices</p>
-            </div>
+            <Card className="text-center">
+              <CardHeader>
+                <Users className="h-12 w-12 mx-auto text-realprofit-gold mb-4" />
+                <CardTitle>Community Growth</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Join our growing community and benefit from our multi-level reward system
+                </CardDescription>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-gray-50 py-16">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Ready to Get Started?</h2>
-          <p className="text-lg text-gray-600 mb-8">
-            Join thousands of satisfied customers and start earning rewards today
+      {/* Club Benefits Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Membership Clubs
+            </h2>
+            <p className="text-xl text-gray-600">
+              Unlock better discounts as you shop more
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="border-2 border-amber-700">
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-amber-700 rounded-full mx-auto mb-2"></div>
+                <CardTitle className="text-amber-700">Bronze</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-2xl font-bold mb-2">10%</p>
+                <p className="text-sm text-gray-600">Points discount privilege</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-2 border-gray-400">
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-gray-400 rounded-full mx-auto mb-2"></div>
+                <CardTitle className="text-gray-600">Silver</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-2xl font-bold mb-2">20%</p>
+                <p className="text-sm text-gray-600">Points discount privilege</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-2 border-yellow-500">
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-yellow-500 rounded-full mx-auto mb-2"></div>
+                <CardTitle className="text-yellow-600">Gold</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-2xl font-bold mb-2">30%</p>
+                <p className="text-sm text-gray-600">Points discount privilege</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-2 border-blue-500">
+              <CardHeader className="text-center">
+                <div className="w-12 h-12 bg-blue-500 rounded-full mx-auto mb-2"></div>
+                <CardTitle className="text-blue-600">Diamond</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-2xl font-bold mb-2">70%</p>
+                <p className="text-sm text-gray-600">Points discount privilege</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section className="py-16 bg-realprofit-lightBlue">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-realprofit-blue mb-4">
+            Need Support?
+          </h2>
+          <p className="text-xl text-gray-600 mb-6">
+            Our customer support team is here to help you
           </p>
-          <Button asChild size="lg" className="bg-realprofit-blue hover:bg-blue-600">
-            <a href="/register">Sign Up Now</a>
-          </Button>
+          <div className="flex items-center justify-center">
+            <Mail className="h-6 w-6 text-realprofit-blue mr-2" />
+            <a 
+              href="mailto:werealprofit@gmail.com" 
+              className="text-xl text-realprofit-blue hover:underline"
+            >
+              werealprofit@gmail.com
+            </a>
+          </div>
         </div>
       </section>
     </Layout>

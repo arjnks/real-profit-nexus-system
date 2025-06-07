@@ -39,42 +39,6 @@ export type Database = {
         }
         Relationships: []
       }
-      club_tiers: {
-        Row: {
-          created_at: string
-          description: string
-          display_order: number
-          id: string
-          image_url: string
-          price: string
-          tier_name: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description: string
-          display_order?: number
-          id?: string
-          image_url: string
-          price: string
-          tier_name: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          display_order?: number
-          id?: string
-          image_url?: string
-          price?: string
-          tier_name?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       customers: {
         Row: {
           accumulated_point_money: number
