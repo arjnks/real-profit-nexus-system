@@ -8,13 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue, 
-} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { ShoppingCart, CreditCard } from 'lucide-react';
 
@@ -25,7 +18,6 @@ const Checkout = () => {
   const { addOrder, customers, products } = useData();
   
   const [pincode, setPincode] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
   const [isLoading, setIsLoading] = useState(false);
 
   const allowedPincodes = ['680305', '680684', '680683'];
@@ -94,7 +86,7 @@ const Checkout = () => {
         pointsUsed: 0,
         amountPaid: totalAmount, // Customer pays MRP
         status: 'pending',
-        paymentMethod,
+        paymentMethod: 'cod',
         pincode: pincode.trim(),
         usedPointsDiscount: false
       });
@@ -166,7 +158,7 @@ const Checkout = () => {
                   />
                   {allowedPincodes.includes(pincode) && (
                     <p className="text-sm text-green-600">
-                      ✓ Delivery available • UPI: deepchandran911@okaxis
+                      ✓ Delivery available
                     </p>
                   )}
                   {pincode && !allowedPincodes.includes(pincode) && (
@@ -178,15 +170,10 @@ const Checkout = () => {
                 
                 <div className="space-y-2">
                   <Label>Payment Method</Label>
-                  <Select value={paymentMethod} onValueChange={(value: 'cod' | 'upi') => setPaymentMethod(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cod">Cash on Delivery</SelectItem>
-                      <SelectItem value="upi">UPI Payment</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="p-3 border rounded-md bg-gray-50">
+                    <p className="text-sm font-medium">Cash on Delivery (COD)</p>
+                    <p className="text-xs text-gray-600">Pay when your order is delivered</p>
+                  </div>
                 </div>
                 
                 <Button
