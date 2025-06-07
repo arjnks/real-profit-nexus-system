@@ -12,10 +12,10 @@ const Footer: React.FC = () => {
               <div className="w-8 h-8 rounded-full bg-realprofit-blue flex items-center justify-center mr-2">
                 <span className="text-white font-bold text-sm">RP</span>
               </div>
-              <span className="text-lg font-bold text-realprofit-blue">Real Profit</span>
+              <span className="text-lg font-bold text-realprofit-blue">Real Profit Online Mart</span>
             </Link>
             <p className="text-gray-600 text-sm mb-4">
-              Your one-stop supermarket for quality products and excellent customer service.
+              Your one-stop online mart for quality products and excellent customer service.
             </p>
             <div className="flex items-center text-gray-600 mb-2">
               <Mail className="h-4 w-4 mr-2" />
@@ -135,7 +135,7 @@ const Footer: React.FC = () => {
 
         <div className="mt-8 pt-8 border-t border-gray-200">
           <p className="text-gray-500 text-sm text-center">
-            &copy; {new Date().getFullYear()} Real Profit Supermarket. All rights reserved.
+            &copy; {new Date().getFullYear()} Real Profit Online Mart. All rights reserved.
           </p>
         </div>
       </div>

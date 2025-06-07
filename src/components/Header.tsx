@@ -38,7 +38,7 @@ const Header = () => {
               <div className="w-8 h-8 bg-realprofit-blue rounded-lg flex items-center justify-center mr-3">
                 <span className="text-white font-bold text-sm">RP</span>
               </div>
-              <span className="text-xl font-bold text-realprofit-blue">Real Profit</span>
+              <span className="text-xl font-bold text-realprofit-blue">Real Profit Online Mart</span>
             </div>
           </Link>
 

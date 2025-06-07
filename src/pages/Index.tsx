@@ -14,7 +14,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Real Profit Supermarket
+              Real Profit Online Mart
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90">
               Quality products, loyalty rewards, and community growth
@@ -52,7 +52,7 @@ const Index = () => {
             <div className="bg-white rounded-lg shadow-lg p-8 text-left max-w-3xl mx-auto">
               <div className="space-y-6 text-lg leading-relaxed text-gray-700">
                 <p className="text-xl font-semibold text-realprofit-blue mb-4 text-center">
-                  റിയൽ പ്രോഫിറ്റ് സൂപ്പർമാർക്കറ്റ് - ഒരു പുതിയ അനുഭവം
+                  റിയൽ പ്രോഫിറ്റ് ഓൺലൈൻ മാർട്ട് - ഒരു പുതിയ അനുഭവം
                 </p>
                 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -109,7 +109,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose Real Profit?
+              Why Choose Real Profit Online Mart?
             </h2>
             <p className="text-xl text-gray-600">
               Experience the best in quality, rewards, and community
