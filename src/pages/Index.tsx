@@ -1,7 +1,6 @@
 
 import React from 'react';
 import Layout from '@/components/Layout';
-import ClubTierDisplay from '@/components/ClubTierDisplay';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Users, Award, Leaf } from 'lucide-react';
 
@@ -27,9 +26,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-
-      {/* Club Tier Benefits */}
-      <ClubTierDisplay />
 
       {/* Features Section */}
       <section className="py-16">
