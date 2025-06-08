@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Service, Order, Category } from '@/contexts/DataContext';
 
@@ -715,88 +714,19 @@ export class SupabaseService {
 
 export const supabaseService = new SupabaseService();
 
+// Keep these for backward compatibility
 export const createCategory = async (categoryData: { name: string; description?: string }) => {
-  try {
-    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/create_category`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify(categoryData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to create category');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating category:', error);
-    throw error;
-  }
+  return await supabaseService.addCategory(categoryData);
 };
 
 export const getCategories = async () => {
-  try {
-    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/get_categories`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch categories');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    throw error;
-  }
+  return await supabaseService.getCategories();
 };
 
 export const updateCategory = async (id: string, categoryData: { name: string; description?: string }) => {
-  try {
-    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/update_category`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ id, ...categoryData }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update category');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error updating category:', error);
-    throw error;
-  }
+  return await supabaseService.updateCategory(id, categoryData);
 };
 
 export const deleteCategory = async (id: string) => {
-  try {
-    const response = await fetch(`https://dcqmbvucslwgnslxdnor.supabase.co/functions/v1/delete_category`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ id }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete category');
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error deleting category:', error);
-    throw error;
-  }
+  return await supabaseService.deleteCategory(id);
 };
