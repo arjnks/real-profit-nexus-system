@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -94,16 +93,26 @@ const Products = () => {
     }
 
     try {
+      console.log('Adding category with data:', { 
+        name: categoryName.trim(), 
+        description: categoryDescription.trim() || undefined 
+      });
+      
       await addCategory({
         name: categoryName.trim(),
         description: categoryDescription.trim() || undefined
       });
+      
       toast.success('Category added successfully');
       resetCategoryForm();
       setIsCategoryDialogOpen(false);
-      // Refresh data to get updated categories
+      
+      // Force refresh categories data
+      console.log('Refreshing data after category addition...');
       await refreshData();
+      console.log('Data refresh completed, categories count:', categories.length);
     } catch (error) {
+      console.error('Failed to add category:', error);
       toast.error('Failed to add category');
     }
   };
@@ -246,6 +255,8 @@ const Products = () => {
     }
   };
 
+  console.log('Current categories in Products component:', categories);
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
@@ -375,11 +386,17 @@ const Products = () => {
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent className="bg-white z-50">
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>
-                          {cat.name}
+                      {categories.length > 0 ? (
+                        categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.name}>
+                            {cat.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-categories" disabled>
+                          No categories available
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   {categories.length === 0 && (
@@ -598,11 +615,17 @@ const Products = () => {
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent className="bg-white z-50">
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>
-                      {cat.name}
+                  {categories.length > 0 ? (
+                    categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-categories" disabled>
+                      No categories available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>

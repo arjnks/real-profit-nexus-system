@@ -1,9 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Service, Order, Category } from '@/contexts/DataContext';
 
-// Get the Supabase URL and key from the client configuration
-const SUPABASE_URL = "https://dcqmbvucslwgnslxdnor.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjcW1idnVjc2x3Z25zbHhkbm9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMTgxNjQsImV4cCI6MjA2NDY5NDE2NH0.Hx7DXyfIrp6ET3mNE517ojxrZCV8yabeBS9uzVL7Vho";
+// Constants for Supabase configuration
+const SUPABASE_URL = 'https://dcqmbvucslwgnslxdnor.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjcW1idnVjc2x3Z25zbHhkbm9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxMTgxNjQsImV4cCI6MjA2NDY5NDE2NH0.Hx7DXyfIrp6ET3mNE517ojxrZCV8yabeBS9uzVL7Vho';
 
 export class SupabaseService {
   // Customer operations
@@ -392,9 +392,10 @@ export class SupabaseService {
     }
   }
 
-  // Category methods - Using direct table access instead of RPC
+  // Category operations
   async getCategories(): Promise<Category[]> {
     try {
+      console.log('Fetching categories from Supabase...');
       const { data, error } = await supabase
         .from('categories')
         .select('*')
@@ -402,36 +403,16 @@ export class SupabaseService {
 
       if (error) {
         console.error('Error fetching categories:', error);
-        // Fallback to direct fetch request
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?order=name`, {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!response.ok) {
-          console.error('Failed to fetch categories');
-          return [];
-        }
-        
-        const categories = await response.json();
-        return categories.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          createdAt: item.created_at,
-          updatedAt: item.updated_at
-        }));
+        throw error;
       }
 
-      return data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at
+      console.log('Categories fetched:', data);
+      return data.map(category => ({
+        id: category.id,
+        name: category.name,
+        description: category.description || undefined,
+        createdAt: category.created_at,
+        updatedAt: category.updated_at
       }));
     } catch (error) {
       console.error('Error in getCategories:', error);
@@ -439,92 +420,66 @@ export class SupabaseService {
     }
   }
 
-  async addCategory(category: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category | null> {
+  async addCategory(categoryData: { name: string; description?: string }): Promise<Category | null> {
     try {
+      console.log('Adding category:', categoryData);
+      
+      // Clean the data to avoid undefined values
+      const cleanData = {
+        name: categoryData.name.trim(),
+        description: categoryData.description?.trim() || null
+      };
+
       const { data, error } = await supabase
         .from('categories')
-        .insert([{
-          name: category.name,
-          description: category.description
-        }])
+        .insert([cleanData])
         .select()
         .single();
 
       if (error) {
         console.error('Error adding category:', error);
-        // Fallback to direct fetch request
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({
-            name: category.name,
-            description: category.description
-          })
-        });
-
-        if (!response.ok) {
-          console.error('Failed to add category');
-          return null;
-        }
-
-        const responseData = await response.json();
-        const newCategory = responseData[0];
-
-        return {
-          id: newCategory.id,
-          name: newCategory.name,
-          description: newCategory.description,
-          createdAt: newCategory.created_at,
-          updatedAt: newCategory.updated_at
-        };
+        throw error;
       }
 
+      console.log('Category added successfully:', data);
       return {
         id: data.id,
         name: data.name,
-        description: data.description,
+        description: data.description || undefined,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
     } catch (error) {
       console.error('Error in addCategory:', error);
-      return null;
+      throw error;
     }
   }
 
-  async updateCategory(id: string, categoryData: Partial<Category>): Promise<boolean> {
+  async updateCategory(id: string, categoryData: { name?: string; description?: string }): Promise<boolean> {
     try {
-      const updateData: any = {};
+      console.log('Updating category:', id, categoryData);
       
-      if (categoryData.name !== undefined) updateData.name = categoryData.name;
-      if (categoryData.description !== undefined) updateData.description = categoryData.description;
+      // Clean the data to avoid undefined values
+      const cleanData: any = {};
+      if (categoryData.name !== undefined) {
+        cleanData.name = categoryData.name.trim();
+      }
+      if (categoryData.description !== undefined) {
+        cleanData.description = categoryData.description?.trim() || null;
+      }
+      cleanData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('categories')
-        .update(updateData)
+        .update(cleanData)
         .eq('id', id);
 
       if (error) {
         console.error('Error updating category:', error);
-        // Fallback to direct fetch request
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?id=eq.${id}`, {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updateData)
-        });
-
-        return response.ok;
+        throw error;
       }
 
+      console.log('Category updated successfully');
       return true;
     } catch (error) {
       console.error('Error in updateCategory:', error);
@@ -534,6 +489,8 @@ export class SupabaseService {
 
   async deleteCategory(id: string): Promise<boolean> {
     try {
+      console.log('Deleting category:', id);
+      
       const { error } = await supabase
         .from('categories')
         .delete()
@@ -541,18 +498,10 @@ export class SupabaseService {
 
       if (error) {
         console.error('Error deleting category:', error);
-        // Fallback to direct fetch request
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/categories?id=eq.${id}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          }
-        });
-
-        return response.ok;
+        throw error;
       }
 
+      console.log('Category deleted successfully');
       return true;
     } catch (error) {
       console.error('Error in deleteCategory:', error);
