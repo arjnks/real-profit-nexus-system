@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -385,15 +386,19 @@ const Products = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white z-50">
+                    <SelectContent className="bg-white border border-gray-200 shadow-lg rounded-md z-[60] max-h-60 overflow-y-auto">
                       {categories.length > 0 ? (
                         categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.name}>
+                          <SelectItem 
+                            key={cat.id} 
+                            value={cat.name}
+                            className="hover:bg-gray-100 cursor-pointer px-3 py-2 text-sm"
+                          >
                             {cat.name}
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="no-categories" disabled>
+                        <SelectItem value="no-categories" disabled className="text-gray-400">
                           No categories available
                         </SelectItem>
                       )}
@@ -614,15 +619,19 @@ const Products = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
-                <SelectContent className="bg-white z-50">
+                <SelectContent className="bg-white border border-gray-200 shadow-lg rounded-md z-[60] max-h-60 overflow-y-auto">
                   {categories.length > 0 ? (
                     categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.name}>
+                      <SelectItem 
+                        key={cat.id} 
+                        value={cat.name}
+                        className="hover:bg-gray-100 cursor-pointer px-3 py-2 text-sm"
+                      >
                         {cat.name}
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="no-categories" disabled>
+                    <SelectItem value="no-categories" disabled className="text-gray-400">
                       No categories available
                     </SelectItem>
                   )}
@@ -644,12 +653,6 @@ const Products = () => {
               label="Product Image"
             />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditProduct}>Update Product</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
