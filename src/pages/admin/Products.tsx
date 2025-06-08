@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -653,6 +654,12 @@ const Products = () => {
               label="Product Image"
             />
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditProduct}>Update Product</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
@@ -660,3 +667,4 @@ const Products = () => {
 };
 
 export default Products;
+
