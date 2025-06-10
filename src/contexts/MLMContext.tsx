@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { useData } from './DataContext';
 
@@ -9,6 +8,9 @@ interface MLMContextType {
   validateMLMStructure: (customerCode: string) => boolean;
   assignCustomerToLevel: (customerCode: string, points: number) => Promise<void>;
   getSlotOccupancy: () => Record<number, { filled: number; capacity: number }>;
+  createDummyCustomers: () => Promise<void>;
+  simulatePurchase: (customerCode: string, amount: number) => Promise<void>;
+  resetAdminPoints: () => Promise<void>;
 }
 
 const MLMContext = createContext<MLMContextType | undefined>(undefined);
@@ -22,7 +24,7 @@ export const useMLM = () => {
 };
 
 export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { customers, updateCustomer, orders } = useData();
+  const { customers, updateCustomer, orders, addCustomer } = useData();
 
   // MLM Level capacities (total slots available)
   const mlmLevelCapacities = {
@@ -32,6 +34,146 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     4: 125,   // 125 slots
     5: 625,   // 625 slots
     6: 3125   // 3125 slots
+  };
+
+  // Reset admin points to 0
+  const resetAdminPoints = async () => {
+    const admin = customers.find(c => c.code === 'A100');
+    if (admin) {
+      await updateCustomer(admin.id, {
+        points: 0,
+        miniCoins: 0,
+        tier: 'Bronze'
+      });
+      console.log('Admin A100 points reset to 0');
+    }
+  };
+
+  // Create dummy customers for demonstration
+  const createDummyCustomers = async () => {
+    console.log('Creating dummy customers for MLM demonstration...');
+    
+    // Clear existing dummy customers first (keep only A100)
+    const existingDummies = customers.filter(c => c.code.startsWith('C0') || c.code.startsWith('B0'));
+    console.log('Clearing existing dummy customers:', existingDummies.length);
+
+    // Ensure A100 admin exists with 0 points
+    let admin = customers.find(c => c.code === 'A100');
+    if (!admin) {
+      admin = await addCustomer({
+        name: 'System Admin',
+        phone: 'admin100',
+        code: 'A100',
+        parentCode: null,
+        isReserved: false,
+        isPending: false,
+        mlmLevel: 1,
+        directReferrals: [],
+        totalDownlineCount: 0,
+        monthlyCommissions: {},
+        totalCommissions: 0,
+      });
+    } else {
+      // Reset admin to 0 points
+      await updateCustomer(admin.id, {
+        points: 0,
+        miniCoins: 0,
+        tier: 'Bronze'
+      });
+    }
+
+    // Create Level 2 customers (under A100)
+    const level2Customers = [
+      { name: 'Alice Johnson', phone: '9876543210', code: 'C001', points: 8, parentCode: 'A100' },
+      { name: 'Bob Smith', phone: '9876543211', code: 'C002', points: 3, parentCode: 'A100' },
+      { name: 'Carol Davis', phone: '9876543212', code: 'C003', points: 12, parentCode: 'A100' },
+    ];
+
+    // Create Level 3 customers (under level 2)
+    const level3Customers = [
+      { name: 'David Wilson', phone: '9876543213', code: 'C004', points: 2, parentCode: 'C001' },
+      { name: 'Emma Brown', phone: '9876543214', code: 'C005', points: 5, parentCode: 'C001' },
+      { name: 'Frank Miller', phone: '9876543215', code: 'C006', points: 7, parentCode: 'C002' },
+      { name: 'Grace Lee', phone: '9876543216', code: 'C007', points: 4, parentCode: 'C003' },
+    ];
+
+    // Create Level 4 customers (under level 3)
+    const level4Customers = [
+      { name: 'Henry Taylor', phone: '9876543217', code: 'C008', points: 3, parentCode: 'C004' },
+      { name: 'Ivy Chen', phone: '9876543218', code: 'C009', points: 6, parentCode: 'C005' },
+      { name: 'Jack Brown', phone: '9876543219', code: 'C010', points: 2, parentCode: 'C006' },
+    ];
+
+    const allDummyCustomers = [...level2Customers, ...level3Customers, ...level4Customers];
+
+    // Add all dummy customers
+    for (const customerData of allDummyCustomers) {
+      const existing = customers.find(c => c.code === customerData.code);
+      if (!existing) {
+        // Determine tier based on points
+        let tier = 'Bronze';
+        if (customerData.points >= 160) tier = 'Diamond';
+        else if (customerData.points >= 80) tier = 'Gold';
+        else if (customerData.points >= 40) tier = 'Silver';
+        else if (customerData.points >= 12) tier = 'Bronze';
+
+        await addCustomer({
+          name: customerData.name,
+          phone: customerData.phone,
+          code: customerData.code,
+          parentCode: customerData.parentCode,
+          isReserved: false,
+          isPending: false,
+          mlmLevel: 2, // Will be reassigned based on structure
+          directReferrals: [],
+          totalDownlineCount: 0,
+          monthlyCommissions: {},
+          totalCommissions: 0,
+        });
+
+        // Update with points after creation
+        const newCustomer = customers.find(c => c.code === customerData.code);
+        if (newCustomer) {
+          await updateCustomer(newCustomer.id, {
+            points: customerData.points,
+            miniCoins: customerData.points,
+            tier: tier
+          });
+        }
+      }
+    }
+
+    console.log('Dummy customers created successfully!');
+    
+    // Assign customers to appropriate levels based on their points
+    setTimeout(async () => {
+      for (const customerData of allDummyCustomers) {
+        await assignCustomerToLevel(customerData.code, customerData.points);
+      }
+      console.log('All customers assigned to appropriate MLM levels');
+    }, 1000);
+  };
+
+  // Simulate a purchase that earns 30 points
+  const simulatePurchase = async (customerCode: string, purchaseAmount: number) => {
+    console.log(`\n=== SIMULATING PURCHASE ===`);
+    console.log(`Customer ${customerCode} making purchase of ₹${purchaseAmount}`);
+    console.log(`This will earn ${Math.floor(purchaseAmount / 5)} points (₹1 for every ₹5 spent)`);
+    
+    // Log admin's current state
+    const adminBefore = customers.find(c => c.code === 'A100');
+    console.log(`\nADMIN BEFORE: ${adminBefore?.points || 0} points, ${adminBefore?.miniCoins || 0} miniCoins`);
+    
+    // Trigger MLM distribution
+    await calculateMLMDistribution(customerCode, purchaseAmount, `DEMO-${Date.now()}`);
+    
+    // Log admin's state after
+    setTimeout(() => {
+      const adminAfter = customers.find(c => c.code === 'A100');
+      console.log(`\nADMIN AFTER: ${adminAfter?.points || 0} points, ${adminAfter?.miniCoins || 0} miniCoins`);
+      console.log(`ADMIN EARNED: ${(adminAfter?.points || 0) - (adminBefore?.points || 0)} points from this transaction`);
+      console.log(`=== SIMULATION COMPLETE ===\n`);
+    }, 2000);
   };
 
   // Get current slot occupancy across all levels
@@ -269,6 +411,9 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         validateMLMStructure,
         assignCustomerToLevel,
         getSlotOccupancy,
+        createDummyCustomers,
+        simulatePurchase,
+        resetAdminPoints,
       }}
     >
       {children}
@@ -277,3 +422,5 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 };
 
 export default MLMProvider;
+
+}

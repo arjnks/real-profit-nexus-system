@@ -1,22 +1,26 @@
-
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useMLM } from '@/contexts/MLMContext';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Shield, UserPlus, RefreshCw, TreePine } from 'lucide-react';
+import { Search, Shield, UserPlus, RefreshCw, TreePine, Play, RotateCcw, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import MLMTreeVisualization from '@/components/MLMTreeVisualization';
 
 const MLMTree = () => {
   const { customers, orders, addCustomer, isAdmin, refreshData } = useData();
+  const { createDummyCustomers, simulatePurchase, resetAdminPoints } = useMLM();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['A100']);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCreatingDummies, setIsCreatingDummies] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationAmount, setSimulationAmount] = useState(150); // ₹150 = 30 points
 
   // Auto-refresh every 30 seconds when user is on the page
   useEffect(() => {
@@ -50,6 +54,52 @@ const MLMTree = () => {
   // Navigate to add customer page
   const handleAddCustomer = () => {
     navigate('/admin/customers/add');
+  };
+
+  // Create dummy customers
+  const handleCreateDummies = async () => {
+    setIsCreatingDummies(true);
+    try {
+      await resetAdminPoints();
+      await createDummyCustomers();
+      toast.success('Dummy customers created! Admin reset to 0 points.');
+      setTimeout(() => {
+        handleRefresh();
+      }, 2000);
+    } catch (error) {
+      toast.error('Failed to create dummy customers');
+      console.error('Error creating dummies:', error);
+    } finally {
+      setIsCreatingDummies(false);
+    }
+  };
+
+  // Simulate purchase that generates 30 points
+  const handleSimulatePurchase = async () => {
+    setIsSimulating(true);
+    try {
+      // Use C001 (Alice) to make the purchase
+      await simulatePurchase('C001', simulationAmount);
+      toast.success(`Simulated ₹${simulationAmount} purchase by C001 (Alice) - ${Math.floor(simulationAmount / 5)} points earned!`);
+      setTimeout(() => {
+        handleRefresh();
+      }, 3000);
+    } catch (error) {
+      toast.error('Failed to simulate purchase');
+      console.error('Error simulating purchase:', error);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  // Get admin's current earnings
+  const getAdminEarnings = () => {
+    const admin = customers.find(c => c.code === 'A100');
+    return {
+      points: admin?.points || 0,
+      miniCoins: admin?.miniCoins || 0,
+      tier: admin?.tier || 'Bronze'
+    };
   };
 
   // Ensure A100 root customer exists
@@ -110,6 +160,7 @@ const MLMTree = () => {
   };
 
   const recentActivity = getRecentMLMActivity();
+  const adminEarnings = getAdminEarnings();
 
   return (
     <AdminLayout>
@@ -151,6 +202,81 @@ const MLMTree = () => {
           </div>
         )}
       </div>
+
+      {/* Demo Control Panel */}
+      <Card className="mb-6 border-2 border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="text-blue-900 flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            MLM Demonstration Panel
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Current Admin Status */}
+            <div className="bg-white p-4 rounded-lg border">
+              <h4 className="font-semibold text-sm text-gray-700 mb-2">Admin A100 Status</h4>
+              <div className="space-y-1 text-sm">
+                <div>Points: <span className="font-bold text-blue-600">{adminEarnings.points}</span></div>
+                <div>Mini Coins: <span className="font-bold text-orange-600">{adminEarnings.miniCoins}</span></div>
+                <div>Tier: <span className="font-bold text-purple-600">{adminEarnings.tier}</span></div>
+              </div>
+            </div>
+
+            {/* Create Dummy Customers */}
+            <div className="bg-white p-4 rounded-lg border">
+              <h4 className="font-semibold text-sm text-gray-700 mb-2">Setup Demo</h4>
+              <Button 
+                onClick={handleCreateDummies}
+                disabled={isCreatingDummies}
+                className="w-full text-xs"
+                variant="outline"
+              >
+                <UserPlus className="h-3 w-3 mr-1" />
+                {isCreatingDummies ? 'Creating...' : 'Create Dummy Customers'}
+              </Button>
+              <p className="text-xs text-gray-500 mt-1">Resets admin to 0 points & creates test customers</p>
+            </div>
+
+            {/* Simulate Purchase */}
+            <div className="bg-white p-4 rounded-lg border">
+              <h4 className="font-semibold text-sm text-gray-700 mb-2">Simulate Purchase</h4>
+              <div className="space-y-2">
+                <Input
+                  type="number"
+                  value={simulationAmount}
+                  onChange={(e) => setSimulationAmount(Number(e.target.value))}
+                  placeholder="Amount in ₹"
+                  className="text-xs h-8"
+                />
+                <Button 
+                  onClick={handleSimulatePurchase}
+                  disabled={isSimulating || !customers.find(c => c.code === 'C001')}
+                  className="w-full text-xs"
+                  variant="default"
+                >
+                  <Play className="h-3 w-3 mr-1" />
+                  {isSimulating ? 'Simulating...' : `Simulate ₹${simulationAmount}`}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                C001 (Alice) buys → Earns {Math.floor(simulationAmount / 5)} points
+              </p>
+            </div>
+
+            {/* Expected Results */}
+            <div className="bg-white p-4 rounded-lg border">
+              <h4 className="font-semibold text-sm text-gray-700 mb-2">Expected Result</h4>
+              <div className="space-y-1 text-xs">
+                <div>Purchase: ₹{simulationAmount}</div>
+                <div>Points Earned: {Math.floor(simulationAmount / 5)}</div>
+                <div className="text-green-600 font-medium">Admin will earn proportional share from level 1</div>
+                <div className="text-blue-600">Other customers earn based on their slots</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="tree" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
