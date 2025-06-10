@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useNavigate } from 'react-router-dom';
@@ -5,24 +6,16 @@ import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue, 
-} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus, Shield, UserPlus, RefreshCw } from 'lucide-react';
+import { Search, Shield, UserPlus, RefreshCw, TreePine } from 'lucide-react';
 import { toast } from 'sonner';
+import MLMTreeVisualization from '@/components/MLMTreeVisualization';
 
 const MLMTree = () => {
-  const { customers, orders, moveCustomerInMLM, addCustomer, isAdmin, refreshData } = useData();
+  const { customers, orders, addCustomer, isAdmin, refreshData } = useData();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['A100']);
-  const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
-  const [newParentCode, setNewParentCode] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Auto-refresh every 30 seconds when user is on the page
@@ -49,24 +42,12 @@ const MLMTree = () => {
     }
   };
 
-  // MLM Level structure: Level 1 (admin), then 5, 25, 125, 625, 1325
-  const mlmLevelCapacities = {
-    1: 1,     // Admin level
-    2: 5,     // 5 slots
-    3: 25,    // 25 slots
-    4: 125,   // 125 slots
-    5: 625,   // 625 slots
-    6: 1325   // 1325 slots
-  };
-
   // Check if current user has admin privileges
   const hasAdminPrivileges = () => {
-    // In a real app, this would check the current logged-in user
-    // For now, we'll assume admin access for demonstration
-    return true;
+    return true; // For demonstration purposes
   };
 
-  // Navigate to add customer page - fix the route
+  // Navigate to add customer page
   const handleAddCustomer = () => {
     navigate('/admin/customers/add');
   };
@@ -108,38 +89,6 @@ const MLMTree = () => {
       .slice(0, 10);
   };
 
-  // Build the MLM tree with proper root handling
-  const buildTree = () => {
-    const tree: { [key: string]: any } = {};
-    
-    // Build tree structure
-    customers.forEach(customer => {
-      tree[customer.code] = {
-        ...customer,
-        children: [],
-      };
-    });
-    
-    // Connect parent-child relationships
-    customers.forEach(customer => {
-      if (customer.parentCode && tree[customer.parentCode]) {
-        tree[customer.parentCode].children.push(tree[customer.code]);
-      }
-    });
-    
-    // Find root customer (A100 or first customer without parent)
-    let root = tree['A100'];
-    if (!root) {
-      // If A100 doesn't exist, find customers without parents
-      const rootCustomers = customers.filter(c => !c.parentCode);
-      if (rootCustomers.length > 0) {
-        root = tree[rootCustomers[0].code];
-      }
-    }
-    
-    return root || null;
-  };
-
   // Toggle node expansion
   const toggleNode = (code: string) => {
     setExpandedNodes(prev => 
@@ -149,249 +98,30 @@ const MLMTree = () => {
     );
   };
 
-  // Enhanced start editing with admin check
-  const startEditingParent = (customerCode: string, currentParentCode: string | null) => {
-    if (!hasAdminPrivileges()) {
-      toast.error('Only admin (A100) can modify MLM structure');
-      return;
-    }
-    setEditingCustomer(customerCode);
-    setNewParentCode(currentParentCode || 'A100');
-  };
-
-  // Enhanced save parent change with admin privileges and better error handling
-  const saveParentChange = async (customerId: string) => {
-    if (!hasAdminPrivileges()) {
-      toast.error('Only admin (A100) can modify MLM structure');
-      return;
-    }
-    
-    try {
-      const finalParentCode = newParentCode === 'A100' ? null : newParentCode;
-      
-      // Show loading toast
-      const loadingToast = toast.loading('Updating MLM structure...');
-      
-      await moveCustomerInMLM(customerId, finalParentCode);
-      
-      setEditingCustomer(null);
-      setNewParentCode('');
-      
-      // Dismiss loading toast and show success
-      toast.dismiss(loadingToast);
-      toast.success('MLM structure updated successfully by admin');
-      
-      // Refresh the tree after update
-      setTimeout(async () => {
-        await refreshData();
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error updating MLM structure:', error);
-      toast.error('Failed to update MLM structure: ' + (error as Error).message);
+  // Expand/collapse all nodes
+  const toggleAllNodes = () => {
+    if (expandedNodes.length === 1 && expandedNodes[0] === 'A100') {
+      // Expand all
+      setExpandedNodes(customers.map(c => c.code));
+    } else {
+      // Collapse all to root
+      setExpandedNodes(['A100']);
     }
   };
 
-  // Cancel editing
-  const cancelEditing = () => {
-    setEditingCustomer(null);
-    setNewParentCode('');
-  };
-
-  // Filter tree based on search
-  const filterTree = (node: any) => {
-    if (!node) return null;
-    
-    if (!searchTerm) return node;
-    
-    const nodeMatches = 
-      node.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      node.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      node.phone.includes(searchTerm);
-    
-    const filteredChildren = node.children
-      .map(filterTree)
-      .filter(Boolean);
-    
-    if (nodeMatches || filteredChildren.length > 0) {
-      return {
-        ...node,
-        children: filteredChildren,
-      };
-    }
-    
-    return null;
-  };
-
-  // Get customers at a specific level
-  const getCustomersAtLevel = (level: number) => {
-    return customers.filter(c => c.mlmLevel === level);
-  };
-
-  const treeRoot = buildTree();
-  const filteredTree = filterTree(treeRoot);
   const recentActivity = getRecentMLMActivity();
-
-  // Render a tree node
-  const renderNode = (node: any, level = 0) => {
-    if (!node) return null;
-    
-    const isExpanded = expandedNodes.includes(node.code);
-    const hasChildren = node.children.length > 0;
-    const isEditing = editingCustomer === node.id;
-    const nodeIsAdmin = isAdmin(node.code);
-    
-    const tierColors = {
-      Bronze: 'bg-amber-700',
-      Silver: 'bg-gray-400',
-      Gold: 'bg-yellow-500',
-      Diamond: 'bg-blue-500',
-    };
-    
-    // Check if customer had recent MLM activity
-    const hasRecentActivity = node.lastMLMDistribution && 
-      new Date(node.lastMLMDistribution).getTime() > Date.now() - (24 * 60 * 60 * 1000); // Last 24 hours
-    
-    return (
-      <div key={node.code} className="mb-1">
-        <div 
-          className={`flex items-center p-2 rounded-md hover:bg-gray-100 ${
-            searchTerm && 
-            (node.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             node.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             node.phone.includes(searchTerm))
-              ? 'bg-yellow-50'
-              : ''
-          } ${hasRecentActivity ? 'border-l-4 border-l-green-500' : ''} ${
-            nodeIsAdmin ? 'border-2 border-red-500 bg-red-50' : ''
-          }`}
-          style={{ marginLeft: `${level * 20}px` }}
-        >
-          {hasChildren && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 mr-1"
-              onClick={() => toggleNode(node.code)}
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-          
-          {!hasChildren && <div className="w-7"></div>}
-          
-          <div className={`w-3 h-3 rounded-full ${tierColors[node.tier as keyof typeof tierColors]} mr-2`}></div>
-          
-          {hasRecentActivity && (
-            <Activity className="h-3 w-3 text-green-500 mr-1" />
-          )}
-          
-          {nodeIsAdmin && (
-            <Shield className="h-3 w-3 text-red-500 mr-1" />
-          )}
-          
-          <div className="flex-1">
-            <div className="flex items-center">
-              <span className="font-medium">{node.name}</span>
-              {nodeIsAdmin && (
-                <span className="ml-2 px-1.5 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">
-                  ADMIN
-                </span>
-              )}
-              {node.isReserved && (
-                <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-800 rounded-full">
-                  Reserved
-                </span>
-              )}
-            </div>
-            <div className="flex text-xs text-gray-500">
-              <span className="mr-4">Code: {node.code}</span>
-              <span className="mr-4">Points: {node.points}</span>
-              {node.miniCoins > 0 && (
-                <span className="mr-4 text-orange-600">Mini Coins: {node.miniCoins}</span>
-              )}
-              <span>Parent: {node.parentCode || 'ROOT'}</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <div className="text-xs text-gray-500">
-              Level {level + 1}
-            </div>
-            
-            <div className="flex items-center space-x-1">
-              {isEditing ? (
-                <>
-                  <Select value={newParentCode} onValueChange={setNewParentCode}>
-                    <SelectTrigger className="w-24 h-6 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A100">A100 (ROOT)</SelectItem>
-                      {customers
-                        .filter(c => c.id !== node.id && c.code !== node.code)
-                        .map((customer) => (
-                          <SelectItem key={customer.id} value={customer.code}>
-                            {customer.code} - {customer.name}
-                          </SelectItem>
-                        ))
-                      }
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-green-600"
-                    onClick={() => saveParentChange(node.id)}
-                  >
-                    <Save className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-red-600"
-                    onClick={cancelEditing}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </>
-              ) : (
-                hasAdminPrivileges() && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => startEditingParent(node.id, node.parentCode)}
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </Button>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {isExpanded && node.children.length > 0 && (
-          <div>
-            {node.children.map((child: any) => renderNode(child, level + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <AdminLayout>
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">MLM Tree Management</h1>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <TreePine className="h-6 w-6 text-green-600" />
+              MLM Tree Management
+            </h1>
             <p className="text-muted-foreground">
-              Visualize and manage the multi-level marketing structure. When customers earn points from purchases, they automatically join the MLM system.
+              Visualize and manage the multi-level marketing structure in a tree format. When customers earn points from purchases, they automatically join the MLM system.
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -424,14 +154,15 @@ const MLMTree = () => {
 
       <Tabs defaultValue="tree" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="tree">MLM Tree</TabsTrigger>
+          <TabsTrigger value="tree">Tree View</TabsTrigger>
           <TabsTrigger value="activity">Recent Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tree">
-          <div className="mb-6">
-            <div className="flex gap-4">
-              <div className="relative flex-1">
+          <div className="space-y-4">
+            {/* Search and controls */}
+            <div className="flex gap-4 items-center">
+              <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, code or phone..."
@@ -440,79 +171,25 @@ const MLMTree = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Button onClick={ensureRootCustomer} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
+              <Button onClick={toggleAllNodes} variant="outline" size="sm">
+                {expandedNodes.length === 1 ? 'Expand All' : 'Collapse All'}
+              </Button>
+              <Button onClick={ensureRootCustomer} variant="outline" size="sm">
                 Ensure Root A100
               </Button>
             </div>
-          </div>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <h3 className="font-semibold">MLM Structure</h3>
-                  <div className="flex items-center gap-2">
-                    {['Bronze', 'Silver', 'Gold', 'Diamond'].map((tier) => (
-                      <div key={tier} className="flex items-center">
-                        <div 
-                          className={`w-3 h-3 rounded-full mr-1 ${
-                            tier === 'Bronze' ? 'bg-amber-700' :
-                            tier === 'Silver' ? 'bg-gray-400' :
-                            tier === 'Gold' ? 'bg-yellow-500' :
-                            'bg-blue-500'
-                          }`} 
-                        />
-                        <span className="text-xs">{tier}</span>
-                      </div>
-                    ))}
-                    <div className="flex items-center ml-4">
-                      <Activity className="h-3 w-3 text-green-500 mr-1" />
-                      <span className="text-xs">Recent Activity</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setExpandedNodes(prev => 
-                    prev.length === 1 && prev[0] === 'A100'
-                      ? customers.map(c => c.code)
-                      : ['A100']
-                  )}
-                >
-                  {expandedNodes.length === 1 ? (
-                    <>
-                      <ChevronDown className="h-4 w-4 mr-1" />
-                      Expand All
-                    </>
-                  ) : (
-                    <>
-                      <ChevronUp className="h-4 w-4 mr-1" />
-                      Collapse All
-                    </>
-                  )}
-                </Button>
-              </div>
-              
-              <div className="border rounded-md p-2 max-h-[600px] overflow-auto">
-                {filteredTree ? (
-                  renderNode(filteredTree)
-                ) : (
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground mb-4">
-                      No MLM tree data available. The system needs a root customer (A100).
-                    </p>
-                    <Button onClick={ensureRootCustomer} variant="default">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Root Customer A100
-                    </Button>
-                  </div>
-                )}
-              </div>
-              
-              <div className="mt-4 p-3 bg-blue-50 rounded-md">
+            {/* Tree visualization */}
+            <MLMTreeVisualization
+              searchTerm={searchTerm}
+              expandedNodes={expandedNodes}
+              onToggleNode={toggleNode}
+              hasAdminPrivileges={hasAdminPrivileges()}
+            />
+
+            {/* MLM Information */}
+            <Card>
+              <CardContent className="p-4">
                 <h4 className="font-medium text-sm text-blue-900 mb-2">MLM Distribution Rules:</h4>
                 <ul className="text-xs text-blue-800 space-y-1">
                   <li>• When a customer makes a purchase and earns 1 point, they automatically join the MLM system</li>
@@ -520,11 +197,11 @@ const MLMTree = () => {
                   <li>• 6 levels total: Level 1 (1 admin slot), Level 2 (5 slots), Level 3 (25 slots), Level 4 (125 slots), Level 5 (625 slots), Level 6 (1325 slots)</li>
                   <li>• 5 mini coins automatically convert to 1 point</li>
                   <li>• Tier thresholds: Bronze (20), Silver (40), Gold (80), Diamond (160) points</li>
-                  <li>• Green border indicates recent MLM activity (last 24 hours)</li>
+                  <li>• Tree visualization shows parent-child relationships clearly</li>
                 </ul>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="activity">
