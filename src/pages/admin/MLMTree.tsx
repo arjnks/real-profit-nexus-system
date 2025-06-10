@@ -121,7 +121,7 @@ const MLMTree = () => {
               MLM Tree Management
             </h1>
             <p className="text-muted-foreground">
-              Visualize and manage the multi-level marketing structure in a tree format. When customers earn points from purchases, they automatically join the MLM system.
+              Visualize and manage the multi-level marketing structure. Each point earned by customers fills slots in the MLM levels. Points earned = slots occupied.
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -190,14 +190,14 @@ const MLMTree = () => {
             {/* MLM Information */}
             <Card>
               <CardContent className="p-4">
-                <h4 className="font-medium text-sm text-blue-900 mb-2">MLM Distribution Rules:</h4>
+                <h4 className="font-medium text-sm text-blue-900 mb-2">MLM Slot Distribution Rules:</h4>
                 <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• When a customer makes a purchase and earns 1 point, they automatically join the MLM system</li>
-                  <li>• Each point earned fills 1 slot (₹1) in their assigned level</li>
-                  <li>• 6 levels total: Level 1 (1 admin slot), Level 2 (5 slots), Level 3 (25 slots), Level 4 (125 slots), Level 5 (625 slots), Level 6 (1325 slots)</li>
-                  <li>• 5 mini coins automatically convert to 1 point</li>
-                  <li>• Tier thresholds: Bronze (20), Silver (40), Gold (80), Diamond (160) points</li>
-                  <li>• Tree visualization shows parent-child relationships clearly</li>
+                  <li>• Each point earned by a customer fills 1 slot in their assigned MLM level</li>
+                  <li>• Customers with more points occupy more slots and earn proportionally more from distributions</li>
+                  <li>• 6 levels total: Level 1 (1 slot), Level 2 (5 slots), Level 3 (25 slots), Level 4 (125 slots), Level 5 (625 slots), Level 6 (3125 slots)</li>
+                  <li>• When levels fill up, customers are automatically assigned to higher available levels</li>
+                  <li>• Earnings are distributed proportionally based on slot occupancy within each level</li>
+                  <li>• Tree visualization shows actual slot usage and level occupancy percentages</li>
                 </ul>
               </CardContent>
             </Card>

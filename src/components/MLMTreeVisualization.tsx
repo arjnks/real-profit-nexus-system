@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useMLM } from '@/contexts/MLMContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Shield, Activity, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Shield, Activity, Users, Layers } from 'lucide-react';
 
 interface TreeNode {
   customer: any;
@@ -28,6 +29,10 @@ const MLMTreeVisualization: React.FC<MLMTreeVisualizationProps> = ({
   hasAdminPrivileges = false
 }) => {
   const { customers, isAdmin } = useData();
+  const { getSlotOccupancy } = useMLM();
+
+  // Get slot occupancy data
+  const slotOccupancy = getSlotOccupancy();
 
   // Build tree structure
   const buildTreeStructure = (): TreeNode | null => {
@@ -108,6 +113,13 @@ const MLMTreeVisualization: React.FC<MLMTreeVisualizationProps> = ({
       new Date(customer.lastMLMDistribution).getTime() > Date.now() - (24 * 60 * 60 * 1000);
   };
 
+  // Get slot utilization percentage for a level
+  const getSlotUtilization = (level: number) => {
+    const occupancy = slotOccupancy[level];
+    if (!occupancy) return 0;
+    return Math.round((occupancy.filled / occupancy.capacity) * 100);
+  };
+
   // Render tree node
   const renderTreeNode = (node: TreeNode) => {
     const { customer } = node;
@@ -115,6 +127,7 @@ const MLMTreeVisualization: React.FC<MLMTreeVisualizationProps> = ({
     const hasChildren = node.children.length > 0;
     const nodeIsAdmin = isAdmin(customer.code);
     const recentActivity = hasRecentActivity(customer);
+    const slotsOccupied = customer.points; // Each point = 1 slot
 
     return (
       <div key={customer.code} className="relative">
@@ -201,6 +214,12 @@ const MLMTreeVisualization: React.FC<MLMTreeVisualizationProps> = ({
                     <div className="text-xs text-gray-500">
                       Level {customer.mlmLevel || 1}
                     </div>
+                    {slotsOccupied > 0 && (
+                      <div className="text-xs text-blue-600 flex items-center">
+                        <Layers className="h-3 w-3 mr-1" />
+                        {slotsOccupied} slots
+                      </div>
+                    )}
                     {customer.miniCoins > 0 && (
                       <div className="text-xs text-orange-600">
                         {customer.miniCoins} coins
@@ -270,9 +289,31 @@ const MLMTreeVisualization: React.FC<MLMTreeVisualizationProps> = ({
                 <span>Recent Activity</span>
               </div>
               <div className="flex items-center">
+                <Layers className="h-3 w-3 text-blue-600 mr-1" />
+                <span>Slots Occupied</span>
+              </div>
+              <div className="flex items-center">
                 <Users className="h-3 w-3 text-gray-400 mr-1" />
                 <span>Children Count</span>
               </div>
+            </div>
+          </div>
+
+          {/* Level occupancy overview */}
+          <div className="bg-blue-50 rounded-md p-3 mb-4">
+            <h4 className="font-medium text-sm text-blue-900 mb-2">Level Slot Occupancy:</h4>
+            <div className="grid grid-cols-6 gap-2 text-xs">
+              {Object.entries(slotOccupancy).map(([level, data]) => (
+                <div key={level} className="text-center">
+                  <div className="font-medium text-blue-800">Level {level}</div>
+                  <div className="text-blue-600">
+                    {data.filled}/{data.capacity}
+                  </div>
+                  <div className="text-blue-500">
+                    ({getSlotUtilization(Number(level))}%)
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -284,14 +325,22 @@ const MLMTreeVisualization: React.FC<MLMTreeVisualizationProps> = ({
           {/* Tree stats */}
           <div className="border-t pt-4 bg-gray-50 rounded-md p-3">
             <h4 className="font-medium text-sm text-gray-700 mb-2">Tree Statistics:</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
               <div>
                 <span className="text-gray-500">Total Customers:</span>
                 <div className="font-semibold">{customers.length}</div>
               </div>
               <div>
-                <span className="text-gray-500">Tree Depth:</span>
-                <div className="font-semibold">{Math.max(...customers.map(c => c.mlmLevel || 1))}</div>
+                <span className="text-gray-500">Total Slots Filled:</span>
+                <div className="font-semibold">
+                  {Object.values(slotOccupancy).reduce((total, level) => total + level.filled, 0)}
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500">Max Capacity:</span>
+                <div className="font-semibold">
+                  {Object.values(slotOccupancy).reduce((total, level) => total + level.capacity, 0)}
+                </div>
               </div>
               <div>
                 <span className="text-gray-500">Active Today:</span>
