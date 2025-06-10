@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
@@ -14,16 +14,41 @@ import {
   SelectValue, 
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus, Shield, UserPlus } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus, Shield, UserPlus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MLMTree = () => {
-  const { customers, orders, moveCustomerInMLM, addCustomer, isAdmin } = useData();
+  const { customers, orders, moveCustomerInMLM, addCustomer, isAdmin, refreshData } = useData();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['A100']);
   const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
   const [newParentCode, setNewParentCode] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Auto-refresh every 30 seconds when user is on the page
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      console.log('Auto-refreshing MLM data...');
+      await refreshData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [refreshData]);
+
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshData();
+      toast.success('MLM tree refreshed successfully');
+    } catch (error) {
+      toast.error('Failed to refresh MLM tree');
+      console.error('Refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // MLM Level structure: Level 1 (admin), then 5, 25, 125, 625, 1325
   const mlmLevelCapacities = {
@@ -48,23 +73,31 @@ const MLMTree = () => {
   };
 
   // Ensure A100 root customer exists
-  const ensureRootCustomer = () => {
+  const ensureRootCustomer = async () => {
     const rootExists = customers.find(c => c.code === 'A100');
     if (!rootExists) {
-      addCustomer({
-        name: 'System Admin',
-        phone: 'admin100',
-        code: 'A100',
-        parentCode: null,
-        isReserved: false,
-        isPending: false,
-        mlmLevel: 1,
-        directReferrals: [],
-        totalDownlineCount: 0,
-        monthlyCommissions: {},
-        totalCommissions: 0,
-      });
-      toast.success('Root admin A100 created');
+      try {
+        await addCustomer({
+          name: 'System Admin',
+          phone: 'admin100',
+          code: 'A100',
+          parentCode: null,
+          isReserved: false,
+          isPending: false,
+          mlmLevel: 1,
+          directReferrals: [],
+          totalDownlineCount: 0,
+          monthlyCommissions: {},
+          totalCommissions: 0,
+        });
+        toast.success('Root admin A100 created');
+        await refreshData();
+      } catch (error) {
+        toast.error('Failed to create root admin');
+        console.error('Error creating root admin:', error);
+      }
+    } else {
+      toast.info('Root admin A100 already exists');
     }
   };
 
@@ -127,8 +160,8 @@ const MLMTree = () => {
     setNewParentCode(currentParentCode || 'A100');
   };
 
-  // Enhanced save parent change with admin privileges
-  const saveParentChange = (customerId: string) => {
+  // Enhanced save parent change with admin privileges and better error handling
+  const saveParentChange = async (customerId: string) => {
     if (!hasAdminPrivileges()) {
       toast.error('Only admin (A100) can modify MLM structure');
       return;
@@ -136,12 +169,27 @@ const MLMTree = () => {
     
     try {
       const finalParentCode = newParentCode === 'A100' ? null : newParentCode;
-      moveCustomerInMLM(customerId, finalParentCode);
+      
+      // Show loading toast
+      const loadingToast = toast.loading('Updating MLM structure...');
+      
+      await moveCustomerInMLM(customerId, finalParentCode);
+      
       setEditingCustomer(null);
       setNewParentCode('');
+      
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
       toast.success('MLM structure updated successfully by admin');
+      
+      // Refresh the tree after update
+      setTimeout(async () => {
+        await refreshData();
+      }, 1000);
+      
     } catch (error) {
-      toast.error('Failed to update MLM structure');
+      console.error('Error updating MLM structure:', error);
+      toast.error('Failed to update MLM structure: ' + (error as Error).message);
     }
   };
 
@@ -347,10 +395,21 @@ const MLMTree = () => {
               Visualize and manage the multi-level marketing structure. When customers earn points from purchases, they automatically join the MLM system.
             </p>
           </div>
-          <Button onClick={handleAddCustomer} className="bg-green-600 hover:bg-green-700">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Customer
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button 
+              onClick={handleRefresh} 
+              variant="outline"
+              disabled={isRefreshing}
+              className="flex items-center"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button onClick={handleAddCustomer} className="bg-green-600 hover:bg-green-700">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Customer
+            </Button>
+          </div>
         </div>
         {hasAdminPrivileges() && (
           <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">

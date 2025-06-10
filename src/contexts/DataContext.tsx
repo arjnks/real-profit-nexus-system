@@ -381,8 +381,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return null;
   };
 
-  // Update an existing customer
+  // Enhanced update customer function with proper MLM structure updates
   const updateCustomer = async (id: string, customerData: Partial<Customer>) => {
+    console.log('Updating customer:', id, customerData);
+    
     const success = await supabaseService.updateCustomer(id, customerData);
     
     if (success) {
@@ -393,20 +395,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (customerData.points !== undefined) {
               updated.tier = calculateTier(updated.points);
             }
+            console.log('Customer updated in state:', updated);
             return updated;
           }
           return customer;
         })
       );
+      
+      // Refresh data to ensure consistency after MLM structure changes
+      if (customerData.parentCode !== undefined) {
+        console.log('MLM structure changed, refreshing data...');
+        setTimeout(() => refreshData(), 500);
+      }
+    } else {
+      console.error('Failed to update customer in database');
     }
   };
 
   // Delete a customer
   const deleteCustomer = async (id: string) => {
+    console.log('Deleting customer:', id);
     const success = await supabaseService.deleteCustomer(id);
     
     if (success) {
       setCustomers(prev => prev.filter(customer => customer.id !== id));
+      console.log('Customer deleted successfully');
+    } else {
+      console.error('Failed to delete customer');
     }
   };
 
@@ -526,7 +541,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Add a new order - now properly calculating point money
+  // Enhanced add order function
   const addOrder = async (order: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<string> => {
     let totalPointMoney = 0;
     
@@ -559,8 +574,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     throw new Error('Failed to create order');
   };
 
-  // Update an existing order - now using database
+  // Enhanced update order function
   const updateOrder = async (id: string, orderData: Partial<Order>) => {
+    console.log('Updating order:', id, orderData);
     const success = await supabaseService.updateOrder(id, orderData);
     
     if (success) {
@@ -618,27 +634,57 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Enhanced moveCustomerInMLM function with admin privileges
+  // Enhanced moveCustomerInMLM function with better error handling and data refresh
   const moveCustomerInMLM = async (customerId: string, newParentCode: string | null) => {
-    const customer = customers.find(c => c.id === customerId);
-    if (!customer) return;
-
-    // A100 (admin) can move any customer, including itself
-    // Other customers cannot be moved to prevent unauthorized changes
-    const adminCustomer = customers.find(c => c.code === 'A100');
+    console.log('Moving customer in MLM:', customerId, 'to parent:', newParentCode);
     
-    const success = await supabaseService.updateCustomer(customerId, {
-      parentCode: newParentCode === 'A100' ? null : newParentCode
-    });
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) {
+      console.error('Customer not found for MLM move:', customerId);
+      return;
+    }
 
-    if (success) {
-      setCustomers(prev =>
-        prev.map(c =>
-          c.id === customerId
-            ? { ...c, parentCode: newParentCode === 'A100' ? null : newParentCode }
-            : c
-        )
-      );
+    // Validate parent exists if not A100/null
+    if (newParentCode && newParentCode !== 'A100') {
+      const parentExists = customers.some(c => c.code === newParentCode);
+      if (!parentExists) {
+        console.error('Parent code does not exist:', newParentCode);
+        throw new Error(`Parent code ${newParentCode} does not exist`);
+      }
+    }
+
+    const finalParentCode = newParentCode === 'A100' ? null : newParentCode;
+    
+    try {
+      const success = await supabaseService.updateCustomer(customerId, {
+        parentCode: finalParentCode
+      });
+
+      if (success) {
+        console.log('Customer MLM parent updated in database');
+        
+        // Update local state immediately
+        setCustomers(prev =>
+          prev.map(c =>
+            c.id === customerId
+              ? { ...c, parentCode: finalParentCode }
+              : c
+          )
+        );
+        
+        // Force refresh after a short delay to ensure consistency
+        setTimeout(async () => {
+          console.log('Refreshing data after MLM structure change...');
+          await refreshData();
+        }, 1000);
+        
+        console.log('MLM structure updated successfully');
+      } else {
+        throw new Error('Failed to update customer in database');
+      }
+    } catch (error) {
+      console.error('Error moving customer in MLM:', error);
+      throw error;
     }
   };
 
