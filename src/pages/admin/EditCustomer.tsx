@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -37,15 +38,20 @@ const EditCustomer = () => {
   const [code, setCode] = useState('');
   const [points, setPoints] = useState(0);
   const [tier, setTier] = useState('Bronze');
-  const [parentCode, setParentCode] = useState('');
+  const [parentCode, setParentCode] = useState('A100');
   const [isReserved, setIsReserved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [customerFound, setCustomerFound] = useState(false);
 
   // Find the customer
   useEffect(() => {
-    if (id) {
+    console.log('EditCustomer - useEffect triggered', { id, customersLength: customers.length });
+    
+    if (id && customers.length > 0) {
       const customer = customers.find(c => c.id === id);
+      console.log('Found customer:', customer);
+      
       if (customer) {
         setName(customer.name);
         setPhone(customer.phone);
@@ -54,7 +60,10 @@ const EditCustomer = () => {
         setTier(customer.tier);
         setParentCode(customer.parentCode || 'A100');
         setIsReserved(customer.isReserved || false);
+        setCustomerFound(true);
       } else {
+        console.log('Customer not found with ID:', id);
+        setCustomerFound(false);
         toast.error('Customer not found');
         navigate('/admin/customers');
       }
@@ -63,7 +72,7 @@ const EditCustomer = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id) return;
+    if (!id || !customerFound) return;
     
     setIsLoading(true);
     
@@ -93,14 +102,14 @@ const EditCustomer = () => {
       navigate('/admin/customers');
     } catch (error) {
       toast.error('Failed to update customer');
-      console.error(error);
+      console.error('Update customer error:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!id) return;
+    if (!id || !customerFound) return;
     
     setIsDeleting(true);
     
@@ -122,11 +131,43 @@ const EditCustomer = () => {
       
     } catch (error) {
       toast.error('Failed to delete customer');
-      console.error(error);
+      console.error('Delete customer error:', error);
     } finally {
       setIsDeleting(false);
     }
   };
+
+  // Show loading state if customer data hasn't loaded yet
+  if (!customerFound && customers.length === 0) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="text-lg">Loading customer data...</div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Show error if customer not found and we've tried to load
+  if (!customerFound && customers.length > 0) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="text-lg text-red-600">Customer not found</div>
+            <Button 
+              onClick={() => navigate('/admin/customers')} 
+              className="mt-4"
+            >
+              Back to Customers
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -288,7 +329,7 @@ const EditCustomer = () => {
           <Button
             type="submit"
             form="edit-customer-form"
-            disabled={isLoading}
+            disabled={isLoading || !customerFound}
           >
             {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
