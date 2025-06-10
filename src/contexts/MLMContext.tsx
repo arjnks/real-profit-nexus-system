@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext } from 'react';
 import { useData } from './DataContext';
 
@@ -111,13 +112,13 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const existing = customers.find(c => c.code === customerData.code);
       if (!existing) {
         // Determine tier based on points
-        let tier = 'Bronze';
+        let tier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
         if (customerData.points >= 160) tier = 'Diamond';
         else if (customerData.points >= 80) tier = 'Gold';
         else if (customerData.points >= 40) tier = 'Silver';
         else if (customerData.points >= 12) tier = 'Bronze';
 
-        await addCustomer({
+        const newCustomer = await addCustomer({
           name: customerData.name,
           phone: customerData.phone,
           code: customerData.code,
@@ -132,13 +133,13 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         // Update with points after creation
-        const newCustomer = customers.find(c => c.code === customerData.code);
         if (newCustomer) {
           await updateCustomer(newCustomer.id, {
             points: customerData.points,
             miniCoins: customerData.points,
             tier: tier
           });
+          console.log(`Customer ${customerData.code} created with ${customerData.points} points, tier: ${tier}`);
         }
       }
     }
@@ -221,12 +222,10 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Admin A100 always stays at level 1
     if (customer.code === 'A100') {
       if (customer.mlmLevel !== 1) {
-        const updatedCustomer = {
-          ...customer,
+        await updateCustomer(customer.id, {
           mlmLevel: 1,
           lastMLMDistribution: new Date().toISOString()
-        };
-        await updateCustomer(customer.id, updatedCustomer);
+        });
       }
       return;
     }
@@ -236,13 +235,10 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Update customer's MLM level if it changed
     if (customer.mlmLevel !== targetLevel) {
-      const updatedCustomer = {
-        ...customer,
+      await updateCustomer(customer.id, {
         mlmLevel: targetLevel,
         lastMLMDistribution: new Date().toISOString()
-      };
-
-      await updateCustomer(customer.id, updatedCustomer);
+      });
       console.log(`Customer ${customerCode} assigned to level ${targetLevel} (will occupy ${totalPoints} slots)`);
     }
   };
@@ -250,7 +246,10 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Calculate MLM distribution - points earned fill slots in the structure
   const calculateMLMDistribution = async (customerCode: string, purchaseAmount: number, orderId?: string) => {
     const customer = customers.find(c => c.code === customerCode);
-    if (!customer) return;
+    if (!customer) {
+      console.log(`Customer ${customerCode} not found`);
+      return;
+    }
 
     console.log(`Starting MLM distribution for ${customerCode} purchase of ₹${purchaseAmount}`);
     
@@ -259,26 +258,30 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     if (pointsEarned > 0) {
       // Update the purchasing customer's points and reassign level if needed
-      const updatedCustomer = {
-        ...customer,
-        points: customer.points + pointsEarned,
-        miniCoins: customer.miniCoins + pointsEarned,
-        lastMLMDistribution: new Date().toISOString()
-      };
-
+      const newPoints = customer.points + pointsEarned;
+      const newMiniCoins = customer.miniCoins + pointsEarned;
+      
       // Calculate new tier based on total points
-      if (updatedCustomer.points >= 160) updatedCustomer.tier = 'Diamond';
-      else if (updatedCustomer.points >= 80) updatedCustomer.tier = 'Gold';
-      else if (updatedCustomer.points >= 40) updatedCustomer.tier = 'Silver';
-      else if (updatedCustomer.points >= 12) updatedCustomer.tier = 'Bronze';
+      let newTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
+      if (newPoints >= 160) newTier = 'Diamond';
+      else if (newPoints >= 80) newTier = 'Gold';
+      else if (newPoints >= 40) newTier = 'Silver';
+      else if (newPoints >= 12) newTier = 'Bronze';
 
-      await updateCustomer(customer.id, updatedCustomer);
+      await updateCustomer(customer.id, {
+        points: newPoints,
+        miniCoins: newMiniCoins,
+        tier: newTier,
+        lastMLMDistribution: new Date().toISOString()
+      });
+      
+      console.log(`Customer ${customerCode} earned ${pointsEarned} points (now has ${newPoints} total points)`);
       
       // Reassign customer to appropriate level based on their new total points
-      await assignCustomerToLevel(customerCode, updatedCustomer.points);
+      await assignCustomerToLevel(customerCode, newPoints);
 
       distributionLog.push(
-        `Customer ${customerCode} earned ${pointsEarned} points (now has ${updatedCustomer.points} total points)`
+        `Customer ${customerCode} earned ${pointsEarned} points (now has ${newPoints} total points)`
       );
 
       // Distribute earnings across levels based on slot occupancy
@@ -296,20 +299,22 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const levelEarnings = Math.floor(pointsEarned * customerShare);
             
             if (levelEarnings > 0) {
-              const updatedMember = {
-                ...levelCustomer,
-                points: levelCustomer.points + levelEarnings,
-                miniCoins: levelCustomer.miniCoins + levelEarnings,
-                lastMLMDistribution: new Date().toISOString()
-              };
-
+              const newLevelPoints = levelCustomer.points + levelEarnings;
+              const newLevelMiniCoins = levelCustomer.miniCoins + levelEarnings;
+              
               // Calculate new tier based on points
-              if (updatedMember.points >= 160) updatedMember.tier = 'Diamond';
-              else if (updatedMember.points >= 80) updatedMember.tier = 'Gold';
-              else if (updatedMember.points >= 40) updatedMember.tier = 'Silver';
-              else if (updatedMember.points >= 12) updatedMember.tier = 'Bronze';
+              let newLevelTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
+              if (newLevelPoints >= 160) newLevelTier = 'Diamond';
+              else if (newLevelPoints >= 80) newLevelTier = 'Gold';
+              else if (newLevelPoints >= 40) newLevelTier = 'Silver';
+              else if (newLevelPoints >= 12) newLevelTier = 'Bronze';
 
-              await updateCustomer(levelCustomer.id, updatedMember);
+              await updateCustomer(levelCustomer.id, {
+                points: newLevelPoints,
+                miniCoins: newLevelMiniCoins,
+                tier: newLevelTier,
+                lastMLMDistribution: new Date().toISOString()
+              });
 
               distributionLog.push(
                 `Level ${level}: ${levelCustomer.code} earned ${levelEarnings} points (${customerSlots} slots occupied, ${(customerShare * 100).toFixed(1)}% share)`
@@ -348,7 +353,6 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return earnings;
   };
 
-  // Get complete MLM structure with slot occupancy
   const getMLMStructure = (customerCode: string) => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) return null;
@@ -387,7 +391,6 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Validate MLM structure - check if more slots can be added
   const validateMLMStructure = (customerCode: string): boolean => {
     const occupancy = getSlotOccupancy();
     
