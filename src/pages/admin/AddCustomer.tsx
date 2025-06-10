@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -117,7 +116,6 @@ const AddCustomer = () => {
         totalDownlineCount: 0,
         monthlyCommissions: {},
         totalCommissions: 0,
-        tier: tier as 'Bronze' | 'Silver' | 'Gold' | 'Diamond',
         points: tier === 'Bronze' ? 20 : tier === 'Silver' ? 40 : tier === 'Gold' ? 80 : 160,
       });
       
