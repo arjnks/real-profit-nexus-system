@@ -1,100 +1,85 @@
-
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/sonner';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { QueryClient } from 'react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { DataProvider } from '@/contexts/DataContext';
-import ProtectedRoute from '@/components/ProtectedRoute';
-
-// Public pages
-import Index from '@/pages/Index';
-import About from '@/pages/About';
-import Contact from '@/pages/Contact';
-import Shop from '@/pages/Shop';
-import Services from '@/pages/Services';
+import { Toaster } from 'sonner';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
-import NotFound from '@/pages/NotFound';
-
-// Customer pages
-import CustomerDashboard from '@/pages/CustomerDashboard';
 import Profile from '@/pages/Profile';
-import Orders from '@/pages/Orders';
+import Shop from '@/pages/Shop';
+import ProductDetails from '@/pages/ProductDetails';
 import Checkout from '@/pages/Checkout';
-
-// Membership pages
-import Bronze from '@/pages/membership/Bronze';
-import Silver from '@/pages/membership/Silver';
-import Gold from '@/pages/membership/Gold';
-import Diamond from '@/pages/membership/Diamond';
-
-// Admin pages
-import AdminDashboard from '@/pages/admin/Dashboard';
-import AdminCustomers from '@/pages/admin/Customers';
-import AdminProducts from '@/pages/admin/Products';
-import AdminServices from '@/pages/admin/Services';
-import AdminPurchases from '@/pages/admin/Purchases';
-import AdminRequests from '@/pages/admin/Requests';
-import ClubManagement from '@/pages/admin/ClubManagement';
-import MLMTree from '@/pages/admin/MLMTree';
+import Orders from '@/pages/Orders';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminProducts from '@/pages/admin/AdminProducts';
+import AdminCustomers from '@/pages/admin/AdminCustomers';
 import AddCustomer from '@/pages/admin/AddCustomer';
 import EditCustomer from '@/pages/admin/EditCustomer';
-
-import './App.css';
-
-const queryClient = new QueryClient();
+import AdminCategories from '@/pages/admin/AdminCategories';
+import AdminServices from '@/pages/admin/AdminServices';
+import AdminOrders from '@/pages/admin/AdminOrders';
+import AdminOffers from '@/pages/admin/AdminOffers';
+import MLMNetwork from '@/pages/admin/MLMNetwork';
+import MLMTree from '@/pages/admin/MLMTree';
+import AddProduct from '@/pages/admin/AddProduct';
+import EditProduct from '@/pages/admin/EditProduct';
+import AddCategory from '@/pages/admin/AddCategory';
+import EditCategory from '@/pages/admin/EditCategory';
+import AddService from '@/pages/admin/AddService';
+import EditService from '@/pages/admin/EditService';
+import Unauthorized from '@/pages/Unauthorized';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
+import SimpleReferralSystem from '@/components/SimpleReferralSystem';
+import MLMProvider from '@/contexts/MLMContext';
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <DataProvider>
-          <Router>
-            <div className="min-h-screen bg-background">
+    <Router>
+      <QueryClient>
+        <AuthProvider>
+          <DataProvider>
+            <MLMProvider>
+              <Toaster />
               <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/services" element={<Services />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                
-                {/* Customer routes */}
-                <Route path="/dashboard" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-                
-                {/* Membership routes */}
-                <Route path="/membership/bronze" element={<Bronze />} />
-                <Route path="/membership/silver" element={<Silver />} />
-                <Route path="/membership/gold" element={<Gold />} />
-                <Route path="/membership/diamond" element={<Diamond />} />
-                
-                {/* Admin routes */}
-                <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/admin/customers" element={<ProtectedRoute><AdminCustomers /></ProtectedRoute>} />
-                <Route path="/admin/add-customer" element={<ProtectedRoute><AddCustomer /></ProtectedRoute>} />
-                <Route path="/admin/customers/:id/edit" element={<ProtectedRoute><EditCustomer /></ProtectedRoute>} />
-                <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
-                <Route path="/admin/services" element={<ProtectedRoute><AdminServices /></ProtectedRoute>} />
-                <Route path="/admin/purchases" element={<ProtectedRoute><AdminPurchases /></ProtectedRoute>} />
-                <Route path="/admin/requests" element={<ProtectedRoute><AdminRequests /></ProtectedRoute>} />
-                <Route path="/admin/club-management" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
-                <Route path="/admin/mlm-tree" element={<ProtectedRoute><MLMTree /></ProtectedRoute>} />
-                
-                {/* 404 route */}
-                <Route path="*" element={<NotFound />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/unauthorized" element={<Unauthorized />} />
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/products" element={<AdminProducts />} />
+                <Route path="/admin/products/add" element={<AddProduct />} />
+                <Route path="/admin/products/edit/:id" element={<EditProduct />} />
+                <Route path="/admin/customers" element={<AdminCustomers />} />
+                <Route path="/admin/customers/add" element={<AddCustomer />} />
+                <Route path="/admin/customers/edit/:id" element={<EditCustomer />} />
+                <Route path="/admin/categories" element={<AdminCategories />} />
+                <Route path="/admin/categories/add" element={<AddCategory />} />
+                <Route path="/admin/categories/edit/:id" element={<EditCategory />} />
+                <Route path="/admin/services" element={<AdminServices />} />
+                <Route path="/admin/services/add" element={<AddService />} />
+                <Route path="/admin/services/edit/:id" element={<EditService />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/offers" element={<AdminOffers />} />
+                {/* MLM */}
+                <Route path="/admin/mlm-network" element={<MLMNetwork />} />
+                <Route path="/admin/mlm-tree" element={<MLMTree />} />
+                {/* Referral test */}
+                <Route path="/referral/:customerCode" element={<SimpleReferralSystem customerCode="A100" />} />
               </Routes>
-            </div>
-          </Router>
-          <Toaster />
-        </DataProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+            </MLMProvider>
+          </DataProvider>
+        </AuthProvider>
+      </QueryClient>
+    </Router>
   );
 }
 

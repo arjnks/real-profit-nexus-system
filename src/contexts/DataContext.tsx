@@ -298,74 +298,65 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Enhanced award points function with MLM tracking
-  const awardPoints = (customerId: string, pointMoney: number, orderId?: string) => {
+  // Enhanced award points function with MLM distribution
+  const awardPoints = async (customerId: string, pointMoney: number, orderId?: string) => {
     console.log(`Awarding ${pointMoney} point money to customer ${customerId} for order ${orderId}`);
     
-    setCustomers(prev => {
-      const newCustomers = prev.map(customer => ({ ...customer }));
-      const customerIndex = newCustomers.findIndex(c => c.id === customerId);
-      
-      if (customerIndex === -1) {
-        console.log(`Customer ${customerId} not found`);
-        return prev;
-      }
-      
-      const customer = newCustomers[customerIndex];
-      const newAccumulated = customer.accumulatedPointMoney + pointMoney;
-      const newPoints = Math.floor(newAccumulated / 5);
-      const remainingMoney = newAccumulated % 5;
-      
-      console.log(`Customer ${customer.code}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
-      
-      // Update customer with new points and remaining accumulated money
-      const updatedCustomer = {
-        ...customer,
-        points: customer.points + newPoints,
-        accumulatedPointMoney: remainingMoney,
-        tier: calculateTier(customer.points + newPoints),
-        lastMLMDistribution: orderId ? new Date().toISOString() : customer.lastMLMDistribution
-      };
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) {
+      console.log(`Customer ${customerId} not found`);
+      return;
+    }
 
-      newCustomers[customerIndex] = updatedCustomer;
+    // Award points to the customer who made the purchase
+    const newAccumulated = customer.accumulatedPointMoney + pointMoney;
+    const newPoints = Math.floor(newAccumulated / 5);
+    const remainingMoney = newAccumulated % 5;
+    
+    console.log(`Customer ${customer.code}: ${newAccumulated} accumulated, awarding ${newPoints} points, ${remainingMoney} remaining`);
+    
+    const updatedCustomer = {
+      ...customer,
+      points: customer.points + newPoints,
+      accumulatedPointMoney: remainingMoney,
+      tier: calculateTier(customer.points + newPoints),
+      lastMLMDistribution: orderId ? new Date().toISOString() : customer.lastMLMDistribution
+    };
 
-      // Update in database
-      supabaseService.updateCustomer(customerId, updatedCustomer);
-      
-      // Distribute mini coins to MLM network
-      if (newPoints > 0) {
-        const mlmPath = getMLMPath(customer.code);
+    await updateCustomer(customerId, updatedCustomer);
+
+    // MLM Distribution - traverse up 6 levels
+    if (customer.parentCode) {
+      let currentParentCode = customer.parentCode;
+      let level = 1;
+
+      while (currentParentCode && level <= 6) {
+        const parentCustomer = customers.find(c => c.code === currentParentCode);
+        if (!parentCustomer) break;
+
+        // Each parent earns 1 point for every ₹5 spent by downline
+        const mlmPointsEarned = Math.floor(pointMoney / 5);
         
-        mlmPath.forEach((parentCode, level) => {
-          const parentIndex = newCustomers.findIndex(c => c.code === parentCode);
-          if (parentIndex !== -1) {
-            const miniCoinsToAdd = newPoints;
-            
-            const updatedParent = {
-              ...newCustomers[parentIndex],
-              miniCoins: newCustomers[parentIndex].miniCoins + miniCoinsToAdd,
-              lastMLMDistribution: new Date().toISOString()
-            };
+        if (mlmPointsEarned > 0) {
+          const updatedParent = {
+            ...parentCustomer,
+            points: parentCustomer.points + mlmPointsEarned,
+            miniCoins: parentCustomer.miniCoins + mlmPointsEarned,
+            lastMLMDistribution: new Date().toISOString()
+          };
 
-            // Convert mini coins to points (5 mini coins = 1 point)
-            if (updatedParent.miniCoins >= 5) {
-              const parentNewPoints = Math.floor(updatedParent.miniCoins / 5);
-              updatedParent.points = updatedParent.points + parentNewPoints;
-              updatedParent.miniCoins = updatedParent.miniCoins % 5;
-              updatedParent.tier = calculateTier(updatedParent.points);
-              
-              console.log(`Parent ${parentCode} at level ${level + 1} received ${miniCoinsToAdd} mini coins, converted ${parentNewPoints} points`);
-            }
+          // Update tier based on new points
+          updatedParent.tier = calculateTier(updatedParent.points);
 
-            newCustomers[parentIndex] = updatedParent;
-            // Update in database
-            supabaseService.updateCustomer(updatedParent.id, updatedParent);
-          }
-        });
+          await updateCustomer(parentCustomer.id, updatedParent);
+          
+          console.log(`MLM Level ${level}: ${parentCustomer.code} earned ${mlmPointsEarned} points from ₹${pointMoney} purchase`);
+        }
+
+        currentParentCode = parentCustomer.parentCode;
+        level++;
       }
-      
-      return newCustomers;
-    });
+    }
   };
 
   // Add a new customer
