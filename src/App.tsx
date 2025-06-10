@@ -22,6 +22,7 @@ import MLMNetwork from '@/pages/admin/MLMNetwork';
 import MLMTree from '@/pages/admin/MLMTree';
 import Purchases from '@/pages/admin/Purchases';
 import Requests from '@/pages/admin/Requests';
+import ClubManagement from '@/pages/admin/ClubManagement';
 import SimpleReferralSystem from '@/components/SimpleReferralSystem';
 import MLMProvider from '@/contexts/MLMContext';
 import NotFound from '@/pages/NotFound';
@@ -59,6 +60,7 @@ function App() {
                 <Route path="/admin/services" element={<Services />} />
                 <Route path="/admin/purchases" element={<Purchases />} />
                 <Route path="/admin/requests" element={<Requests />} />
+                <Route path="/admin/club-management" element={<ClubManagement />} />
                 {/* MLM */}
                 <Route path="/admin/mlm-network" element={<MLMNetwork />} />
                 <Route path="/admin/mlm-tree" element={<MLMTree />} />
