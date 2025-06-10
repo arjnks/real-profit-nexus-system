@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
+import { useMLM } from '@/contexts/MLMContext';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ const Checkout = () => {
   const location = useLocation();
   const { user } = useAuth();
   const { addOrder, customers, products } = useData();
+  const { calculateMLMDistribution } = useMLM();
   
   const [pincode, setPincode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -90,6 +91,15 @@ const Checkout = () => {
         pincode: pincode.trim(),
         usedPointsDiscount: false
       });
+
+      // Trigger MLM distribution after successful order creation
+      if (customer?.code && totalAmount > 0) {
+        console.log(`Triggering MLM distribution for customer ${customer.code} with purchase amount ${totalAmount}`);
+        await calculateMLMDistribution(customer.code, totalAmount, orderId);
+        toast.success('Order placed and MLM distribution completed!');
+      } else {
+        toast.success('Order placed successfully!');
+      }
 
       toast.success('Order placed successfully!', {
         description: `Order ${orderId} is now pending approval.`

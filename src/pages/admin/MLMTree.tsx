@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useNavigate } from 'react-router-dom';
@@ -67,9 +66,9 @@ const MLMTree = () => {
     return true;
   };
 
-  // Navigate to add customer page
+  // Navigate to add customer page - fix the route
   const handleAddCustomer = () => {
-    navigate('/admin/add-customer');
+    navigate('/admin/customers/add');
   };
 
   // Ensure A100 root customer exists
