@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,21 +13,37 @@ import {
   SelectValue, 
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus, Shield } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus, Shield, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MLMTree = () => {
   const { customers, orders, moveCustomerInMLM, addCustomer, isAdmin } = useData();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['A100']);
   const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
   const [newParentCode, setNewParentCode] = useState<string>('');
+
+  // MLM Level structure: Level 1 (admin), then 5, 25, 125, 625, 1325
+  const mlmLevelCapacities = {
+    1: 1,     // Admin level
+    2: 5,     // 5 slots
+    3: 25,    // 25 slots
+    4: 125,   // 125 slots
+    5: 625,   // 625 slots
+    6: 1325   // 1325 slots
+  };
 
   // Check if current user has admin privileges
   const hasAdminPrivileges = () => {
     // In a real app, this would check the current logged-in user
     // For now, we'll assume admin access for demonstration
     return true;
+  };
+
+  // Navigate to add customer page
+  const handleAddCustomer = () => {
+    navigate('/admin/add-customer');
   };
 
   // Ensure A100 root customer exists
@@ -156,6 +173,11 @@ const MLMTree = () => {
     }
     
     return null;
+  };
+
+  // Get customers at a specific level
+  const getCustomersAtLevel = (level: number) => {
+    return customers.filter(c => c.mlmLevel === level);
   };
 
   const treeRoot = buildTree();
@@ -317,10 +339,18 @@ const MLMTree = () => {
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">MLM Tree Management</h1>
-        <p className="text-muted-foreground">
-          Visualize and manage the multi-level marketing structure. Admin (A100) has full access to modify the structure.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">MLM Tree Management</h1>
+            <p className="text-muted-foreground">
+              Visualize and manage the multi-level marketing structure. When customers earn points from purchases, they automatically join the MLM system.
+            </p>
+          </div>
+          <Button onClick={handleAddCustomer} className="bg-green-600 hover:bg-green-700">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Customer
+          </Button>
+        </div>
         {hasAdminPrivileges() && (
           <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
             <div className="flex items-center">
@@ -426,10 +456,11 @@ const MLMTree = () => {
               <div className="mt-4 p-3 bg-blue-50 rounded-md">
                 <h4 className="font-medium text-sm text-blue-900 mb-2">MLM Distribution Rules:</h4>
                 <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• When a customer earns points, each parent level receives mini coins</li>
+                  <li>• When a customer makes a purchase and earns 1 point, they automatically join the MLM system</li>
+                  <li>• Each point earned fills 1 slot (₹1) in their assigned level</li>
+                  <li>• 6 levels total: Level 1 (1 admin slot), Level 2 (5 slots), Level 3 (25 slots), Level 4 (125 slots), Level 5 (625 slots), Level 6 (1325 slots)</li>
                   <li>• 5 mini coins automatically convert to 1 point</li>
                   <li>• Tier thresholds: Bronze (20), Silver (40), Gold (80), Diamond (160) points</li>
-                  <li>• Click edit icons to reorganize the MLM structure</li>
                   <li>• Green border indicates recent MLM activity (last 24 hours)</li>
                 </ul>
               </div>
@@ -479,9 +510,15 @@ const MLMTree = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-center py-6 text-muted-foreground">
-                  No recent MLM activity found. Confirm some orders to see activity here.
-                </p>
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground mb-4">
+                    No recent MLM activity found. When customers make purchases and earn points, they'll automatically join the MLM system and activity will appear here.
+                  </p>
+                  <Button onClick={handleAddCustomer} className="bg-green-600 hover:bg-green-700">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add First Customer
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -492,3 +529,5 @@ const MLMTree = () => {
 };
 
 export default MLMTree;
+
+}
