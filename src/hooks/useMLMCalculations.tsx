@@ -20,42 +20,40 @@ export const useMLMCalculations = (customerCode: string) => {
       let totalNetworkSize = 0;
       let totalEarnings = 0;
 
-      // Function to get members at each level
-      const getMembersAtLevel = (parentCode: string, level: number): string[] => {
-        if (level > 6) return [];
-        
-        const directMembers = customers.filter(c => c.parentCode === parentCode);
-        let members = directMembers.map(m => m.code);
-        totalNetworkSize += members.length;
-
-        // Calculate earnings from this level
-        members.forEach(memberCode => {
-          const memberOrders = orders.filter(o => 
-            o.customerCode === memberCode && 
-            o.status === 'delivered'
-          );
+      // Function to calculate stats for each level
+      const calculateLevelStats = () => {
+        // Loop through all 6 levels
+        for (let level = 1; level <= 6; level++) {
+          // Get customers at this level
+          const customersAtLevel = customers.filter(c => c.mlmLevel === level);
+          const levelCount = customersAtLevel.length;
+          totalNetworkSize += levelCount;
           
-          const levelEarnings = memberOrders.reduce((sum, order) => 
-            sum + Math.floor(order.amountPaid / 5), 0
-          );
+          // Calculate earnings from this level
+          let levelEarnings = 0;
+          customersAtLevel.forEach(levelCustomer => {
+            const customerOrders = orders.filter(o => 
+              o.customerCode === levelCustomer.code && 
+              o.status === 'delivered'
+            );
+            
+            levelEarnings += customerOrders.reduce((sum, order) => 
+              sum + Math.floor(order.amountPaid / 5), 0
+            );
+          });
           
-          if (!levelStats[level]) {
-            levelStats[level] = { count: 0, earnings: 0 };
+          // Only add non-empty levels to stats
+          if (levelCount > 0 || levelEarnings > 0) {
+            levelStats[level] = { 
+              count: levelCount, 
+              earnings: levelEarnings 
+            };
+            totalEarnings += levelEarnings;
           }
-          levelStats[level].count++;
-          levelStats[level].earnings += levelEarnings;
-          totalEarnings += levelEarnings;
-        });
-
-        // Recursively get next level
-        directMembers.forEach(member => {
-          getMembersAtLevel(member.code, level + 1);
-        });
-
-        return members;
+        }
       };
 
-      getMembersAtLevel(customerCode, 1);
+      calculateLevelStats();
 
       setMLMStats({
         totalNetworkSize,

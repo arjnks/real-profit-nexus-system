@@ -7,70 +7,64 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Gift, Users, Star, Target, TrendingUp } from 'lucide-react';
+import { Gift, Award, Star, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMLMCalculations } from '@/hooks/useMLMCalculations';
 
 interface HiddenMLMSystemProps {
   customerCode: string;
 }
 
 const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
-  const { customers, canAddReferral, addReferral } = useData();
-  const { getMLMStructure, validateMLMStructure, getMLMEarnings } = useMLM();
-  const [friendCode, setFriendCode] = useState('');
+  const { customers } = useData();
+  const { getMLMStructure } = useMLM();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const mlmStats = useMLMCalculations(customerCode);
 
   const customer = customers.find(c => c.code === customerCode);
   const mlmStructure = getMLMStructure(customerCode);
 
   if (!customer) return null;
 
-  const handleInviteFriend = async () => {
-    if (!friendCode.trim()) {
-      toast.error('Please enter your friend\'s code');
-      return;
-    }
-
-    if (friendCode === customerCode) {
-      toast.error('You cannot refer yourself');
-      return;
-    }
-
-    if (!validateMLMStructure(customerCode)) {
-      toast.error('You have reached the maximum number of referrals (5)');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const success = await addReferral(customerCode, friendCode);
-      if (success) {
-        toast.success('Friend successfully added to your network!');
-        setFriendCode('');
-      } else {
-        toast.error('Unable to add referral. Please check the friend\'s code.');
-      }
-    } catch (error) {
-      toast.error('An error occurred while adding the referral');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Calculate potential earnings
   const calculatePotentialEarnings = () => {
-    const level1 = 5; // 5 direct referrals
-    const level2 = 25; // 5 x 5
-    const level3 = 125; // 25 x 5
-    const level4 = 625; // 125 x 5
-    const level5 = 3125; // 625 x 5
-    const level6 = 15625; // 3125 x 5
+    const level1 = 5; // level 1 has 1 slot (admin)
+    const level2 = 25; // level 2 has 5 slots
+    const level3 = 125; // level 3 has 25 slots
+    const level4 = 625; // level 4 has 125 slots
+    const level5 = 3125; // level 5 has 625 slots
+    const level6 = 15625; // level 6 has 3125 slots
 
     return { level1, level2, level3, level4, level5, level6 };
   };
 
   const potentialEarnings = calculatePotentialEarnings();
-  const directReferrals = customers.filter(c => c.parentCode === customerCode);
+  
+  // Calculate customer's level stats
+  const getLevelInfo = () => {
+    const level = customer.mlmLevel || 1;
+    const levelCapacities = {
+      1: 1, // Admin level
+      2: 5,
+      3: 25,
+      4: 125,
+      5: 625,
+      6: 3125
+    };
+    
+    const customersAtSameLevel = customers.filter(c => c.mlmLevel === level).length;
+    const capacity = levelCapacities[level as keyof typeof levelCapacities];
+    const progress = (customersAtSameLevel / capacity) * 100;
+    
+    return {
+      level,
+      customersAtSameLevel,
+      capacity,
+      progress
+    };
+  };
+  
+  const levelInfo = getLevelInfo();
 
   return (
     <div className="space-y-6">
@@ -88,67 +82,41 @@ const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
               <Star className="h-8 w-8 text-blue-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-blue-900">{customer.points}</div>
               <div className="text-sm text-blue-700">Loyalty Points</div>
-              <div className="text-xs text-blue-600 mt-1">Earn from shopping & friends</div>
+              <div className="text-xs text-blue-600 mt-1">Earn from shopping & system rewards</div>
             </div>
             
             <div className="text-center p-4 bg-green-50 rounded-lg">
-              <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-green-900">{directReferrals.length}/5</div>
-              <div className="text-sm text-green-700">Friends Invited</div>
-              <div className="text-xs text-green-600 mt-1">Invite more to earn bonus points</div>
+              <Award className="h-8 w-8 text-green-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-green-900">Level {customer.mlmLevel || 1}</div>
+              <div className="text-sm text-green-700">Loyalty Level</div>
+              <div className="text-xs text-green-600 mt-1">Higher levels earn more rewards</div>
             </div>
             
             <div className="text-center p-4 bg-orange-50 rounded-lg">
               <Target className="h-8 w-8 text-orange-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-orange-900">{customer.miniCoins}</div>
               <div className="text-sm text-orange-700">Bonus Coins</div>
-              <div className="text-xs text-orange-600 mt-1">From friend activities</div>
+              <div className="text-xs text-orange-600 mt-1">From system activities</div>
             </div>
           </div>
 
-          {/* Invite Friend Section */}
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-3">Invite Friends & Earn More Points</h4>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter friend's customer code (e.g., A123)"
-                value={friendCode}
-                onChange={(e) => setFriendCode(e.target.value.toUpperCase())}
-                disabled={isSubmitting || directReferrals.length >= 5}
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleInviteFriend}
-                disabled={isSubmitting || directReferrals.length >= 5}
-              >
-                {isSubmitting ? 'Adding...' : 'Invite'}
-              </Button>
-            </div>
-            
-            {directReferrals.length >= 5 && (
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                You've invited the maximum number of friends. Great job building your network!
-              </div>
-            )}
-          </div>
-
-          {/* Progress Visualization */}
+          {/* Level Progress Visualization */}
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h5 className="font-medium text-gray-900 mb-3">Your Network Progress</h5>
+            <h5 className="font-medium text-gray-900 mb-3">Your Loyalty Progress</h5>
             <div className="space-y-3">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Friends Invited</span>
-                  <span>{directReferrals.length}/5</span>
+                  <span>Level {levelInfo.level} Progress</span>
+                  <span>{levelInfo.customersAtSameLevel}/{levelInfo.capacity}</span>
                 </div>
-                <Progress value={(directReferrals.length / 5) * 100} className="h-2" />
+                <Progress value={levelInfo.progress} className="h-2" />
               </div>
               
               <div className="text-xs text-gray-600 space-y-1">
-                <div>• Earn 1 point for every ₹5 your friends spend</div>
-                <div>• Points from your friends' friends too!</div>
-                <div>• Build a network of up to 6 levels deep</div>
-                <div>• More friends = more points automatically</div>
+                <div>• Earn 1 point for every ₹5 you spend</div>
+                <div>• More points = higher loyalty tier</div>
+                <div>• Higher tiers get more rewards and discounts</div>
+                <div>• Points can be redeemed for purchases</div>
               </div>
             </div>
           </div>
@@ -157,28 +125,43 @@ const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
           <div className="bg-blue-50 p-4 rounded-lg">
             <h5 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Earning Potential
+              Loyalty Rewards Potential
             </h5>
             <div className="text-sm text-blue-800 space-y-1">
-              <p>When you invite 5 friends who each spend ₹5, you earn <strong>5 points</strong></p>
-              <p>If they each invite 5 friends (25 total), you earn <strong>25 more points</strong></p>
-              <p>This continues for 6 levels - the more active your network, the more you earn!</p>
+              <p>Every ₹5 spent in our store = <strong>1 loyalty point</strong></p>
+              <p>Reach higher tiers: Bronze (12 pts), Silver (40 pts), Gold (80 pts), Diamond (160 pts)</p>
+              <p>Higher tiers receive bigger discounts and exclusive offers!</p>
             </div>
           </div>
 
-          {/* Current Friends List */}
-          {directReferrals.length > 0 && (
-            <div>
-              <h5 className="font-medium mb-2">Your Invited Friends</h5>
-              <div className="flex flex-wrap gap-2">
-                {directReferrals.map(friend => (
-                  <Badge key={friend.id} variant="outline" className="text-xs">
-                    {friend.name} ({friend.code})
-                  </Badge>
-                ))}
+          {/* MLM Stats */}
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h5 className="font-medium text-purple-900 mb-2">Your Loyalty Network Stats</h5>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <span className="text-sm text-purple-700">Total Network Size:</span>
+                <p className="text-lg font-semibold text-purple-900">{mlmStats.totalNetworkSize}</p>
+              </div>
+              <div>
+                <span className="text-sm text-purple-700">Total Earnings:</span>
+                <p className="text-lg font-semibold text-purple-900">{mlmStats.totalEarnings}</p>
               </div>
             </div>
-          )}
+
+            {Object.keys(mlmStats.levelStats).length > 0 && (
+              <div className="mt-3">
+                <h6 className="text-sm font-medium text-purple-800 mb-2">Earnings by Level:</h6>
+                <div className="space-y-1">
+                  {Object.entries(mlmStats.levelStats).map(([level, { count, earnings }]) => (
+                    <div key={level} className="flex justify-between text-xs">
+                      <span>Level {level}:</span>
+                      <span>{count} members, {earnings} points earned</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

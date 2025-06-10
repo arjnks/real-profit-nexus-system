@@ -7,6 +7,7 @@ interface MLMContextType {
   getMLMEarnings: (customerCode: string, level: number) => number;
   getMLMStructure: (customerCode: string) => any;
   validateMLMStructure: (customerCode: string) => boolean;
+  assignCustomerToLevel: (customerCode: string, points: number) => Promise<void>;
 }
 
 const MLMContext = createContext<MLMContextType | undefined>(undefined);
@@ -20,9 +21,53 @@ export const useMLM = () => {
 };
 
 export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { customers, updateCustomer, orders, setOrders } = useData();
+  const { customers, updateCustomer, orders } = useData();
 
-  // Calculate MLM distribution based on your requirements
+  // MLM Level capacities
+  const mlmLevelCapacities = {
+    1: 1,     // Admin level (A100)
+    2: 5,     // 5 slots  
+    3: 25,    // 25 slots
+    4: 125,   // 125 slots
+    5: 625,   // 625 slots
+    6: 3125   // 3125 slots
+  };
+
+  // Assign customer to appropriate MLM level based on points
+  const assignCustomerToLevel = async (customerCode: string, points: number) => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer) return;
+
+    // Calculate which level this customer should be in
+    let targetLevel = 6; // Start from highest level
+    let totalSlots = 0;
+    
+    // Count filled slots from level 2 onwards (level 1 is admin)
+    for (let level = 2; level <= 6; level++) {
+      const customersAtLevel = customers.filter(c => c.mlmLevel === level).length;
+      const capacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+      
+      if (customersAtLevel < capacity) {
+        targetLevel = level;
+        break;
+      }
+      totalSlots += capacity;
+    }
+
+    // Update customer's MLM level
+    if (customer.mlmLevel !== targetLevel) {
+      const updatedCustomer = {
+        ...customer,
+        mlmLevel: targetLevel,
+        lastMLMDistribution: new Date().toISOString()
+      };
+
+      await updateCustomer(customer.id, updatedCustomer);
+      console.log(`Customer ${customerCode} assigned to level ${targetLevel}`);
+    }
+  };
+
+  // Calculate MLM distribution - each purchase triggers level-based earnings
   const calculateMLMDistribution = async (customerCode: string, purchaseAmount: number, orderId?: string) => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) return;
@@ -31,53 +76,48 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     const distributionLog: string[] = [];
     
-    // Traverse up the MLM tree for 6 levels
-    let currentCode = customer.parentCode;
-    let level = 1;
-    
-    while (currentCode && level <= 6) {
-      const uplineMember = customers.find(c => c.code === currentCode);
-      if (!uplineMember) break;
+    // First, assign the purchasing customer to appropriate level if they earn points
+    const pointsEarned = Math.floor(purchaseAmount / 5);
+    if (pointsEarned > 0) {
+      await assignCustomerToLevel(customerCode, customer.points + pointsEarned);
+    }
 
-      // Each person earns ₹1 (1 point) for every ₹5 purchase from their downline
-      const pointsEarned = Math.floor(purchaseAmount / 5);
+    // Distribute earnings across all 6 levels
+    for (let level = 1; level <= 6; level++) {
+      const customersAtLevel = customers.filter(c => c.mlmLevel === level);
       
-      if (pointsEarned > 0) {
-        // Award points to upline member
-        const updatedMember = {
-          ...uplineMember,
-          points: uplineMember.points + pointsEarned,
-          miniCoins: uplineMember.miniCoins + pointsEarned,
-          lastMLMDistribution: new Date().toISOString()
-        };
+      if (customersAtLevel.length > 0) {
+        // Each customer at this level earns based on the purchase
+        for (const levelCustomer of customersAtLevel) {
+          const levelEarnings = Math.floor(purchaseAmount / 5); // ₹1 for every ₹5
+          
+          if (levelEarnings > 0) {
+            const updatedMember = {
+              ...levelCustomer,
+              points: levelCustomer.points + levelEarnings,
+              miniCoins: levelCustomer.miniCoins + levelEarnings,
+              lastMLMDistribution: new Date().toISOString()
+            };
 
-        // Calculate new tier based on points
-        if (updatedMember.points >= 160) updatedMember.tier = 'Diamond';
-        else if (updatedMember.points >= 80) updatedMember.tier = 'Gold';
-        else if (updatedMember.points >= 40) updatedMember.tier = 'Silver';
-        else if (updatedMember.points >= 12) updatedMember.tier = 'Bronze';
+            // Calculate new tier based on points
+            if (updatedMember.points >= 160) updatedMember.tier = 'Diamond';
+            else if (updatedMember.points >= 80) updatedMember.tier = 'Gold';
+            else if (updatedMember.points >= 40) updatedMember.tier = 'Silver';
+            else if (updatedMember.points >= 12) updatedMember.tier = 'Bronze';
 
-        await updateCustomer(uplineMember.id, updatedMember);
+            await updateCustomer(levelCustomer.id, updatedMember);
 
-        distributionLog.push(
-          `Level ${level}: ${uplineMember.code} (${uplineMember.name}) earned ${pointsEarned} points from ₹${purchaseAmount} purchase`
-        );
-        
-        console.log(`Level ${level}: ${uplineMember.code} earned ${pointsEarned} points`);
+            distributionLog.push(
+              `Level ${level}: ${levelCustomer.code} (${levelCustomer.name}) earned ${levelEarnings} points from ₹${purchaseAmount} purchase`
+            );
+            
+            console.log(`Level ${level}: ${levelCustomer.code} earned ${levelEarnings} points`);
+          }
+        }
       }
-
-      currentCode = uplineMember.parentCode;
-      level++;
     }
 
-    // Update order with MLM distribution log if order ID provided
-    if (orderId && distributionLog.length > 0) {
-      setOrders(prev => prev.map(order => 
-        order.id === orderId 
-          ? { ...order, mlmDistributionLog: [...(order.mlmDistributionLog || []), ...distributionLog] }
-          : order
-      ));
-    }
+    console.log('MLM distribution completed:', distributionLog);
   };
 
   // Get MLM earnings for a specific level
@@ -85,27 +125,16 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) return 0;
 
-    // Calculate earnings from specific level in downline
+    // Calculate earnings from orders at this level
     let earnings = 0;
-    const getDownlineAtLevel = (code: string, currentLevel: number): string[] => {
-      if (currentLevel === level) return [code];
-      if (currentLevel > level) return [];
-      
-      const directReferrals = customers.filter(c => c.parentCode === code);
-      let result: string[] = [];
-      
-      directReferrals.forEach(referral => {
-        result = result.concat(getDownlineAtLevel(referral.code, currentLevel + 1));
-      });
-      
-      return result;
-    };
-
-    const downlineAtLevel = getDownlineAtLevel(customerCode, 1);
+    const levelCustomers = customers.filter(c => c.mlmLevel === level);
     
-    // Calculate earnings from orders of downline members
-    downlineAtLevel.forEach(downlineCode => {
-      const memberOrders = orders.filter(o => o.customerCode === downlineCode && o.status === 'delivered');
+    levelCustomers.forEach(levelCustomer => {
+      const memberOrders = orders.filter(o => 
+        o.customerCode === levelCustomer.code && 
+        o.status === 'delivered'
+      );
+      
       memberOrders.forEach(order => {
         earnings += Math.floor(order.amountPaid / 5); // ₹1 for every ₹5 purchase
       });
@@ -114,41 +143,50 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return earnings;
   };
 
-  // Get complete MLM structure for a customer
+  // Get complete MLM structure
   const getMLMStructure = (customerCode: string) => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) return null;
 
-    const buildStructure = (code: string, level: number = 1): any => {
-      if (level > 6) return null; // Max 6 levels
-      
-      const member = customers.find(c => c.code === code);
-      if (!member) return null;
-
-      const directReferrals = customers.filter(c => c.parentCode === code);
-      
-      return {
-        ...member,
-        level,
-        directCount: directReferrals.length,
-        maxReferrals: 5,
-        canAddMore: directReferrals.length < 5,
-        children: directReferrals.map(ref => buildStructure(ref.code, level + 1)).filter(Boolean),
-        totalEarnings: getMLMEarnings(code, level)
-      };
+    const levels: Record<number, any[]> = {
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+      5: [],
+      6: []
     };
 
-    return buildStructure(customerCode);
+    // Group customers by their MLM level
+    customers.forEach(c => {
+      if (c.mlmLevel >= 1 && c.mlmLevel <= 6) {
+        levels[c.mlmLevel].push(c);
+      }
+    });
+
+    return {
+      rootCustomer: customer,
+      levels,
+      stats: {
+        totalCustomers: customers.length,
+        levelCounts: Object.keys(levels).reduce((acc, level) => {
+          acc[level] = levels[Number(level)].length;
+          return acc;
+        }, {} as Record<string, number>)
+      }
+    };
   };
 
-  // Validate MLM structure constraints
+  // Validate MLM structure - returns if customer can add more points at current level
   const validateMLMStructure = (customerCode: string): boolean => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) return false;
 
-    // Check if customer can add more referrals (max 5 direct)
-    const directReferrals = customers.filter(c => c.parentCode === customerCode);
-    return directReferrals.length < 5;
+    const customersAtLevel = customers.filter(c => c.mlmLevel === customer.mlmLevel).length;
+    const levelCapacity = mlmLevelCapacities[customer.mlmLevel as keyof typeof mlmLevelCapacities];
+    
+    // Customer can add more points if their level has capacity
+    return customersAtLevel < levelCapacity;
   };
 
   return (
@@ -158,6 +196,7 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getMLMEarnings,
         getMLMStructure,
         validateMLMStructure,
+        assignCustomerToLevel,
       }}
     >
       {children}
