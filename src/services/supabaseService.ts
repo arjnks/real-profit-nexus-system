@@ -528,6 +528,12 @@ export class SupabaseService {
       accumulatedPointMoney: parseFloat(data.accumulated_point_money),
       lastMLMDistribution: data.last_mlm_distribution,
       passwordHash: data.password_hash,
+      // New MLM fields
+      mlmLevel: data.mlm_level || 1,
+      directReferrals: data.direct_referrals || [],
+      totalDownlineCount: data.total_downline_count || 0,
+      monthlyCommissions: data.monthly_commissions || {},
+      totalCommissions: parseFloat(data.total_commissions || '0'),
     };
   }
 
@@ -548,6 +554,13 @@ export class SupabaseService {
     if (customer.accumulatedPointMoney !== undefined) dbCustomer.accumulated_point_money = customer.accumulatedPointMoney;
     if (customer.lastMLMDistribution !== undefined) dbCustomer.last_mlm_distribution = customer.lastMLMDistribution;
     if (customer.passwordHash !== undefined) dbCustomer.password_hash = customer.passwordHash;
+    
+    // New MLM fields
+    if (customer.mlmLevel !== undefined) dbCustomer.mlm_level = customer.mlmLevel;
+    if (customer.directReferrals !== undefined) dbCustomer.direct_referrals = customer.directReferrals;
+    if (customer.totalDownlineCount !== undefined) dbCustomer.total_downline_count = customer.totalDownlineCount;
+    if (customer.monthlyCommissions !== undefined) dbCustomer.monthly_commissions = customer.monthlyCommissions;
+    if (customer.totalCommissions !== undefined) dbCustomer.total_commissions = customer.totalCommissions;
     
     return dbCustomer;
   }
@@ -678,4 +691,76 @@ export const updateCategory = async (id: string, categoryData: { name: string; d
 
 export const deleteCategory = async (id: string) => {
   return await supabaseService.deleteCategory(id);
+};
+
+export const getCustomers = async () => {
+  return await supabaseService.getCustomers();
+};
+
+export const addCustomer = async (customer: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">) => {
+  return await supabaseService.addCustomer(customer);
+};
+
+export const updateCustomer = async (id: string, customerData: Partial<Customer>) => {
+  return await supabaseService.updateCustomer(id, customerData);
+};
+
+export const deleteCustomer = async (id: string) => {
+  return await supabaseService.deleteCustomer(id);
+};
+
+export const authenticateCustomer = async (phone: string, password: string) => {
+  return await supabaseService.authenticateCustomer(phone, password);
+};
+
+export const getProducts = async () => {
+  return await supabaseService.getProducts();
+};
+
+export const addProduct = async (product: Omit<Product, "id">) => {
+  return await supabaseService.addProduct(product);
+};
+
+export const updateProduct = async (id: string, productData: Partial<Product>) => {
+  return await supabaseService.updateProduct(id, productData);
+};
+
+export const deleteProduct = async (id: string) => {
+  return await supabaseService.deleteProduct(id);
+};
+
+export const getServices = async () => {
+  return await supabaseService.getServices();
+};
+
+export const addService = async (service: Omit<Service, "id">) => {
+  return await supabaseService.addService(service);
+};
+
+export const updateService = async (id: string, serviceData: Partial<Service>) => {
+  return await supabaseService.updateService(id, serviceData);
+};
+
+export const deleteService = async (id: string) => {
+  return await supabaseService.deleteService(id);
+};
+
+export const getOrders = async () => {
+  return await supabaseService.getOrders();
+};
+
+export const addOrder = async (order: Omit<Order, "id" | "orderDate" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">) => {
+  return await supabaseService.addOrder(order);
+};
+
+export const updateOrder = async (id: string, orderData: Partial<Order>) => {
+  return await supabaseService.updateOrder(id, orderData);
+};
+
+export const deleteOrder = async (id: string) => {
+  return await supabaseService.deleteOrder(id);
+};
+
+export const authenticateAdmin = async (username: string, password: string) => {
+  return await supabaseService.authenticateAdmin(username, password);
 };

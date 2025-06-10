@@ -19,6 +19,12 @@ export type Customer = {
   accumulatedPointMoney: number;
   lastMLMDistribution?: string;
   passwordHash?: string;
+  // New MLM fields
+  mlmLevel: number; // 1-6 levels
+  directReferrals: string[]; // Array of customer codes directly referred
+  totalDownlineCount: number; // Total count of downline members
+  monthlyCommissions: Record<string, number>; // Monthly commission earnings
+  totalCommissions: number; // Total lifetime commissions
 };
 
 export type Category = {
@@ -127,6 +133,18 @@ interface DataContextType {
   getMLMPath: (customerCode: string) => string[];
   refreshData: () => Promise<void>;
   updateProductStock: (productId: string, quantityPurchased: number) => Promise<void>;
+  getMLMCommissionStructure: (level: number) => number;
+  calculateMLMCommissions: (customerId: string, purchaseAmount: number, orderId?: string) => void;
+  getDownlineStructure: (customerCode: string) => any;
+  canAddReferral: (customerCode: string) => boolean;
+  addReferral: (parentCode: string, childCode: string) => Promise<boolean>;
+  getMLMStatistics: (customerCode: string) => {
+    level: number;
+    directReferrals: number;
+    totalDownline: number;
+    monthlyCommissions: number;
+    totalCommissions: number;
+  };
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -609,6 +627,179 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // MLM Commission Structure (hidden from customers)
+  const getMLMCommissionStructure = (level: number): number => {
+    const commissionRates = {
+      1: 0.10, // 10% for direct referrals (Level 1)
+      2: 0.05, // 5% for Level 2
+      3: 0.03, // 3% for Level 3
+      4: 0.02, // 2% for Level 4
+      5: 0.01, // 1% for Level 5
+      6: 0.005 // 0.5% for Level 6
+    };
+    return commissionRates[level as keyof typeof commissionRates] || 0;
+  };
+
+  // Check if customer can add more referrals (max 5 direct referrals)
+  const canAddReferral = (customerCode: string): boolean => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer) return false;
+    return customer.directReferrals.length < 5;
+  };
+
+  // Add a referral to the MLM structure
+  const addReferral = async (parentCode: string, childCode: string): Promise<boolean> => {
+    const parent = customers.find(c => c.code === parentCode);
+    const child = customers.find(c => c.code === childCode);
+    
+    if (!parent || !child || !canAddReferral(parentCode) || child.parentCode) {
+      return false;
+    }
+
+    // Update child's parent
+    await updateCustomer(child.id, { 
+      parentCode: parentCode,
+      mlmLevel: Math.min(parent.mlmLevel + 1, 6)
+    });
+
+    // Update parent's direct referrals
+    const updatedDirectReferrals = [...parent.directReferrals, childCode];
+    await updateCustomer(parent.id, { 
+      directReferrals: updatedDirectReferrals,
+      totalDownlineCount: parent.totalDownlineCount + 1
+    });
+
+    // Update all upline members' downline counts
+    let currentParentCode = parentCode;
+    for (let i = 0; i < 6; i++) {
+      const currentParent = customers.find(c => c.code === currentParentCode);
+      if (!currentParent || !currentParent.parentCode) break;
+      
+      await updateCustomer(currentParent.id, {
+        totalDownlineCount: currentParent.totalDownlineCount + 1
+      });
+      
+      currentParentCode = currentParent.parentCode;
+    }
+
+    return true;
+  };
+
+  // Get downline structure for admin view
+  const getDownlineStructure = (customerCode: string) => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer) return null;
+
+    const buildDownline = (code: string, level: number = 1): any => {
+      if (level > 6) return null;
+      
+      const member = customers.find(c => c.code === code);
+      if (!member) return null;
+
+      const directReferrals = customers.filter(c => c.parentCode === code);
+      
+      return {
+        ...member,
+        level,
+        children: directReferrals.map(ref => buildDownline(ref.code, level + 1)).filter(Boolean)
+      };
+    };
+
+    return buildDownline(customerCode);
+  };
+
+  // Calculate MLM commissions (hidden backend logic)
+  const calculateMLMCommissions = (customerId: string, purchaseAmount: number, orderId?: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    console.log(`Calculating MLM commissions for ${customer.code} purchase of ₹${purchaseAmount}`);
+    
+    let currentCode = customer.parentCode;
+    let level = 1;
+    const distributionLog: string[] = [];
+
+    // Traverse up to 6 levels
+    while (currentCode && level <= 6) {
+      const uplineMember = customers.find(c => c.code === currentCode);
+      if (!uplineMember) break;
+
+      const commissionRate = getMLMCommissionStructure(level);
+      const commissionAmount = purchaseAmount * commissionRate;
+
+      if (commissionAmount > 0) {
+        const currentMonth = new Date().toISOString().substring(0, 7);
+        
+        // Update upline member's commissions
+        const updatedMonthlyCommissions = {
+          ...uplineMember.monthlyCommissions,
+          [currentMonth]: (uplineMember.monthlyCommissions[currentMonth] || 0) + commissionAmount
+        };
+
+        const updatedMember = {
+          ...uplineMember,
+          monthlyCommissions: updatedMonthlyCommissions,
+          totalCommissions: uplineMember.totalCommissions + commissionAmount,
+          // Convert commission to mini coins (1 rupee = 1 mini coin)
+          miniCoins: uplineMember.miniCoins + Math.floor(commissionAmount),
+          lastMLMDistribution: new Date().toISOString()
+        };
+
+        // Convert mini coins to points if >= 5
+        if (updatedMember.miniCoins >= 5) {
+          const newPoints = Math.floor(updatedMember.miniCoins / 5);
+          updatedMember.points += newPoints;
+          updatedMember.miniCoins = updatedMember.miniCoins % 5;
+          updatedMember.tier = calculateTier(updatedMember.points);
+        }
+
+        // Update in state and database
+        setCustomers(prev => prev.map(c => c.id === uplineMember.id ? updatedMember : c));
+        supabaseService.updateCustomer(uplineMember.id, updatedMember);
+
+        distributionLog.push(`Level ${level}: ${uplineMember.code} received ₹${commissionAmount.toFixed(2)} commission (${(commissionRate * 100).toFixed(1)}%)`);
+        
+        console.log(`Level ${level}: ${uplineMember.code} received ₹${commissionAmount.toFixed(2)} commission`);
+      }
+
+      currentCode = uplineMember.parentCode;
+      level++;
+    }
+
+    // Update order with MLM distribution log
+    if (orderId && distributionLog.length > 0) {
+      setOrders(prev => prev.map(order => 
+        order.id === orderId 
+          ? { ...order, mlmDistributionLog: [...(order.mlmDistributionLog || []), ...distributionLog] }
+          : order
+      ));
+    }
+  };
+
+  // Get MLM statistics for a customer
+  const getMLMStatistics = (customerCode: string) => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer) {
+      return {
+        level: 1,
+        directReferrals: 0,
+        totalDownline: 0,
+        monthlyCommissions: 0,
+        totalCommissions: 0
+      };
+    }
+
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    
+    return {
+      level: customer.mlmLevel,
+      directReferrals: customer.directReferrals.length,
+      totalDownline: customer.totalDownlineCount,
+      monthlyCommissions: customer.monthlyCommissions[currentMonth] || 0,
+      totalCommissions: customer.totalCommissions
+    };
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -642,9 +833,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         getMLMPath,
         refreshData,
         updateProductStock,
+        getMLMCommissionStructure,
+        calculateMLMCommissions,
+        getDownlineStructure,
+        canAddReferral,
+        addReferral,
+        getMLMStatistics,
       }}
     >
       {children}
     </DataContext.Provider>
   );
 };
+
+export default DataProvider;
