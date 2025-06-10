@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -25,10 +26,20 @@ const AddCustomer = () => {
   const [parentCode, setParentCode] = useState('A100');
   const [customCode, setCustomCode] = useState('');
   const [useCustomCode, setUseCustomCode] = useState(false);
-  const [mlmLevel, setMlmLevel] = useState('1');
+  const [mlmLevel, setMlmLevel] = useState('2'); // Start from level 2 since level 1 is admin
   const [tier, setTier] = useState('Bronze');
   const [isReserved, setIsReserved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // MLM Level structure: Level 1 (admin), then 5, 25, 125, 625, 1325
+  const mlmLevelCapacities = {
+    1: 1,     // Admin level
+    2: 5,     // 5 slots
+    3: 25,    // 25 slots
+    4: 125,   // 125 slots
+    5: 625,   // 625 slots
+    6: 1325   // 1325 slots
+  };
 
   // Check if current user has admin privileges
   const hasAdminPrivileges = () => {
@@ -57,6 +68,18 @@ const AddCustomer = () => {
     return `A${nextNumber}`;
   };
 
+  // Get customers at a specific level
+  const getCustomersAtLevel = (level: number) => {
+    return customers.filter(c => c.mlmLevel === level);
+  };
+
+  // Check if level has available slots
+  const hasAvailableSlots = (level: number) => {
+    const customersAtLevel = getCustomersAtLevel(level);
+    const capacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+    return customersAtLevel.length < capacity;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -68,6 +91,16 @@ const AddCustomer = () => {
     setIsLoading(true);
     
     try {
+      const selectedLevel = parseInt(mlmLevel);
+      
+      // Check if the selected level has available slots
+      if (!hasAvailableSlots(selectedLevel)) {
+        const capacity = mlmLevelCapacities[selectedLevel as keyof typeof mlmLevelCapacities];
+        toast.error(`Level ${selectedLevel} is full (${capacity} slots occupied)`);
+        setIsLoading(false);
+        return;
+      }
+
       // Validate parent code exists (except for A100 which is root)
       if (parentCode !== 'A100') {
         const parentExists = customers.some(c => c.code === parentCode);
@@ -93,17 +126,7 @@ const AddCustomer = () => {
         newCode = generateNextCode();
       }
       
-      // Calculate MLM level based on parent
-      let calculatedLevel = 1;
-      if (parentCode !== 'A100') {
-        const parent = customers.find(c => c.code === parentCode);
-        calculatedLevel = parent ? parent.mlmLevel + 1 : parseInt(mlmLevel);
-      } else {
-        // Admin can set any level for direct placements under A100
-        calculatedLevel = parseInt(mlmLevel);
-      }
-      
-      // Add the customer
+      // Add the customer (without points and tier as they're excluded from the type)
       addCustomer({
         name,
         phone,
@@ -111,16 +134,18 @@ const AddCustomer = () => {
         parentCode: parentCode === 'A100' ? null : parentCode,
         isReserved,
         isPending: false,
-        mlmLevel: calculatedLevel,
+        mlmLevel: selectedLevel,
         directReferrals: [],
         totalDownlineCount: 0,
         monthlyCommissions: {},
         totalCommissions: 0,
-        points: tier === 'Bronze' ? 20 : tier === 'Silver' ? 40 : tier === 'Gold' ? 80 : 160,
       });
       
+      const currentAtLevel = getCustomersAtLevel(selectedLevel).length;
+      const capacity = mlmLevelCapacities[selectedLevel as keyof typeof mlmLevelCapacities];
+      
       toast.success('Customer added successfully!', {
-        description: `${name} has been assigned code ${newCode} at level ${calculatedLevel}`,
+        description: `${name} assigned code ${newCode} at level ${selectedLevel} (${currentAtLevel + 1}/${capacity} slots filled)`,
       });
       
       navigate('/admin/customers');
@@ -153,7 +178,7 @@ const AddCustomer = () => {
         <CardHeader>
           <CardTitle>Customer Details</CardTitle>
           <CardDescription>
-            Enter the details of the new customer. As admin, you can control their placement, level, and tier.
+            Enter the details of the new customer. MLM has 6 levels: Level 1 (Admin), then 5→25→125→625→1325 slots per level.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,15 +234,25 @@ const AddCustomer = () => {
                     <SelectValue placeholder="Select MLM level" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
-                      <SelectItem key={level} value={level.toString()}>
-                        Level {level}
-                      </SelectItem>
-                    ))}
+                    {[2, 3, 4, 5, 6].map((level) => {
+                      const capacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+                      const currentCount = getCustomersAtLevel(level).length;
+                      const isAvailable = hasAvailableSlots(level);
+                      
+                      return (
+                        <SelectItem 
+                          key={level} 
+                          value={level.toString()}
+                          disabled={!isAvailable}
+                        >
+                          Level {level} ({currentCount}/{capacity} slots) {!isAvailable && '- FULL'}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  As admin, you can place customers at any level.
+                  Level 1 is reserved for admin. Each level has limited slots.
                 </p>
               </div>
 
@@ -284,14 +319,18 @@ const AddCustomer = () => {
             </div>
 
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Admin Privileges:</h4>
-              <ul className="text-xs text-blue-800 space-y-1">
-                <li>• Place customers at any level in the MLM hierarchy</li>
-                <li>• Assign custom codes or use auto-generated ones</li>
-                <li>• Set initial tier and points for new customers</li>
-                <li>• Override normal MLM level calculation rules</li>
-                <li>• Create reserved codes for future use</li>
-              </ul>
+              <h4 className="font-medium text-blue-900 mb-2">MLM Level Structure:</h4>
+              <div className="text-xs text-blue-800 space-y-1">
+                <div>• Level 1: Admin (1 slot) - System Administrator</div>
+                <div>• Level 2: {getCustomersAtLevel(2).length}/5 slots filled (₹1 per slot)</div>
+                <div>• Level 3: {getCustomersAtLevel(3).length}/25 slots filled (₹1 per slot)</div>
+                <div>• Level 4: {getCustomersAtLevel(4).length}/125 slots filled (₹1 per slot)</div>
+                <div>• Level 5: {getCustomersAtLevel(5).length}/625 slots filled (₹1 per slot)</div>
+                <div>• Level 6: {getCustomersAtLevel(6).length}/1325 slots filled (₹1 per slot)</div>
+                <div className="mt-2 pt-2 border-t border-blue-200">
+                  <em>When a customer earns 5 points, it fills 5 slots (₹5) in their level</em>
+                </div>
+              </div>
             </div>
           </form>
         </CardContent>
