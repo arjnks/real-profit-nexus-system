@@ -20,8 +20,13 @@ import EditCustomer from '@/pages/admin/EditCustomer';
 import Services from '@/pages/admin/Services';
 import MLMNetwork from '@/pages/admin/MLMNetwork';
 import MLMTree from '@/pages/admin/MLMTree';
+import Purchases from '@/pages/admin/Purchases';
+import Requests from '@/pages/admin/Requests';
 import SimpleReferralSystem from '@/components/SimpleReferralSystem';
 import MLMProvider from '@/contexts/MLMContext';
+import NotFound from '@/pages/NotFound';
+import About from '@/pages/About';
+import Contact from '@/pages/Contact';
 
 const queryClient = new QueryClient();
 
@@ -41,6 +46,9 @@ function App() {
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/services" element={<Services />} />
                 {/* Admin Routes */}
                 <Route path="/admin" element={<Dashboard />} />
                 <Route path="/admin/dashboard" element={<Dashboard />} />
@@ -49,11 +57,16 @@ function App() {
                 <Route path="/admin/customers/add" element={<AddCustomer />} />
                 <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
                 <Route path="/admin/services" element={<Services />} />
+                <Route path="/admin/purchases" element={<Purchases />} />
+                <Route path="/admin/requests" element={<Requests />} />
                 {/* MLM */}
                 <Route path="/admin/mlm-network" element={<MLMNetwork />} />
                 <Route path="/admin/mlm-tree" element={<MLMTree />} />
+                <Route path="/admin/mlm" element={<MLMTree />} />
                 {/* Referral test */}
                 <Route path="/referral/:customerCode" element={<SimpleReferralSystem customerCode="A100" />} />
+                {/* 404 */}
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </MLMProvider>
           </DataProvider>
