@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -13,23 +12,30 @@ import {
   SelectValue, 
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronRight, Edit2, Save, X, Activity, Plus, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MLMTree = () => {
-  const { customers, orders, moveCustomerInMLM, addCustomer } = useData();
+  const { customers, orders, moveCustomerInMLM, addCustomer, isAdmin } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['A100']);
   const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
   const [newParentCode, setNewParentCode] = useState<string>('');
+
+  // Check if current user has admin privileges
+  const hasAdminPrivileges = () => {
+    // In a real app, this would check the current logged-in user
+    // For now, we'll assume admin access for demonstration
+    return true;
+  };
 
   // Ensure A100 root customer exists
   const ensureRootCustomer = () => {
     const rootExists = customers.find(c => c.code === 'A100');
     if (!rootExists) {
       addCustomer({
-        name: 'Root Customer',
-        phone: '0000000000',
+        name: 'System Admin',
+        phone: 'admin100',
         code: 'A100',
         parentCode: null,
         isReserved: false,
@@ -40,7 +46,7 @@ const MLMTree = () => {
         monthlyCommissions: {},
         totalCommissions: 0,
       });
-      toast.success('Root customer A100 created');
+      toast.success('Root admin A100 created');
     }
   };
 
@@ -93,20 +99,29 @@ const MLMTree = () => {
     );
   };
 
-  // Start editing a customer's parent
+  // Enhanced start editing with admin check
   const startEditingParent = (customerCode: string, currentParentCode: string | null) => {
+    if (!hasAdminPrivileges()) {
+      toast.error('Only admin (A100) can modify MLM structure');
+      return;
+    }
     setEditingCustomer(customerCode);
     setNewParentCode(currentParentCode || 'A100');
   };
 
-  // Save parent change
+  // Enhanced save parent change with admin privileges
   const saveParentChange = (customerId: string) => {
+    if (!hasAdminPrivileges()) {
+      toast.error('Only admin (A100) can modify MLM structure');
+      return;
+    }
+    
     try {
       const finalParentCode = newParentCode === 'A100' ? null : newParentCode;
       moveCustomerInMLM(customerId, finalParentCode);
       setEditingCustomer(null);
       setNewParentCode('');
-      toast.success('MLM structure updated successfully');
+      toast.success('MLM structure updated successfully by admin');
     } catch (error) {
       toast.error('Failed to update MLM structure');
     }
@@ -154,6 +169,7 @@ const MLMTree = () => {
     const isExpanded = expandedNodes.includes(node.code);
     const hasChildren = node.children.length > 0;
     const isEditing = editingCustomer === node.id;
+    const nodeIsAdmin = isAdmin(node.code);
     
     const tierColors = {
       Bronze: 'bg-amber-700',
@@ -176,7 +192,9 @@ const MLMTree = () => {
              node.phone.includes(searchTerm))
               ? 'bg-yellow-50'
               : ''
-          } ${hasRecentActivity ? 'border-l-4 border-l-green-500' : ''}`}
+          } ${hasRecentActivity ? 'border-l-4 border-l-green-500' : ''} ${
+            nodeIsAdmin ? 'border-2 border-red-500 bg-red-50' : ''
+          }`}
           style={{ marginLeft: `${level * 20}px` }}
         >
           {hasChildren && (
@@ -202,9 +220,18 @@ const MLMTree = () => {
             <Activity className="h-3 w-3 text-green-500 mr-1" />
           )}
           
+          {nodeIsAdmin && (
+            <Shield className="h-3 w-3 text-red-500 mr-1" />
+          )}
+          
           <div className="flex-1">
             <div className="flex items-center">
               <span className="font-medium">{node.name}</span>
+              {nodeIsAdmin && (
+                <span className="ml-2 px-1.5 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">
+                  ADMIN
+                </span>
+              )}
               {node.isReserved && (
                 <span className="ml-2 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-800 rounded-full">
                   Reserved
@@ -217,7 +244,7 @@ const MLMTree = () => {
               {node.miniCoins > 0 && (
                 <span className="mr-4 text-orange-600">Mini Coins: {node.miniCoins}</span>
               )}
-              <span>Parent: {node.parentCode || 'A100'}</span>
+              <span>Parent: {node.parentCode || 'ROOT'}</span>
             </div>
           </div>
           
@@ -234,12 +261,12 @@ const MLMTree = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="A100">A100</SelectItem>
+                      <SelectItem value="A100">A100 (ROOT)</SelectItem>
                       {customers
                         .filter(c => c.id !== node.id && c.code !== node.code)
                         .map((customer) => (
                           <SelectItem key={customer.id} value={customer.code}>
-                            {customer.code}
+                            {customer.code} - {customer.name}
                           </SelectItem>
                         ))
                       }
@@ -263,14 +290,16 @@ const MLMTree = () => {
                   </Button>
                 </>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => startEditingParent(node.id, node.parentCode)}
-                >
-                  <Edit2 className="h-3 w-3" />
-                </Button>
+                hasAdminPrivileges() && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => startEditingParent(node.id, node.parentCode)}
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                )
               )}
             </div>
           </div>
@@ -290,8 +319,18 @@ const MLMTree = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">MLM Tree Management</h1>
         <p className="text-muted-foreground">
-          Visualize and manage the multi-level marketing structure. Recent MLM activity is highlighted.
+          Visualize and manage the multi-level marketing structure. Admin (A100) has full access to modify the structure.
         </p>
+        {hasAdminPrivileges() && (
+          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center">
+              <Shield className="h-4 w-4 text-red-600 mr-2" />
+              <span className="text-sm text-red-800 font-medium">
+                Admin Mode: You have full access to modify the MLM structure
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="tree" className="w-full">

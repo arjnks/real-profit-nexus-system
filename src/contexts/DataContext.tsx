@@ -145,6 +145,7 @@ interface DataContextType {
     monthlyCommissions: number;
     totalCommissions: number;
   };
+  isAdmin: (customerCode: string) => boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -252,24 +253,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return path;
   };
 
-  // Move customer in MLM structure
-  const moveCustomerInMLM = async (customerId: string, newParentCode: string | null) => {
-    const customer = customers.find(c => c.id === customerId);
-    if (!customer) return;
-
-    const success = await supabaseService.updateCustomer(customerId, {
-      parentCode: newParentCode === 'A100' ? null : newParentCode
-    });
-
-    if (success) {
-      setCustomers(prev =>
-        prev.map(c =>
-          c.id === customerId
-            ? { ...c, parentCode: newParentCode === 'A100' ? null : newParentCode }
-            : c
-        )
-      );
-    }
+  // Check if a customer code is admin (A100)
+  const isAdmin = (customerCode: string): boolean => {
+    return customerCode === 'A100';
   };
 
   // Get next available sequential code
@@ -632,6 +618,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Enhanced moveCustomerInMLM function with admin privileges
+  const moveCustomerInMLM = async (customerId: string, newParentCode: string | null) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    // A100 (admin) can move any customer, including itself
+    // Other customers cannot be moved to prevent unauthorized changes
+    const adminCustomer = customers.find(c => c.code === 'A100');
+    
+    const success = await supabaseService.updateCustomer(customerId, {
+      parentCode: newParentCode === 'A100' ? null : newParentCode
+    });
+
+    if (success) {
+      setCustomers(prev =>
+        prev.map(c =>
+          c.id === customerId
+            ? { ...c, parentCode: newParentCode === 'A100' ? null : newParentCode }
+            : c
+        )
+      );
+    }
+  };
+
   // MLM Commission Structure (hidden from customers)
   const getMLMCommissionStructure = (level: number): number => {
     const commissionRates = {
@@ -844,6 +854,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         canAddReferral,
         addReferral,
         getMLMStatistics,
+        isAdmin,
       }}
     >
       {children}

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -27,11 +28,22 @@ const AddCustomer = () => {
 
   // Generate next available code
   const generateNextCode = () => {
-    // For simplicity, just increment the last customer code
-    const lastCustomer = customers[customers.length - 1];
-    const lastCode = lastCustomer?.code || 'A100';
-    const lastNumber = parseInt(lastCode.substring(1));
-    return `A${lastNumber + 1}`;
+    const activeCodes = customers
+      .filter(c => c.code.startsWith('A'))
+      .map(c => parseInt(c.code.substring(1)))
+      .filter(num => !isNaN(num))
+      .sort((a, b) => a - b);
+    
+    let nextNumber = 101;
+    for (const num of activeCodes) {
+      if (num === nextNumber) {
+        nextNumber++;
+      } else {
+        break;
+      }
+    }
+    
+    return `A${nextNumber}`;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -39,12 +51,14 @@ const AddCustomer = () => {
     setIsLoading(true);
     
     try {
-      // Validate parent code exists
-      const parentExists = customers.some(c => c.code === parentCode);
-      if (!parentExists) {
-        toast.error(`Parent code ${parentCode} doesn't exist`);
-        setIsLoading(false);
-        return;
+      // Validate parent code exists (except for A100 which is root)
+      if (parentCode !== 'A100') {
+        const parentExists = customers.some(c => c.code === parentCode);
+        if (!parentExists) {
+          toast.error(`Parent code ${parentCode} doesn't exist`);
+          setIsLoading(false);
+          return;
+        }
       }
       
       // Generate a code for the new customer
@@ -55,7 +69,7 @@ const AddCustomer = () => {
         name,
         phone,
         code: newCode,
-        parentCode,
+        parentCode: parentCode === 'A100' ? null : parentCode,
         isReserved,
         isPending: false,
         mlmLevel: 1,
@@ -82,7 +96,7 @@ const AddCustomer = () => {
     <AdminLayout>
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Add New Customer</h1>
-        <p className="text-muted-foreground">Create a new customer account</p>
+        <p className="text-muted-foreground">Create a new customer account in the MLM system</p>
       </div>
 
       <Card>
@@ -90,6 +104,7 @@ const AddCustomer = () => {
           <CardTitle>Customer Details</CardTitle>
           <CardDescription>
             Enter the details of the new customer. A unique code will be assigned automatically.
+            Parent code determines position in MLM hierarchy.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,15 +138,18 @@ const AddCustomer = () => {
                     <SelectValue placeholder="Select parent code" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.code}>
-                        {customer.code} - {customer.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="A100">A100 - System Admin (ROOT)</SelectItem>
+                    {customers
+                      .filter(c => c.code !== 'A100')
+                      .map((customer) => (
+                        <SelectItem key={customer.id} value={customer.code}>
+                          {customer.code} - {customer.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  This determines the customer's position in the MLM tree
+                  This determines the customer's position in the MLM tree. A100 is the root admin.
                 </p>
               </div>
               

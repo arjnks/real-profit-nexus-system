@@ -104,12 +104,15 @@ export type Database = {
           accumulated_point_money: number
           code: string
           created_at: string
+          direct_referrals: Json
           id: string
           is_pending: boolean
           is_reserved: boolean
           joined_date: string
           last_mlm_distribution: string | null
           mini_coins: number
+          mlm_level: number
+          monthly_commissions: Json
           monthly_spent: Json
           name: string
           parent_code: string | null
@@ -117,6 +120,8 @@ export type Database = {
           phone: string
           points: number
           tier: string
+          total_commissions: number
+          total_downline_count: number
           total_spent: number
           updated_at: string
         }
@@ -124,12 +129,15 @@ export type Database = {
           accumulated_point_money?: number
           code: string
           created_at?: string
+          direct_referrals?: Json
           id?: string
           is_pending?: boolean
           is_reserved?: boolean
           joined_date?: string
           last_mlm_distribution?: string | null
           mini_coins?: number
+          mlm_level?: number
+          monthly_commissions?: Json
           monthly_spent?: Json
           name: string
           parent_code?: string | null
@@ -137,6 +145,8 @@ export type Database = {
           phone: string
           points?: number
           tier?: string
+          total_commissions?: number
+          total_downline_count?: number
           total_spent?: number
           updated_at?: string
         }
@@ -144,12 +154,15 @@ export type Database = {
           accumulated_point_money?: number
           code?: string
           created_at?: string
+          direct_referrals?: Json
           id?: string
           is_pending?: boolean
           is_reserved?: boolean
           joined_date?: string
           last_mlm_distribution?: string | null
           mini_coins?: number
+          mlm_level?: number
+          monthly_commissions?: Json
           monthly_spent?: Json
           name?: string
           parent_code?: string | null
@@ -157,6 +170,8 @@ export type Database = {
           phone?: string
           points?: number
           tier?: string
+          total_commissions?: number
+          total_downline_count?: number
           total_spent?: number
           updated_at?: string
         }
