@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -59,6 +58,11 @@ const AddCustomer = () => {
         parentCode,
         isReserved,
         isPending: false,
+        mlmLevel: 1,
+        directReferrals: [],
+        totalDownlineCount: 0,
+        monthlyCommissions: {},
+        totalCommissions: 0,
       });
       
       toast.success('Customer added successfully!', {

@@ -433,6 +433,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       parentCode: null,
       isReserved: true,
       isPending: false,
+      mlmLevel: 1,
+      directReferrals: [],
+      totalDownlineCount: 0,
+      monthlyCommissions: {},
+      totalCommissions: 0,
     });
   };
 

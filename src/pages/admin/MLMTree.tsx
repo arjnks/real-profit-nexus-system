@@ -34,6 +34,11 @@ const MLMTree = () => {
         parentCode: null,
         isReserved: false,
         isPending: false,
+        mlmLevel: 1,
+        directReferrals: [],
+        totalDownlineCount: 0,
+        monthlyCommissions: {},
+        totalCommissions: 0,
       });
       toast.success('Root customer A100 created');
     }

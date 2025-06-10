@@ -94,7 +94,12 @@ const Register = () => {
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
         isReserved: false,
         isPending: false,
-        passwordHash: passwordHash
+        passwordHash: passwordHash,
+        mlmLevel: 1,
+        directReferrals: [],
+        totalDownlineCount: 0,
+        monthlyCommissions: {},
+        totalCommissions: 0,
       });
 
       console.log('Customer added successfully');
