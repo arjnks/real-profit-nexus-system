@@ -237,7 +237,28 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Calculate MLM distribution with waterfall model and upward earnings flow
+  // Helper function to distribute points using waterfall model
+  const distributePointsWaterfall = (totalPoints: number) => {
+    const distribution: Record<number, number> = {};
+    let remainingPoints = totalPoints;
+    
+    // Fill levels sequentially starting from level 2
+    for (let level = 2; level <= 6; level++) {
+      if (remainingPoints <= 0) break;
+      
+      const levelCapacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+      const pointsInThisLevel = Math.min(remainingPoints, levelCapacity);
+      
+      if (pointsInThisLevel > 0) {
+        distribution[level] = pointsInThisLevel;
+        remainingPoints -= pointsInThisLevel;
+      }
+    }
+    
+    return distribution;
+  };
+
+  // Calculate MLM distribution with cascading earnings
   const calculateMLMDistribution = async (customerCode: string, purchaseAmount: number, orderId?: string) => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) {
@@ -271,88 +292,87 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       console.log(`${customerCode} earned ${pointsEarned} points (now has ${newCustomerPoints} total)`);
 
-      // 2. Calculate current global slot occupancy AFTER the customer's points are added
+      // 2. Get current global distribution after adding the new points
       const currentOccupancy = getGlobalSlotOccupancy();
       
-      // 3. Distribute earnings upward through the MLM hierarchy
-      // Each occupied slot in each level gets 1 rupee per point earned by the purchasing customer
-      console.log('\n--- UPWARD EARNINGS DISTRIBUTION ---');
+      // 3. Distribute the new points using waterfall model
+      const newPointsDistribution = distributePointsWaterfall(pointsEarned);
       
-      // Admin gets 1 rupee for each occupied slot across ALL levels
-      const admin = customers.find(c => c.code === 'A100');
-      if (admin) {
-        let totalOccupiedSlots = 0;
-        for (let level = 1; level <= 6; level++) {
-          totalOccupiedSlots += currentOccupancy[level]?.filled || 0;
-        }
-        
-        const adminEarnings = pointsEarned * totalOccupiedSlots; // 1 rupee per slot per point
-        
-        if (adminEarnings > 0) {
-          const newAdminPoints = admin.points + adminEarnings;
-          const newAdminMiniCoins = admin.miniCoins + adminEarnings;
-          
-          // Calculate admin's new tier
-          let newAdminTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
-          if (newAdminPoints >= 160) newAdminTier = 'Diamond';
-          else if (newAdminPoints >= 80) newAdminTier = 'Gold';
-          else if (newAdminPoints >= 40) newAdminTier = 'Silver';
-          else if (newAdminPoints >= 12) newAdminTier = 'Bronze';
+      console.log('\n--- CASCADING EARNINGS DISTRIBUTION ---');
+      console.log('New points distribution:', newPointsDistribution);
 
-          await updateCustomer(admin.id, {
-            points: newAdminPoints,
-            miniCoins: newAdminMiniCoins,
-            tier: newAdminTier,
-            lastMLMDistribution: new Date().toISOString()
-          });
-
-          console.log(`Admin earned ${adminEarnings} points (${totalOccupiedSlots} total occupied slots × ${pointsEarned} points)`);
-        }
-      }
-
-      // 4. Distribute earnings to customers in each level based on occupied slots
-      for (let level = 2; level <= 6; level++) {
-        const { filled: occupiedSlots } = currentOccupancy[level] || { filled: 0 };
+      // 4. For each level that receives new points, distribute earnings cascadingly
+      for (const [levelStr, newPointsInLevel] of Object.entries(newPointsDistribution)) {
+        const level = parseInt(levelStr);
         
-        if (occupiedSlots > 0) {
-          // Each occupied slot in this level gets pointsEarned amount
-          const perSlotEarnings = pointsEarned;
-          const totalLevelEarnings = perSlotEarnings * occupiedSlots;
+        if (newPointsInLevel > 0) {
+          console.log(`\nLevel ${level} receives ${newPointsInLevel} new points`);
           
-          // Get all customers who have points (contributing to slots)
-          const levelCustomers = customers.filter(c => c.code !== 'A100' && c.points > 0);
-          
-          if (levelCustomers.length > 0) {
-            // Calculate how much each customer should get based on their slot contribution
-            // For waterfall: find customers whose points contribute to this level
-            const customersInThisLevel = levelCustomers.filter(c => {
-              const customerContribution = getCustomerContributionToLevel(c.code, level);
-              return customerContribution > 0;
-            });
+          // Admin always gets ₹1 per new point at any level
+          const admin = customers.find(c => c.code === 'A100');
+          if (admin) {
+            const adminEarnings = newPointsInLevel;
+            const newAdminPoints = admin.points + adminEarnings;
+            const newAdminMiniCoins = admin.miniCoins + adminEarnings;
             
-            for (const levelCustomer of customersInThisLevel) {
-              const customerSlots = getCustomerContributionToLevel(levelCustomer.code, level);
-              const customerEarnings = Math.floor((customerSlots / occupiedSlots) * totalLevelEarnings);
+            // Calculate admin's new tier
+            let newAdminTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
+            if (newAdminPoints >= 160) newAdminTier = 'Diamond';
+            else if (newAdminPoints >= 80) newAdminTier = 'Gold';
+            else if (newAdminPoints >= 40) newAdminTier = 'Silver';
+            else if (newAdminPoints >= 12) newAdminTier = 'Bronze';
+
+            await updateCustomer(admin.id, {
+              points: newAdminPoints,
+              miniCoins: newAdminMiniCoins,
+              tier: newAdminTier,
+              lastMLMDistribution: new Date().toISOString()
+            });
+
+            console.log(`Admin earned ${adminEarnings} points from Level ${level}`);
+          }
+          
+          // Distribute to all lower levels (levels 2 to current level - 1)
+          for (let lowerLevel = 2; lowerLevel < level; lowerLevel++) {
+            const { filled: occupiedSlots } = currentOccupancy[lowerLevel] || { filled: 0 };
+            
+            if (occupiedSlots > 0) {
+              // Each new point in higher level gives ₹1 per occupied slot in lower levels
+              const totalEarningsForLevel = newPointsInLevel * occupiedSlots;
               
-              if (customerEarnings > 0) {
-                const newLevelPoints = levelCustomer.points + customerEarnings;
-                const newLevelMiniCoins = levelCustomer.miniCoins + customerEarnings;
-                
-                // Calculate new tier
-                let newLevelTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
-                if (newLevelPoints >= 160) newLevelTier = 'Diamond';
-                else if (newLevelPoints >= 80) newLevelTier = 'Gold';
-                else if (newLevelPoints >= 40) newLevelTier = 'Silver';
-                else if (newLevelPoints >= 12) newLevelTier = 'Bronze';
+              // Get customers who have points contributing to this lower level
+              const customersInThisLevel = customers.filter(c => {
+                const contribution = getCustomerContributionToLevel(c.code, lowerLevel);
+                return contribution > 0;
+              });
+              
+              if (customersInThisLevel.length > 0) {
+                for (const levelCustomer of customersInThisLevel) {
+                  const customerSlots = getCustomerContributionToLevel(levelCustomer.code, lowerLevel);
+                  const customerShare = (customerSlots / occupiedSlots);
+                  const customerEarnings = Math.floor(totalEarningsForLevel * customerShare);
+                  
+                  if (customerEarnings > 0) {
+                    const newLevelPoints = levelCustomer.points + customerEarnings;
+                    const newLevelMiniCoins = levelCustomer.miniCoins + customerEarnings;
+                    
+                    // Calculate new tier
+                    let newLevelTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
+                    if (newLevelPoints >= 160) newLevelTier = 'Diamond';
+                    else if (newLevelPoints >= 80) newLevelTier = 'Gold';
+                    else if (newLevelPoints >= 40) newLevelTier = 'Silver';
+                    else if (newLevelPoints >= 12) newLevelTier = 'Bronze';
 
-                await updateCustomer(levelCustomer.id, {
-                  points: newLevelPoints,
-                  miniCoins: newLevelMiniCoins,
-                  tier: newLevelTier,
-                  lastMLMDistribution: new Date().toISOString()
-                });
+                    await updateCustomer(levelCustomer.id, {
+                      points: newLevelPoints,
+                      miniCoins: newLevelMiniCoins,
+                      tier: newLevelTier,
+                      lastMLMDistribution: new Date().toISOString()
+                    });
 
-                console.log(`Level ${level}: ${levelCustomer.code} earned ${customerEarnings} points (${customerSlots} slots)`);
+                    console.log(`Level ${lowerLevel}: ${levelCustomer.code} earned ${customerEarnings} points (${customerSlots}/${occupiedSlots} slots, ${(customerShare * 100).toFixed(1)}% share)`);
+                  }
+                }
               }
             }
           }
