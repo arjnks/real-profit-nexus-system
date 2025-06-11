@@ -315,8 +315,13 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Level 2: Each point = 1 slot, so admin gets 1 point per point
             totalAdminEarnings += newPointsInLevel;
             console.log(`Admin earns ${newPointsInLevel} points from Level ${level} (1 point per slot)`);
+          } else if (level === 3) {
+            // Level 3: 25 points = 5 slots (controlled by Level 2), admin gets 1 point total
+            const slotsControlled = Math.min(newPointsInLevel, 25) / 5; // 25 points = 5 slots
+            totalAdminEarnings += slotsControlled;
+            console.log(`Admin earns ${slotsControlled} points from Level ${level} (${newPointsInLevel} points = ${slotsControlled} slots)`);
           } else {
-            // Level 3+: Every 5 points = 1 slot controlled by previous level
+            // Level 4+: Every 5 points = 1 slot controlled by previous level
             const slotsControlled = Math.ceil(newPointsInLevel / 5);
             totalAdminEarnings += slotsControlled;
             console.log(`Admin earns ${slotsControlled} points from Level ${level} (${newPointsInLevel} points = ${slotsControlled} slots)`);
