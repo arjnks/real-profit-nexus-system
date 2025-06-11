@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { useData } from './DataContext';
 
@@ -185,8 +184,14 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const capacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
       const customersAtLevel = customers.filter(c => c.mlmLevel === level);
       
-      // Calculate total points of customers at this level but cap at level capacity
-      const totalPointsAtLevel = customersAtLevel.reduce((total, customer) => total + customer.points, 0);
+      // Calculate total points distributed to this level (respecting capacity)
+      let totalPointsAtLevel = 0;
+      customersAtLevel.forEach(customer => {
+        // Each customer's points are distributed across levels using waterfall method
+        const customerPointsAtThisLevel = calculateCustomerPointsAtLevel(customer.code, level);
+        totalPointsAtLevel += customerPointsAtThisLevel;
+      });
+      
       const filledSlots = Math.min(totalPointsAtLevel, capacity);
       
       occupancy[level] = {
@@ -198,25 +203,31 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return occupancy;
   };
 
-  // Find the best level for a customer based on available slots
-  const findAvailableLevel = (pointsToAllocate: number): number => {
-    const occupancy = getSlotOccupancy();
+  // Calculate how many points a customer has at a specific level using waterfall distribution
+  const calculateCustomerPointsAtLevel = (customerCode: string, targetLevel: number): number => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer || customer.code === 'A100') return 0; // Admin doesn't participate in waterfall
     
-    // Start from level 2 (level 1 is reserved for admin A100)
+    let remainingPoints = customer.points;
+    
+    // Distribute points from level 2 onwards using waterfall method
     for (let level = 2; level <= 6; level++) {
-      const { filled, capacity } = occupancy[level];
-      const availableSlots = capacity - filled;
+      if (remainingPoints <= 0) break;
       
-      if (availableSlots >= pointsToAllocate) {
-        return level;
+      const levelCapacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+      const pointsToFillThisLevel = Math.min(remainingPoints, levelCapacity);
+      
+      if (level === targetLevel) {
+        return pointsToFillThisLevel;
       }
+      
+      remainingPoints -= pointsToFillThisLevel;
     }
     
-    // If no level has enough slots, assign to highest level (6)
-    return 6;
+    return 0;
   };
 
-  // Assign customer to appropriate MLM level based on points they will occupy
+  // Assign customer to appropriate MLM level based on waterfall distribution
   const assignCustomerToLevel = async (customerCode: string, totalPoints: number) => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) return;
@@ -232,16 +243,32 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Find appropriate level based on available slots for this customer's points
-    const targetLevel = findAvailableLevel(totalPoints);
+    // Determine primary level based on waterfall distribution
+    // Customer's "primary level" is the lowest level where they have points
+    let primaryLevel = 2; // Start from level 2 (level 1 is admin only)
+    let remainingPoints = totalPoints;
+    
+    for (let level = 2; level <= 6; level++) {
+      if (remainingPoints <= 0) break;
+      
+      const levelCapacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+      const pointsAtThisLevel = Math.min(remainingPoints, levelCapacity);
+      
+      if (pointsAtThisLevel > 0) {
+        primaryLevel = level;
+        break; // Customer's primary level is the first level where they have points
+      }
+      
+      remainingPoints -= pointsAtThisLevel;
+    }
 
     // Update customer's MLM level if it changed
-    if (customer.mlmLevel !== targetLevel) {
+    if (customer.mlmLevel !== primaryLevel) {
       await updateCustomer(customer.id, {
-        mlmLevel: targetLevel,
+        mlmLevel: primaryLevel,
         lastMLMDistribution: new Date().toISOString()
       });
-      console.log(`Customer ${customerCode} assigned to level ${targetLevel} (has ${totalPoints} points)`);
+      console.log(`Customer ${customerCode} assigned to primary level ${primaryLevel} (has ${totalPoints} points distributed via waterfall)`);
     }
   };
 
@@ -470,3 +497,5 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 };
 
 export default MLMProvider;
+
+}
