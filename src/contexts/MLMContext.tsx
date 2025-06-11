@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext } from 'react';
 import { useData } from './DataContext';
 
@@ -301,7 +302,8 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('New points distribution:', newPointsDistribution);
 
       // 4. Calculate admin earnings: ₹1 per point distributed to any level
-      let totalAdminEarnings = 0;
+      // Convert ₹ to points: ₹30 = 6 points (since 1 point = ₹5)
+      let totalAdminEarningsInRupees = 0;
       
       for (const [levelStr, newPointsInLevel] of Object.entries(newPointsDistribution)) {
         const level = parseInt(levelStr);
@@ -310,19 +312,21 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.log(`\nLevel ${level} receives ${newPointsInLevel} new points`);
           
           // Admin gets ₹1 per point distributed (not per slot)
-          totalAdminEarnings += newPointsInLevel;
-          console.log(`Admin earns ${newPointsInLevel} points from Level ${level} (₹1 per point)`);
+          totalAdminEarningsInRupees += newPointsInLevel;
+          console.log(`Admin earns ₹${newPointsInLevel} from Level ${level} (₹1 per point)`);
         }
       }
 
-      console.log(`\nTotal admin earnings: ${totalAdminEarnings} points`);
+      // Convert rupees to points for admin (₹5 = 1 point)
+      const totalAdminEarningsInPoints = Math.floor(totalAdminEarningsInRupees / 5);
+      console.log(`\nTotal admin earnings: ₹${totalAdminEarningsInRupees} = ${totalAdminEarningsInPoints} points`);
 
       // Update admin with total earnings
-      if (totalAdminEarnings > 0) {
+      if (totalAdminEarningsInPoints > 0) {
         const admin = customers.find(c => c.code === 'A100');
         if (admin) {
-          const newAdminPoints = admin.points + totalAdminEarnings;
-          const newAdminMiniCoins = admin.miniCoins + totalAdminEarnings;
+          const newAdminPoints = admin.points + totalAdminEarningsInPoints;
+          const newAdminMiniCoins = admin.miniCoins + totalAdminEarningsInPoints;
           
           // Calculate admin's new tier
           let newAdminTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
@@ -338,7 +342,7 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lastMLMDistribution: new Date().toISOString()
           });
 
-          console.log(`Admin A100 earned ${totalAdminEarnings} points (now has ${newAdminPoints} total)`);
+          console.log(`Admin A100 earned ${totalAdminEarningsInPoints} points (₹${totalAdminEarningsInRupees}) (now has ${newAdminPoints} total)`);
         }
       }
 
@@ -353,7 +357,7 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             
             if (occupiedSlots > 0) {
               // Each new point in higher level gives ₹1 per occupied slot in lower levels
-              const totalEarningsForLevel = newPointsInLevel * occupiedSlots;
+              const totalEarningsForLevelInRupees = newPointsInLevel * occupiedSlots;
               
               // Get customers who have points contributing to this lower level
               const customersInThisLevel = customers.filter(c => {
@@ -365,11 +369,12 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 for (const levelCustomer of customersInThisLevel) {
                   const customerSlots = getCustomerContributionToLevel(levelCustomer.code, lowerLevel);
                   const customerShare = (customerSlots / occupiedSlots);
-                  const customerEarnings = Math.floor(totalEarningsForLevel * customerShare);
+                  const customerEarningsInRupees = Math.floor(totalEarningsForLevelInRupees * customerShare);
+                  const customerEarningsInPoints = Math.floor(customerEarningsInRupees / 5); // Convert ₹ to points
                   
-                  if (customerEarnings > 0) {
-                    const newLevelPoints = levelCustomer.points + customerEarnings;
-                    const newLevelMiniCoins = levelCustomer.miniCoins + customerEarnings;
+                  if (customerEarningsInPoints > 0) {
+                    const newLevelPoints = levelCustomer.points + customerEarningsInPoints;
+                    const newLevelMiniCoins = levelCustomer.miniCoins + customerEarningsInPoints;
                     
                     // Calculate new tier
                     let newLevelTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
@@ -385,7 +390,7 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                       lastMLMDistribution: new Date().toISOString()
                     });
 
-                    console.log(`Level ${lowerLevel}: ${levelCustomer.code} earned ${customerEarnings} points (${customerSlots}/${occupiedSlots} slots, ${(customerShare * 100).toFixed(1)}% share)`);
+                    console.log(`Level ${lowerLevel}: ${levelCustomer.code} earned ${customerEarningsInPoints} points (₹${customerEarningsInRupees}) (${customerSlots}/${occupiedSlots} slots, ${(customerShare * 100).toFixed(1)}% share)`);
                   }
                 }
               }
