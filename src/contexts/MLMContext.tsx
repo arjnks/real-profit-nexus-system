@@ -301,37 +301,61 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('\n--- CASCADING EARNINGS DISTRIBUTION ---');
       console.log('New points distribution:', newPointsDistribution);
 
-      // 4. For each level that receives new points, distribute earnings cascadingly
+      // 4. Calculate admin earnings: 1 point per slot filled across all levels
+      let totalAdminEarnings = 0;
+      
       for (const [levelStr, newPointsInLevel] of Object.entries(newPointsDistribution)) {
         const level = parseInt(levelStr);
         
         if (newPointsInLevel > 0) {
           console.log(`\nLevel ${level} receives ${newPointsInLevel} new points`);
           
-          // Admin always gets ₹1 per new point at any level
-          const admin = customers.find(c => c.code === 'A100');
-          if (admin) {
-            const adminEarnings = newPointsInLevel;
-            const newAdminPoints = admin.points + adminEarnings;
-            const newAdminMiniCoins = admin.miniCoins + adminEarnings;
-            
-            // Calculate admin's new tier
-            let newAdminTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
-            if (newAdminPoints >= 160) newAdminTier = 'Diamond';
-            else if (newAdminPoints >= 80) newAdminTier = 'Gold';
-            else if (newAdminPoints >= 40) newAdminTier = 'Silver';
-            else if (newAdminPoints >= 12) newAdminTier = 'Bronze';
-
-            await updateCustomer(admin.id, {
-              points: newAdminPoints,
-              miniCoins: newAdminMiniCoins,
-              tier: newAdminTier,
-              lastMLMDistribution: new Date().toISOString()
-            });
-
-            console.log(`Admin earned ${adminEarnings} points from Level ${level}`);
+          // For each level, admin gets 1 point per slot filled
+          if (level === 2) {
+            // Level 2: Each point = 1 slot, so admin gets 1 point per point
+            totalAdminEarnings += newPointsInLevel;
+            console.log(`Admin earns ${newPointsInLevel} points from Level ${level} (1 point per slot)`);
+          } else {
+            // Level 3+: Every 5 points = 1 slot controlled by previous level
+            const slotsControlled = Math.ceil(newPointsInLevel / 5);
+            totalAdminEarnings += slotsControlled;
+            console.log(`Admin earns ${slotsControlled} points from Level ${level} (${newPointsInLevel} points = ${slotsControlled} slots)`);
           }
+        }
+      }
+
+      console.log(`\nTotal admin earnings: ${totalAdminEarnings} points`);
+
+      // Update admin with total earnings
+      if (totalAdminEarnings > 0) {
+        const admin = customers.find(c => c.code === 'A100');
+        if (admin) {
+          const newAdminPoints = admin.points + totalAdminEarnings;
+          const newAdminMiniCoins = admin.miniCoins + totalAdminEarnings;
           
+          // Calculate admin's new tier
+          let newAdminTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
+          if (newAdminPoints >= 160) newAdminTier = 'Diamond';
+          else if (newAdminPoints >= 80) newAdminTier = 'Gold';
+          else if (newAdminPoints >= 40) newAdminTier = 'Silver';
+          else if (newAdminPoints >= 12) newAdminTier = 'Bronze';
+
+          await updateCustomer(admin.id, {
+            points: newAdminPoints,
+            miniCoins: newAdminMiniCoins,
+            tier: newAdminTier,
+            lastMLMDistribution: new Date().toISOString()
+          });
+
+          console.log(`Admin A100 earned ${totalAdminEarnings} points (now has ${newAdminPoints} total)`);
+        }
+      }
+
+      // 5. Distribute to lower level slot holders
+      for (const [levelStr, newPointsInLevel] of Object.entries(newPointsDistribution)) {
+        const level = parseInt(levelStr);
+        
+        if (newPointsInLevel > 0 && level > 2) {
           // Distribute to all lower levels (levels 2 to current level - 1)
           for (let lowerLevel = 2; lowerLevel < level; lowerLevel++) {
             const { filled: occupiedSlots } = currentOccupancy[lowerLevel] || { filled: 0 };
