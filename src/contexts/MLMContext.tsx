@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext } from 'react';
 import { useData } from './DataContext';
 
@@ -36,6 +37,43 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     6: 3125   // 3125 slots
   };
 
+  // Calculate current global slot occupancy using waterfall model
+  const getGlobalSlotOccupancy = () => {
+    // Get total points from all customers (excluding admin)
+    const totalPoints = customers
+      .filter(c => c.code !== 'A100')
+      .reduce((sum, customer) => sum + customer.points, 0);
+
+    console.log(`Total points in system: ${totalPoints}`);
+
+    const occupancy: Record<number, { filled: number; capacity: number }> = {};
+    let remainingPoints = totalPoints;
+
+    // Distribute points using waterfall model starting from level 2
+    for (let level = 2; level <= 6; level++) {
+      const capacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+      const pointsAtThisLevel = Math.min(remainingPoints, capacity);
+      
+      occupancy[level] = {
+        filled: pointsAtThisLevel,
+        capacity
+      };
+      
+      remainingPoints -= pointsAtThisLevel;
+      
+      if (remainingPoints <= 0) break;
+    }
+
+    // Admin level (level 1) is always occupied by A100
+    occupancy[1] = {
+      filled: 1,
+      capacity: 1
+    };
+
+    console.log('Global slot occupancy:', occupancy);
+    return occupancy;
+  };
+
   // Reset admin points to 0
   const resetAdminPoints = async () => {
     const admin = customers.find(c => c.code === 'A100');
@@ -53,10 +91,6 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createDummyCustomers = async () => {
     console.log('Creating dummy customers for MLM demonstration...');
     
-    // Clear existing dummy customers first (keep only A100)
-    const existingDummies = customers.filter(c => c.code.startsWith('C0') || c.code.startsWith('B0'));
-    console.log('Clearing existing dummy customers:', existingDummies.length);
-
     // Ensure A100 admin exists with 0 points
     let admin = customers.find(c => c.code === 'A100');
     if (!admin) {
@@ -74,7 +108,6 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         totalCommissions: 0,
       });
     } else {
-      // Reset admin to 0 points
       await updateCustomer(admin.id, {
         points: 0,
         miniCoins: 0,
@@ -82,32 +115,17 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
-    // Create Level 2 customers (under A100) - RESPECTING CAPACITY
-    const level2Customers = [
-      { name: 'Alice Johnson', phone: '9876543210', code: 'C001', points: 2, parentCode: 'A100' },
-      { name: 'Bob Smith', phone: '9876543211', code: 'C002', points: 1, parentCode: 'A100' },
-      { name: 'Carol Davis', phone: '9876543212', code: 'C003', points: 2, parentCode: 'A100' },
+    // Create test customers with different point amounts
+    const testCustomers = [
+      { name: 'Alice Johnson', phone: '9876543210', code: 'C001', points: 3, parentCode: 'A100' },
+      { name: 'Bob Smith', phone: '9876543211', code: 'C002', points: 2, parentCode: 'A100' },
+      { name: 'Carol Davis', phone: '9876543212', code: 'C003', points: 7, parentCode: 'A100' },
+      { name: 'David Wilson', phone: '9876543213', code: 'C004', points: 15, parentCode: 'A100' },
+      { name: 'Emma Brown', phone: '9876543214', code: 'C005', points: 8, parentCode: 'A100' },
     ];
 
-    // Create Level 3 customers (under level 2)
-    const level3Customers = [
-      { name: 'David Wilson', phone: '9876543213', code: 'C004', points: 3, parentCode: 'C001' },
-      { name: 'Emma Brown', phone: '9876543214', code: 'C005', points: 2, parentCode: 'C001' },
-      { name: 'Frank Miller', phone: '9876543215', code: 'C006', points: 4, parentCode: 'C002' },
-      { name: 'Grace Lee', phone: '9876543216', code: 'C007', points: 3, parentCode: 'C003' },
-    ];
-
-    // Create Level 4 customers (under level 3)
-    const level4Customers = [
-      { name: 'Henry Taylor', phone: '9876543217', code: 'C008', points: 5, parentCode: 'C004' },
-      { name: 'Ivy Chen', phone: '9876543218', code: 'C009', points: 4, parentCode: 'C005' },
-      { name: 'Jack Brown', phone: '9876543219', code: 'C010', points: 3, parentCode: 'C006' },
-    ];
-
-    const allDummyCustomers = [...level2Customers, ...level3Customers, ...level4Customers];
-
-    // Add all dummy customers
-    for (const customerData of allDummyCustomers) {
+    // Add all test customers
+    for (const customerData of testCustomers) {
       const existing = customers.find(c => c.code === customerData.code);
       if (!existing) {
         // Determine tier based on points
@@ -124,7 +142,7 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           parentCode: customerData.parentCode,
           isReserved: false,
           isPending: false,
-          mlmLevel: 2, // Will be reassigned based on structure
+          mlmLevel: 2,
           directReferrals: [],
           totalDownlineCount: 0,
           monthlyCommissions: {},
@@ -143,22 +161,16 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    console.log('Dummy customers created successfully!');
-    
-    // Assign customers to appropriate levels based on their points
-    setTimeout(async () => {
-      for (const customerData of allDummyCustomers) {
-        await assignCustomerToLevel(customerData.code, customerData.points);
-      }
-      console.log('All customers assigned to appropriate MLM levels');
-    }, 1000);
+    console.log('Test customers created successfully!');
   };
 
-  // Simulate a purchase that earns 30 points
+  // Simulate a purchase
   const simulatePurchase = async (customerCode: string, purchaseAmount: number) => {
     console.log(`\n=== SIMULATING PURCHASE ===`);
     console.log(`Customer ${customerCode} making purchase of ₹${purchaseAmount}`);
-    console.log(`This will earn ${Math.floor(purchaseAmount / 5)} points (₹1 for every ₹5 spent)`);
+    
+    const pointsEarned = Math.floor(purchaseAmount / 5); // ₹1 for every ₹5 spent
+    console.log(`This will earn ${pointsEarned} points`);
     
     // Log admin's current state
     const adminBefore = customers.find(c => c.code === 'A100');
@@ -176,58 +188,12 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 2000);
   };
 
-  // Get current slot occupancy across all levels - FIXED TO RESPECT CAPACITY
+  // Get current slot occupancy - wrapper for global occupancy
   const getSlotOccupancy = () => {
-    const occupancy: Record<number, { filled: number; capacity: number }> = {};
-    
-    for (let level = 1; level <= 6; level++) {
-      const capacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
-      const customersAtLevel = customers.filter(c => c.mlmLevel === level);
-      
-      // Calculate total points distributed to this level (respecting capacity)
-      let totalPointsAtLevel = 0;
-      customersAtLevel.forEach(customer => {
-        // Each customer's points are distributed across levels using waterfall method
-        const customerPointsAtThisLevel = calculateCustomerPointsAtLevel(customer.code, level);
-        totalPointsAtLevel += customerPointsAtThisLevel;
-      });
-      
-      const filledSlots = Math.min(totalPointsAtLevel, capacity);
-      
-      occupancy[level] = {
-        filled: filledSlots,
-        capacity
-      };
-    }
-    
-    return occupancy;
+    return getGlobalSlotOccupancy();
   };
 
-  // Calculate how many points a customer has at a specific level using waterfall distribution
-  const calculateCustomerPointsAtLevel = (customerCode: string, targetLevel: number): number => {
-    const customer = customers.find(c => c.code === customerCode);
-    if (!customer || customer.code === 'A100') return 0; // Admin doesn't participate in waterfall
-    
-    let remainingPoints = customer.points;
-    
-    // Distribute points from level 2 onwards using waterfall method
-    for (let level = 2; level <= 6; level++) {
-      if (remainingPoints <= 0) break;
-      
-      const levelCapacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
-      const pointsToFillThisLevel = Math.min(remainingPoints, levelCapacity);
-      
-      if (level === targetLevel) {
-        return pointsToFillThisLevel;
-      }
-      
-      remainingPoints -= pointsToFillThisLevel;
-    }
-    
-    return 0;
-  };
-
-  // Assign customer to appropriate MLM level based on waterfall distribution
+  // Assign customer to appropriate MLM level based on their points and global occupancy
   const assignCustomerToLevel = async (customerCode: string, totalPoints: number) => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) return;
@@ -243,23 +209,22 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Determine primary level based on waterfall distribution
-    // Customer's "primary level" is the lowest level where they have points
-    let primaryLevel = 2; // Start from level 2 (level 1 is admin only)
-    let remainingPoints = totalPoints;
+    // For other customers, assign based on where their points would be in the waterfall
+    // This is for display purposes - their primary level is where their first points land
+    let primaryLevel = 2; // Default to level 2
     
+    // Get global occupancy to see current distribution
+    const globalOccupancy = getGlobalSlotOccupancy();
+    
+    // Find the level where this customer's points would start filling
+    let cumulativeCapacity = 0;
     for (let level = 2; level <= 6; level++) {
-      if (remainingPoints <= 0) break;
-      
       const levelCapacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
-      const pointsAtThisLevel = Math.min(remainingPoints, levelCapacity);
-      
-      if (pointsAtThisLevel > 0) {
+      if (totalPoints > 0) {
         primaryLevel = level;
-        break; // Customer's primary level is the first level where they have points
+        break;
       }
-      
-      remainingPoints -= pointsAtThisLevel;
+      cumulativeCapacity += levelCapacity;
     }
 
     // Update customer's MLM level if it changed
@@ -268,11 +233,11 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         mlmLevel: primaryLevel,
         lastMLMDistribution: new Date().toISOString()
       });
-      console.log(`Customer ${customerCode} assigned to primary level ${primaryLevel} (has ${totalPoints} points distributed via waterfall)`);
+      console.log(`Customer ${customerCode} assigned to level ${primaryLevel}`);
     }
   };
 
-  // Calculate MLM distribution - FIXED WITH GUARANTEED ADMIN SHARE
+  // Calculate MLM distribution with waterfall model and upward earnings flow
   const calculateMLMDistribution = async (customerCode: string, purchaseAmount: number, orderId?: string) => {
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) {
@@ -280,43 +245,49 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    console.log(`Starting MLM distribution for ${customerCode} purchase of ₹${purchaseAmount}`);
+    console.log(`\n=== MLM DISTRIBUTION START ===`);
+    console.log(`Customer: ${customerCode}, Purchase: ₹${purchaseAmount}`);
     
-    const distributionLog: string[] = [];
     const pointsEarned = Math.floor(purchaseAmount / 5); // ₹1 for every ₹5 spent
     
     if (pointsEarned > 0) {
-      // Update the purchasing customer's points and reassign level if needed
-      const newPoints = customer.points + pointsEarned;
-      const newMiniCoins = customer.miniCoins + pointsEarned;
+      // 1. Update the purchasing customer's points first
+      const newCustomerPoints = customer.points + pointsEarned;
+      const newCustomerMiniCoins = customer.miniCoins + pointsEarned;
       
       // Calculate new tier based on total points
       let newTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
-      if (newPoints >= 160) newTier = 'Diamond';
-      else if (newPoints >= 80) newTier = 'Gold';
-      else if (newPoints >= 40) newTier = 'Silver';
-      else if (newPoints >= 12) newTier = 'Bronze';
+      if (newCustomerPoints >= 160) newTier = 'Diamond';
+      else if (newCustomerPoints >= 80) newTier = 'Gold';
+      else if (newCustomerPoints >= 40) newTier = 'Silver';
+      else if (newCustomerPoints >= 12) newTier = 'Bronze';
 
       await updateCustomer(customer.id, {
-        points: newPoints,
-        miniCoins: newMiniCoins,
+        points: newCustomerPoints,
+        miniCoins: newCustomerMiniCoins,
         tier: newTier,
         lastMLMDistribution: new Date().toISOString()
       });
       
-      console.log(`Customer ${customerCode} earned ${pointsEarned} points (now has ${newPoints} total points)`);
+      console.log(`${customerCode} earned ${pointsEarned} points (now has ${newCustomerPoints} total)`);
+
+      // 2. Calculate current global slot occupancy AFTER the customer's points are added
+      const currentOccupancy = getGlobalSlotOccupancy();
       
-      // Reassign customer to appropriate level based on their new total points
-      await assignCustomerToLevel(customerCode, newPoints);
-
-      distributionLog.push(
-        `Customer ${customerCode} earned ${pointsEarned} points (now has ${newPoints} total points)`
-      );
-
-      // FIXED: Admin always gets 20% of earned points regardless of current points
+      // 3. Distribute earnings upward through the MLM hierarchy
+      // Each occupied slot in each level gets 1 rupee per point earned by the purchasing customer
+      console.log('\n--- UPWARD EARNINGS DISTRIBUTION ---');
+      
+      // Admin gets 1 rupee for each occupied slot across ALL levels
       const admin = customers.find(c => c.code === 'A100');
       if (admin) {
-        const adminEarnings = Math.floor(pointsEarned * 0.2); // 20% fixed share
+        let totalOccupiedSlots = 0;
+        for (let level = 1; level <= 6; level++) {
+          totalOccupiedSlots += currentOccupancy[level]?.filled || 0;
+        }
+        
+        const adminEarnings = pointsEarned * totalOccupiedSlots; // 1 rupee per slot per point
+        
         if (adminEarnings > 0) {
           const newAdminPoints = admin.points + adminEarnings;
           const newAdminMiniCoins = admin.miniCoins + adminEarnings;
@@ -335,45 +306,39 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             lastMLMDistribution: new Date().toISOString()
           });
 
-          distributionLog.push(
-            `Level 1 (Admin): A100 earned ${adminEarnings} points (20% guaranteed share)`
-          );
-          
-          console.log(`Level 1 (Admin): A100 earned ${adminEarnings} points (20% guaranteed share)`);
+          console.log(`Admin earned ${adminEarnings} points (${totalOccupiedSlots} total occupied slots × ${pointsEarned} points)`);
         }
       }
 
-      // Distribute remaining 80% proportionally among levels 2-6 based on slot occupancy
-      const remainingPoints = pointsEarned - Math.floor(pointsEarned * 0.2);
-      const occupancy = getSlotOccupancy();
-      
-      // Calculate total filled slots across levels 2-6 for proportional distribution
-      let totalFilledSlotsAcrossLevels = 0;
+      // 4. Distribute earnings to customers in each level based on occupied slots
       for (let level = 2; level <= 6; level++) {
-        totalFilledSlotsAcrossLevels += occupancy[level].filled;
-      }
-      
-      if (totalFilledSlotsAcrossLevels > 0) {
-        for (let level = 2; level <= 6; level++) {
-          const customersAtLevel = customers.filter(c => c.mlmLevel === level);
-          const { filled: filledSlots, capacity } = occupancy[level];
+        const { filled: occupiedSlots } = currentOccupancy[level] || { filled: 0 };
+        
+        if (occupiedSlots > 0) {
+          // Each occupied slot in this level gets pointsEarned amount
+          const perSlotEarnings = pointsEarned;
+          const totalLevelEarnings = perSlotEarnings * occupiedSlots;
           
-          if (customersAtLevel.length > 0 && filledSlots > 0) {
-            // Calculate this level's share based on its filled slots proportion
-            const levelShareRatio = filledSlots / totalFilledSlotsAcrossLevels;
-            const levelTotalEarnings = Math.floor(remainingPoints * levelShareRatio);
+          // Get all customers who have points (contributing to slots)
+          const levelCustomers = customers.filter(c => c.code !== 'A100' && c.points > 0);
+          
+          if (levelCustomers.length > 0) {
+            // Calculate how much each customer should get based on their slot contribution
+            // For waterfall: find customers whose points contribute to this level
+            const customersInThisLevel = levelCustomers.filter(c => {
+              const customerContribution = getCustomerContributionToLevel(c.code, level);
+              return customerContribution > 0;
+            });
             
-            // Distribute level earnings among customers at this level based on their point contribution
-            for (const levelCustomer of customersAtLevel) {
-              const customerPoints = Math.min(levelCustomer.points, capacity); // Cap at level capacity
-              const customerShareRatio = customerPoints / Math.max(filledSlots, 1);
-              const customerEarnings = Math.floor(levelTotalEarnings * customerShareRatio);
+            for (const levelCustomer of customersInThisLevel) {
+              const customerSlots = getCustomerContributionToLevel(levelCustomer.code, level);
+              const customerEarnings = Math.floor((customerSlots / occupiedSlots) * totalLevelEarnings);
               
               if (customerEarnings > 0) {
                 const newLevelPoints = levelCustomer.points + customerEarnings;
                 const newLevelMiniCoins = levelCustomer.miniCoins + customerEarnings;
                 
-                // Calculate new tier based on points
+                // Calculate new tier
                 let newLevelTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
                 if (newLevelPoints >= 160) newLevelTier = 'Diamond';
                 else if (newLevelPoints >= 80) newLevelTier = 'Gold';
@@ -387,19 +352,39 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   lastMLMDistribution: new Date().toISOString()
                 });
 
-                distributionLog.push(
-                  `Level ${level}: ${levelCustomer.code} earned ${customerEarnings} points (${customerPoints} points, ${(customerShareRatio * 100).toFixed(1)}% of level)`
-                );
-                
-                console.log(`Level ${level}: ${levelCustomer.code} earned ${customerEarnings} points from ${customerPoints} points`);
+                console.log(`Level ${level}: ${levelCustomer.code} earned ${customerEarnings} points (${customerSlots} slots)`);
               }
             }
           }
         }
       }
-    }
 
-    console.log('MLM distribution completed:', distributionLog);
+      console.log('=== MLM DISTRIBUTION COMPLETE ===\n');
+    }
+  };
+
+  // Helper function to calculate how many slots a customer contributes to a specific level
+  const getCustomerContributionToLevel = (customerCode: string, targetLevel: number): number => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer || customer.code === 'A100') return 0;
+    
+    let remainingPoints = customer.points;
+    
+    // Waterfall distribution: fill levels sequentially
+    for (let level = 2; level <= 6; level++) {
+      if (remainingPoints <= 0) break;
+      
+      const levelCapacity = mlmLevelCapacities[level as keyof typeof mlmLevelCapacities];
+      const pointsInThisLevel = Math.min(remainingPoints, levelCapacity);
+      
+      if (level === targetLevel) {
+        return pointsInThisLevel;
+      }
+      
+      remainingPoints -= pointsInThisLevel;
+    }
+    
+    return 0;
   };
 
   // Get MLM earnings for a specific level
@@ -418,7 +403,7 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       
       memberOrders.forEach(order => {
-        earnings += Math.floor(order.amountPaid / 5); // ₹1 for every ₹5 purchase
+        earnings += Math.floor(order.amountPaid / 5);
       });
     });
 
