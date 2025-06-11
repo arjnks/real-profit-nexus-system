@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useContext } from 'react';
 import { useData } from './DataContext';
 
@@ -87,7 +88,6 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Create dummy customers for demonstration
   const createDummyCustomers = async () => {
     console.log('Creating dummy customers for MLM demonstration...');
     
@@ -164,7 +164,6 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log('Test customers created successfully!');
   };
 
-  // Simulate a purchase
   const simulatePurchase = async (customerCode: string, purchaseAmount: number) => {
     console.log(`\n=== SIMULATING PURCHASE ===`);
     console.log(`Customer ${customerCode} making purchase of ₹${purchaseAmount}`);
@@ -258,6 +257,24 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return distribution;
   };
 
+  // Get customers who have points in a specific level (using waterfall distribution)
+  const getCustomersInLevel = (targetLevel: number) => {
+    const customersInLevel: Array<{customer: any, slotsInLevel: number}> = [];
+    
+    // For each customer (excluding admin), calculate how many slots they occupy in the target level
+    customers.filter(c => c.code !== 'A100').forEach(customer => {
+      const slotsInLevel = getCustomerContributionToLevel(customer.code, targetLevel);
+      if (slotsInLevel > 0) {
+        customersInLevel.push({
+          customer,
+          slotsInLevel
+        });
+      }
+    });
+    
+    return customersInLevel;
+  };
+
   // Calculate MLM distribution with cascading earnings
   const calculateMLMDistribution = async (customerCode: string, purchaseAmount: number, orderId?: string) => {
     const customer = customers.find(c => c.code === customerCode);
@@ -292,17 +309,16 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       console.log(`${customerCode} earned ${pointsEarned} points (now has ${newCustomerPoints} total)`);
 
-      // 2. Get current global distribution after adding the new points
+      // 2. Get current global distribution before adding the new points
       const currentOccupancy = getGlobalSlotOccupancy();
       
       // 3. Distribute the new points using waterfall model
       const newPointsDistribution = distributePointsWaterfall(pointsEarned);
       
-      console.log('\n--- CASCADING EARNINGS DISTRIBUTION ---');
+      console.log('\n--- NEW POINTS DISTRIBUTION ---');
       console.log('New points distribution:', newPointsDistribution);
 
       // 4. Calculate admin earnings: ₹1 per point distributed to any level
-      // Convert ₹ to points: ₹30 = 6 points (since 1 point = ₹5)
       let totalAdminEarningsInRupees = 0;
       
       for (const [levelStr, newPointsInLevel] of Object.entries(newPointsDistribution)) {
@@ -311,9 +327,9 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (newPointsInLevel > 0) {
           console.log(`\nLevel ${level} receives ${newPointsInLevel} new points`);
           
-          // Admin gets ₹1 per point distributed (not per slot)
+          // Admin gets ₹1 per point distributed
           totalAdminEarningsInRupees += newPointsInLevel;
-          console.log(`Admin earns ₹${newPointsInLevel} from Level ${level} (₹1 per point)`);
+          console.log(`Admin earns ₹${newPointsInLevel} from Level ${level} distribution`);
         }
       }
 
@@ -346,52 +362,50 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // 5. Distribute to lower level slot holders
+      // 5. Distribute cascading earnings to existing slot holders in lower levels
+      console.log('\n--- CASCADING EARNINGS TO EXISTING SLOT HOLDERS ---');
+      
       for (const [levelStr, newPointsInLevel] of Object.entries(newPointsDistribution)) {
-        const level = parseInt(levelStr);
+        const currentLevel = parseInt(levelStr);
         
-        if (newPointsInLevel > 0 && level > 2) {
-          // Distribute to all lower levels (levels 2 to current level - 1)
-          for (let lowerLevel = 2; lowerLevel < level; lowerLevel++) {
-            const { filled: occupiedSlots } = currentOccupancy[lowerLevel] || { filled: 0 };
+        if (newPointsInLevel > 0) {
+          // Give cascading earnings to all levels below the current level
+          for (let lowerLevel = 2; lowerLevel < currentLevel; lowerLevel++) {
+            const customersInLowerLevel = getCustomersInLevel(lowerLevel);
+            const totalSlotsInLowerLevel = customersInLowerLevel.reduce((sum, item) => sum + item.slotsInLevel, 0);
             
-            if (occupiedSlots > 0) {
-              // Each new point in higher level gives ₹1 per occupied slot in lower levels
-              const totalEarningsForLevelInRupees = newPointsInLevel * occupiedSlots;
+            if (totalSlotsInLowerLevel > 0) {
+              console.log(`\nDistributing cascading earnings to Level ${lowerLevel} (${totalSlotsInLowerLevel} total slots)`);
               
-              // Get customers who have points contributing to this lower level
-              const customersInThisLevel = customers.filter(c => {
-                const contribution = getCustomerContributionToLevel(c.code, lowerLevel);
-                return contribution > 0;
-              });
+              // Each point in higher level gives ₹1 per slot in lower levels
+              const totalCascadingEarningsInRupees = newPointsInLevel * totalSlotsInLowerLevel;
+              console.log(`Total cascading earnings for Level ${lowerLevel}: ₹${totalCascadingEarningsInRupees}`);
               
-              if (customersInThisLevel.length > 0) {
-                for (const levelCustomer of customersInThisLevel) {
-                  const customerSlots = getCustomerContributionToLevel(levelCustomer.code, lowerLevel);
-                  const customerShare = (customerSlots / occupiedSlots);
-                  const customerEarningsInRupees = Math.floor(totalEarningsForLevelInRupees * customerShare);
-                  const customerEarningsInPoints = Math.floor(customerEarningsInRupees / 5); // Convert ₹ to points
+              // Distribute proportionally to customers in this level
+              for (const { customer: levelCustomer, slotsInLevel } of customersInLowerLevel) {
+                const customerShare = slotsInLevel / totalSlotsInLowerLevel;
+                const customerEarningsInRupees = Math.floor(totalCascadingEarningsInRupees * customerShare);
+                const customerEarningsInPoints = Math.floor(customerEarningsInRupees / 5);
+                
+                if (customerEarningsInPoints > 0) {
+                  const newLevelPoints = levelCustomer.points + customerEarningsInPoints;
+                  const newLevelMiniCoins = levelCustomer.miniCoins + customerEarningsInPoints;
                   
-                  if (customerEarningsInPoints > 0) {
-                    const newLevelPoints = levelCustomer.points + customerEarningsInPoints;
-                    const newLevelMiniCoins = levelCustomer.miniCoins + customerEarningsInPoints;
-                    
-                    // Calculate new tier
-                    let newLevelTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
-                    if (newLevelPoints >= 160) newLevelTier = 'Diamond';
-                    else if (newLevelPoints >= 80) newLevelTier = 'Gold';
-                    else if (newLevelPoints >= 40) newLevelTier = 'Silver';
-                    else if (newLevelPoints >= 12) newLevelTier = 'Bronze';
+                  // Calculate new tier
+                  let newLevelTier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' = 'Bronze';
+                  if (newLevelPoints >= 160) newLevelTier = 'Diamond';
+                  else if (newLevelPoints >= 80) newLevelTier = 'Gold';
+                  else if (newLevelPoints >= 40) newLevelTier = 'Silver';
+                  else if (newLevelPoints >= 12) newLevelTier = 'Bronze';
 
-                    await updateCustomer(levelCustomer.id, {
-                      points: newLevelPoints,
-                      miniCoins: newLevelMiniCoins,
-                      tier: newLevelTier,
-                      lastMLMDistribution: new Date().toISOString()
-                    });
+                  await updateCustomer(levelCustomer.id, {
+                    points: newLevelPoints,
+                    miniCoins: newLevelMiniCoins,
+                    tier: newLevelTier,
+                    lastMLMDistribution: new Date().toISOString()
+                  });
 
-                    console.log(`Level ${lowerLevel}: ${levelCustomer.code} earned ${customerEarningsInPoints} points (₹${customerEarningsInRupees}) (${customerSlots}/${occupiedSlots} slots, ${(customerShare * 100).toFixed(1)}% share)`);
-                  }
+                  console.log(`Level ${lowerLevel}: ${levelCustomer.code} earned ${customerEarningsInPoints} points (₹${customerEarningsInRupees}) from ${slotsInLevel} slots (${(customerShare * 100).toFixed(1)}% share)`);
                 }
               }
             }
@@ -522,3 +536,4 @@ export const MLMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 };
 
 export default MLMProvider;
+
