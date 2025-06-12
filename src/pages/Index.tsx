@@ -1,17 +1,18 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ClubTierDisplay from '@/components/ClubTierDisplay';
 import AdOverlay from '@/components/AdOverlay';
+import AdSenseSetup from '@/components/AdSenseSetup';
 import { useAdRevenue } from '@/hooks/useAdRevenue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Users, Award, Mail, Star, Gift } from 'lucide-react';
+import { ShoppingCart, Users, Award, Mail, Star, Gift, DollarSign, Settings } from 'lucide-react';
 
 const Index = () => {
   const [showRevenue, setShowRevenue] = useState(false);
-  const { totalRevenue, dailyRevenue, adsShown, addRevenue } = useAdRevenue();
+  const [showAdSenseSetup, setShowAdSenseSetup] = useState(false);
+  const { totalRevenue, dailyRevenue, adsShown, pendingRevenue, canWithdraw, addRevenue } = useAdRevenue();
 
   const handleAdComplete = (revenue: number) => {
     addRevenue(revenue);
@@ -21,7 +22,7 @@ const Index = () => {
     <Layout>
       <AdOverlay onAdComplete={handleAdComplete} />
       
-      {/* Revenue Display - Hidden by default, click to show */}
+      {/* Revenue Display - Enhanced with withdrawal info */}
       <div className="fixed bottom-4 left-4 z-40">
         <Button
           variant="outline"
@@ -32,13 +33,55 @@ const Index = () => {
           💰 Revenue
         </Button>
         {showRevenue && (
-          <div className="mt-2 bg-white border rounded-lg shadow-lg p-3 text-sm">
-            <div>Total: ₹{totalRevenue.toFixed(2)}</div>
-            <div>Today: ₹{dailyRevenue.toFixed(2)}</div>
-            <div>Ads: {adsShown}</div>
+          <div className="mt-2 bg-white border rounded-lg shadow-lg p-3 text-sm min-w-48">
+            <div className="space-y-1">
+              <div>Total: ₹{totalRevenue.toFixed(2)}</div>
+              <div>Today: ₹{dailyRevenue.toFixed(2)}</div>
+              <div>Ads: {adsShown}</div>
+              <div className="pt-2 border-t">
+                <div className="font-semibold text-green-600">
+                  Pending: ₹{pendingRevenue.toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {canWithdraw ? (
+                    <span className="text-green-600">✓ Can withdraw!</span>
+                  ) : (
+                    `Need ₹${(1000 - pendingRevenue).toFixed(2)} more`
+                  )}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAdSenseSetup(true)}
+                className="w-full mt-2"
+              >
+                <Settings className="h-3 w-3 mr-1" />
+                Setup AdSense
+              </Button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* AdSense Setup Modal */}
+      {showAdSenseSetup && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold">Google AdSense Setup</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAdSenseSetup(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            <AdSenseSetup />
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-realprofit-blue to-realprofit-green text-white py-20">

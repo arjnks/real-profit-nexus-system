@@ -11,30 +11,6 @@ const AdOverlay: React.FC<AdOverlayProps> = ({ onAdComplete }) => {
   const [countdown, setCountdown] = useState(5);
   const [canClose, setCanClose] = useState(false);
 
-  // Sample ads - replace with real ad content
-  const ads = [
-    {
-      title: "Premium Shopping Experience",
-      content: "Get 50% off on all premium products! Limited time offer.",
-      revenue: 0.25,
-      bg: "bg-gradient-to-br from-blue-600 to-purple-700"
-    },
-    {
-      title: "Local Business Spotlight", 
-      content: "Support local businesses in your area. Find the best deals nearby!",
-      revenue: 0.30,
-      bg: "bg-gradient-to-br from-green-600 to-teal-700"
-    },
-    {
-      title: "Health & Wellness",
-      content: "Transform your health with our certified wellness programs.",
-      revenue: 0.35,
-      bg: "bg-gradient-to-br from-orange-600 to-red-700"
-    }
-  ];
-
-  const currentAd = ads[Math.floor(Math.random() * ads.length)];
-
   useEffect(() => {
     // Show ad after 2 seconds of page load
     const showTimer = setTimeout(() => {
@@ -57,44 +33,63 @@ const AdOverlay: React.FC<AdOverlayProps> = ({ onAdComplete }) => {
 
   const handleCloseAd = () => {
     setShowAd(false);
-    onAdComplete(currentAd.revenue);
+    // Estimated AdSense revenue per interstitial ad view in India
+    const estimatedRevenue = 0.15; // ₹0.15 average per view
+    onAdComplete(estimatedRevenue);
   };
 
   if (!showAd) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-95">
-      <div className={`relative w-full h-full ${currentAd.bg} flex items-center justify-center text-white`}>
+      <div className="relative w-full h-full bg-white flex flex-col items-center justify-center">
         {canClose && (
           <button
             onClick={handleCloseAd}
-            className="absolute top-6 right-6 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-all"
+            className="absolute top-6 right-6 bg-gray-200 hover:bg-gray-300 rounded-full p-2 transition-all z-10"
           >
             <X className="h-6 w-6" />
           </button>
         )}
         
-        <div className="text-center max-w-4xl px-6">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-pulse">
-            {currentAd.title}
-          </h1>
-          <p className="text-2xl md:text-3xl mb-8 opacity-90">
-            {currentAd.content}
-          </p>
+        <div className="text-center max-w-4xl px-6 mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Advertisement
+          </h2>
           
           {!canClose && (
-            <div className="text-xl">
-              <div className="inline-block bg-white bg-opacity-20 rounded-full px-6 py-3">
+            <div className="text-lg text-gray-600 mb-6">
+              <div className="inline-block bg-gray-100 rounded-full px-6 py-3">
                 Ad closes in {countdown} seconds...
               </div>
             </div>
           )}
           
           {canClose && (
-            <div className="text-lg opacity-75">
-              Click X to close
+            <div className="text-base text-gray-500 mb-6">
+              Click X to close and continue
             </div>
           )}
+        </div>
+
+        {/* Google AdSense Interstitial Ad Container */}
+        <div 
+          id="adsense-interstitial-container" 
+          className="w-full max-w-4xl h-96 bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center"
+        >
+          <div className="text-center text-gray-500">
+            <div className="text-lg font-semibold mb-2">Google AdSense Ad</div>
+            <div className="text-sm">
+              Replace this div with your AdSense ad unit code
+            </div>
+            <div className="text-xs mt-2 opacity-75">
+              Ad Unit ID: ca-pub-XXXXXXXXXX/XXXXXXXXXX
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 text-xs text-gray-400 text-center max-w-md">
+          <p>This ad helps support our website. Revenue goes directly to site maintenance and improvements.</p>
         </div>
       </div>
     </div>
