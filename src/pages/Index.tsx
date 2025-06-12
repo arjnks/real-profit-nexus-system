@@ -1,14 +1,45 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ClubTierDisplay from '@/components/ClubTierDisplay';
+import AdOverlay from '@/components/AdOverlay';
+import { useAdRevenue } from '@/hooks/useAdRevenue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart, Users, Award, Mail, Star, Gift } from 'lucide-react';
 
 const Index = () => {
+  const [showRevenue, setShowRevenue] = useState(false);
+  const { totalRevenue, dailyRevenue, adsShown, addRevenue } = useAdRevenue();
+
+  const handleAdComplete = (revenue: number) => {
+    addRevenue(revenue);
+  };
+
   return (
     <Layout>
+      <AdOverlay onAdComplete={handleAdComplete} />
+      
+      {/* Revenue Display - Hidden by default, click to show */}
+      <div className="fixed bottom-4 left-4 z-40">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowRevenue(!showRevenue)}
+          className="bg-white"
+        >
+          💰 Revenue
+        </Button>
+        {showRevenue && (
+          <div className="mt-2 bg-white border rounded-lg shadow-lg p-3 text-sm">
+            <div>Total: ₹{totalRevenue.toFixed(2)}</div>
+            <div>Today: ₹{dailyRevenue.toFixed(2)}</div>
+            <div>Ads: {adsShown}</div>
+          </div>
+        )}
+      </div>
+
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-realprofit-blue to-realprofit-green text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
