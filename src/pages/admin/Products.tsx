@@ -288,7 +288,7 @@ const Products = () => {
           
           <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
+              <Button variant="outline">
                 <FolderPlus className="mr-2 h-4 w-4" />
                 Add Category
               </Button>
@@ -331,7 +331,7 @@ const Products = () => {
 
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }}>
+              <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
@@ -553,7 +553,7 @@ const Products = () => {
                     <p>No products found</p>
                     <Button
                       variant="outline"
-                      onClick={() => { resetForm(); setIsAddDialogOpen(true); }}
+                      onClick={openAddDialog}
                       className="border-dashed border-2 hover:border-solid hover:bg-blue-50 text-blue-600 hover:text-blue-700"
                     >
                       <Plus className="h-4 w-4 mr-2" />
