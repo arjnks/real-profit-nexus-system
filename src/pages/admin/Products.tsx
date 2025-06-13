@@ -177,18 +177,18 @@ const Products = () => {
       const points = calculatePointsForProduct(mrpValue, priceValue);
       console.log('Product added successfully');
       console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
-      toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
       
       // Reset form and close dialog first
       resetForm();
       setIsAddDialogOpen(false);
       
-      // Force refresh data to show the new product
-      console.log('Refreshing data after product addition...');
-      setTimeout(async () => {
-        await refreshData();
-        console.log('Data refresh completed, total products:', products.length);
-      }, 100);
+      toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
+      
+      // Immediately refresh data to ensure product appears
+      console.log('Refreshing data immediately after product addition...');
+      await refreshData();
+      console.log('Data refresh completed, total products:', products.length);
+      
     } catch (error) {
       console.error('Error adding product:', error);
       toast.error('Failed to add product');
