@@ -156,7 +156,7 @@ const Products = () => {
     });
 
     try {
-      const newProduct = await addProduct({
+      await addProduct({
         name,
         mrp: mrpValue,
         price: priceValue,
@@ -174,23 +174,18 @@ const Products = () => {
         }
       });
 
-      if (newProduct) {
-        const points = calculatePointsForProduct(mrpValue, priceValue);
-        console.log('Product added successfully:', newProduct);
-        console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
-        toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
-        
-        // Force refresh data to show the new product
-        console.log('Refreshing data after product addition...');
-        await refreshData();
-        console.log('Data refresh completed, total products:', products.length + 1);
-        
-        resetForm();
-        setIsAddDialogOpen(false);
-      } else {
-        console.error('Failed to add product - no product returned');
-        toast.error('Failed to add product');
-      }
+      const points = calculatePointsForProduct(mrpValue, priceValue);
+      console.log('Product added successfully');
+      console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
+      toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
+      
+      // Force refresh data to show the new product
+      console.log('Refreshing data after product addition...');
+      await refreshData();
+      console.log('Data refresh completed, total products:', products.length);
+      
+      resetForm();
+      setIsAddDialogOpen(false);
     } catch (error) {
       console.error('Error adding product:', error);
       toast.error('Failed to add product');
