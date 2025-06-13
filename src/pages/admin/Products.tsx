@@ -57,8 +57,15 @@ const Products = () => {
 
   // Load data on component mount
   useEffect(() => {
+    console.log('Products component mounted, refreshing data...');
     refreshData();
   }, []);
+
+  // Debug: Log products when they change
+  useEffect(() => {
+    console.log('Products updated:', products.length, 'products loaded');
+    console.log('Product list:', products);
+  }, [products]);
 
   // Filter products
   const filteredProducts = products.filter(product =>
@@ -118,7 +125,7 @@ const Products = () => {
   };
 
   // Handle add product
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!name || !mrp || !price || !description || !category || !stockQuantity) {
       toast.error('Please fill in all required fields');
       return;
@@ -144,32 +151,52 @@ const Products = () => {
       return;
     }
 
-    addProduct({
-      name,
-      mrp: mrpValue,
-      price: priceValue,
-      dummyPrice: dummyPriceValue,
-      description,
-      category,
-      image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200',
-      inStock: stockValue > 0,
-      stockQuantity: stockValue,
-      tierDiscounts: {
-        Bronze: 2,
-        Silver: 3,
-        Gold: 4,
-        Diamond: 5
-      }
+    console.log('Adding new product:', {
+      name, mrp: mrpValue, price: priceValue, category, stockQuantity: stockValue
     });
 
-    const points = calculatePointsForProduct(mrpValue, priceValue);
-    console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
-    toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
-    resetForm();
-    setIsAddDialogOpen(false);
+    try {
+      const newProduct = await addProduct({
+        name,
+        mrp: mrpValue,
+        price: priceValue,
+        dummyPrice: dummyPriceValue,
+        description,
+        category,
+        image: image || 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?q=80&w=200',
+        inStock: stockValue > 0,
+        stockQuantity: stockValue,
+        tierDiscounts: {
+          Bronze: 2,
+          Silver: 3,
+          Gold: 4,
+          Diamond: 5
+        }
+      });
+
+      if (newProduct) {
+        const points = calculatePointsForProduct(mrpValue, priceValue);
+        console.log('Product added successfully:', newProduct);
+        console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
+        toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
+        
+        // Force refresh data to show the new product
+        console.log('Refreshing data after product addition...');
+        await refreshData();
+        console.log('Data refresh completed, total products:', products.length + 1);
+        
+        resetForm();
+        setIsAddDialogOpen(false);
+      } else {
+        console.error('Failed to add product - no product returned');
+        toast.error('Failed to add product');
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
+      toast.error('Failed to add product');
+    }
   };
 
-  // Handle edit product
   const handleEditProduct = () => {
     if (!editingProduct || !name || !mrp || !price || !description || !category || stockQuantity === '') {
       toast.error('Please fill in all required fields');
@@ -215,7 +242,6 @@ const Products = () => {
     setIsEditDialogOpen(false);
   };
 
-  // Handle delete product
   const handleDeleteProduct = (productId: string) => {
     if (confirm('Are you sure you want to delete this product?')) {
       deleteProduct(productId);
@@ -223,7 +249,6 @@ const Products = () => {
     }
   };
 
-  // Open edit dialog
   const openEditDialog = (product: any) => {
     setEditingProduct(product);
     setName(product.name);
@@ -237,7 +262,6 @@ const Products = () => {
     setIsEditDialogOpen(true);
   };
 
-  // Open add dialog
   const openAddDialog = () => {
     resetForm();
     setIsAddDialogOpen(true);
@@ -262,6 +286,11 @@ const Products = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Products</h1>
         <div className="flex gap-2">
+          {/* Debug info */}
+          <div className="text-sm text-gray-500">
+            Products: {products.length} | Categories: {categories.length}
+          </div>
+          
           <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
@@ -543,7 +572,6 @@ const Products = () => {
         </Table>
       </div>
 
-      {/* Edit Product Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>

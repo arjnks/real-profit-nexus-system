@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/hooks/useCart';
@@ -30,6 +30,20 @@ const Shop = () => {
     getTotalPrice
   } = useCart();
 
+  // Debug: Log products when they change
+  useEffect(() => {
+    console.log('Shop page - Products updated:', products.length, 'products loaded');
+    if (products.length === 0 && !isLoading) {
+      console.warn('No products found in shop page');
+    }
+  }, [products, isLoading]);
+
+  // Auto-refresh data when component mounts
+  useEffect(() => {
+    console.log('Shop page mounted, refreshing data...');
+    refreshData();
+  }, []);
+
   // Filter products
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,9 +58,12 @@ const Shop = () => {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      console.log('Manual refresh triggered...');
       await refreshData();
+      console.log('Manual refresh completed, products count:', products.length);
       toast.success('Products refreshed');
     } catch (error) {
+      console.error('Failed to refresh products:', error);
       toast.error('Failed to refresh products');
     } finally {
       setIsRefreshing(false);
@@ -121,6 +138,11 @@ const Shop = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Shop</h1>
           <div className="flex items-center gap-4">
+            {/* Debug info */}
+            <div className="text-sm text-gray-500">
+              {products.length} products available
+            </div>
+            
             <Button
               variant="outline"
               size="sm"
@@ -250,10 +272,20 @@ const Shop = () => {
           <div className="text-center py-12">
             <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-lg">
-              {searchTerm || selectedCategory !== 'all' 
-                ? 'No products found matching your criteria.' 
-                : 'No products available at the moment.'}
+              {products.length === 0 
+                ? 'No products available at the moment.' 
+                : searchTerm || selectedCategory !== 'all' 
+                  ? 'No products found matching your criteria.' 
+                  : 'No products available at the moment.'}
             </p>
+            {products.length === 0 && (
+              <div className="mt-4">
+                <Button onClick={handleRefresh} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Products
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
