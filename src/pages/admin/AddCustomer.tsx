@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -23,6 +22,7 @@ const AddCustomer = () => {
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [parentCode, setParentCode] = useState('A100');
   const [customCode, setCustomCode] = useState('');
   const [useCustomCode, setUseCustomCode] = useState(false);
@@ -130,6 +130,7 @@ const AddCustomer = () => {
       addCustomer({
         name,
         phone,
+        address,
         code: newCode,
         parentCode: parentCode === 'A100' ? null : parentCode,
         isReserved,
@@ -202,6 +203,16 @@ const AddCustomer = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
+                />
+              </div>
+              
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter customer address"
                 />
               </div>
               

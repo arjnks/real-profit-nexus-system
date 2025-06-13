@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { Loader2, User, Phone, Lock, UserCheck } from 'lucide-react';
+import bcrypt from 'bcryptjs';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -77,9 +77,7 @@ const Register = () => {
       }
 
       // Hash password
-      const bcrypt = await import('bcryptjs');
-      const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(formData.password, saltRounds);
+      const hashedPassword = await bcrypt.hash(formData.password, 10);
 
       // Get next available code
       const newCode = getNextAvailableCode();
@@ -90,16 +88,17 @@ const Register = () => {
       await addCustomer({
         name: formData.name,
         phone: formData.phone,
+        address: '', // Default empty address
         code: newCode,
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
         isReserved: false,
         isPending: false,
-        passwordHash: passwordHash,
-        mlmLevel: 1,
+        mlmLevel: 2,
         directReferrals: [],
         totalDownlineCount: 0,
         monthlyCommissions: {},
         totalCommissions: 0,
+        passwordHash: hashedPassword
       });
 
       console.log('Customer added successfully');

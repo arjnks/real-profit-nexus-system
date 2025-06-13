@@ -1,9 +1,11 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import type { Customer } from '@/types';
 import bcrypt from 'bcryptjs';
 
 // Define types for your tables
-type Customer = Database['public']['Tables']['customers']['Row'];
+type DbCustomer = Database['public']['Tables']['customers']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
 type Product = Database['public']['Tables']['products']['Row'];
 type Service = Database['public']['Tables']['services']['Row'];
@@ -11,16 +13,16 @@ type Order = Database['public']['Tables']['orders']['Row'];
 type AdminUser = Database['public']['Tables']['admin_users']['Row'];
 
 // Transform database customer to application Customer type
-const transformCustomer = (dbCustomer: any): Customer => ({
+const transformCustomer = (dbCustomer: DbCustomer): Customer => ({
   id: dbCustomer.id,
   name: dbCustomer.name,
   phone: dbCustomer.phone,
-  address: dbCustomer.address || '', // Add address field
+  address: dbCustomer.address || '',
   code: dbCustomer.code,
   parentCode: dbCustomer.parent_code,
   points: dbCustomer.points,
   miniCoins: dbCustomer.mini_coins,
-  tier: dbCustomer.tier,
+  tier: dbCustomer.tier as "Bronze" | "Silver" | "Gold" | "Diamond",
   joinedDate: dbCustomer.joined_date,
   isReserved: dbCustomer.is_reserved,
   isPending: dbCustomer.is_pending,
@@ -32,14 +34,15 @@ const transformCustomer = (dbCustomer: any): Customer => ({
   totalDownlineCount: dbCustomer.total_downline_count,
   monthlyCommissions: dbCustomer.monthly_commissions || {},
   totalCommissions: Number(dbCustomer.total_commissions),
-  lastMLMDistribution: dbCustomer.last_mlm_distribution
+  lastMLMDistribution: dbCustomer.last_mlm_distribution,
+  passwordHash: dbCustomer.password_hash
 });
 
 // Transform application Customer to database format
 const transformCustomerToDb = (customer: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'miniCoins' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>): any => ({
   name: customer.name,
   phone: customer.phone,
-  address: customer.address || '', // Add address field
+  address: customer.address || '',
   code: customer.code,
   parent_code: customer.parentCode || null,
   is_reserved: customer.isReserved,
@@ -50,7 +53,7 @@ const transformCustomerToDb = (customer: Omit<Customer, 'id' | 'points' | 'tier'
   monthly_commissions: customer.monthlyCommissions || {},
   total_commissions: customer.totalCommissions,
   last_mlm_distribution: customer.lastMLMDistribution || null,
-  password_hash: null,
+  password_hash: customer.passwordHash || null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   accumulated_point_money: 0
@@ -147,7 +150,7 @@ const authenticateCustomer = async (phone: string, password: string) => {
         id: transformedCustomer.id,
         name: transformedCustomer.name,
         phone: transformedCustomer.phone,
-        role: 'customer'
+        role: 'customer' as const
       }
     };
   } catch (error) {
@@ -210,6 +213,7 @@ const addCustomer = async (customerData: any) => {
     .insert([{
       name: customerData.name,
       phone: customerData.phone,
+      address: customerData.address || '',
       code: customerData.code,
       parent_code: customerData.parentCode,
       is_reserved: customerData.isReserved,

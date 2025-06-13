@@ -110,6 +110,7 @@ const MLMTree = () => {
         await addCustomer({
           name: 'System Admin',
           phone: 'admin100',
+          address: 'System Administrator',
           code: 'A100',
           parentCode: null,
           isReserved: false,
