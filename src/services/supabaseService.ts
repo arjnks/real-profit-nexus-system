@@ -1,5 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import bcrypt from 'bcryptjs';
 
 // Define types for your tables
 type Customer = Database['public']['Tables']['customers']['Row'];
@@ -7,9 +9,168 @@ type Category = Database['public']['Tables']['categories']['Row'];
 type Product = Database['public']['Tables']['products']['Row'];
 type Service = Database['public']['Tables']['services']['Row'];
 type Order = Database['public']['Tables']['orders']['Row'];
+type AdminUser = Database['public']['Tables']['admin_users']['Row'];
+
+// Transform database rows to application format
+const transformCustomer = (dbCustomer: Customer) => ({
+  id: dbCustomer.id,
+  name: dbCustomer.name,
+  phone: dbCustomer.phone,
+  code: dbCustomer.code,
+  points: dbCustomer.points,
+  miniCoins: dbCustomer.mini_coins,
+  tier: dbCustomer.tier as 'Bronze' | 'Silver' | 'Gold' | 'Diamond',
+  parentCode: dbCustomer.parent_code,
+  joinedDate: dbCustomer.joined_date,
+  isReserved: dbCustomer.is_reserved,
+  isPending: dbCustomer.is_pending,
+  totalSpent: Number(dbCustomer.total_spent),
+  monthlySpent: (dbCustomer.monthly_spent as Record<string, number>) || {},
+  accumulatedPointMoney: Number(dbCustomer.accumulated_point_money),
+  lastMLMDistribution: dbCustomer.last_mlm_distribution,
+  passwordHash: dbCustomer.password_hash,
+  mlmLevel: dbCustomer.mlm_level,
+  directReferrals: (dbCustomer.direct_referrals as string[]) || [],
+  totalDownlineCount: dbCustomer.total_downline_count,
+  monthlyCommissions: (dbCustomer.monthly_commissions as Record<string, number>) || {},
+  totalCommissions: Number(dbCustomer.total_commissions)
+});
+
+const transformCategory = (dbCategory: Category) => ({
+  id: dbCategory.id,
+  name: dbCategory.name,
+  description: dbCategory.description,
+  createdAt: dbCategory.created_at,
+  updatedAt: dbCategory.updated_at
+});
+
+const transformProduct = (dbProduct: Product) => ({
+  id: dbProduct.id,
+  name: dbProduct.name,
+  price: Number(dbProduct.price),
+  mrp: Number(dbProduct.mrp),
+  dummyPrice: dbProduct.dummy_price ? Number(dbProduct.dummy_price) : undefined,
+  image: dbProduct.image,
+  description: dbProduct.description,
+  category: dbProduct.category,
+  inStock: dbProduct.in_stock,
+  stockQuantity: dbProduct.stock_quantity,
+  tierDiscounts: (dbProduct.tier_discounts as { Bronze: number; Silver: number; Gold: number; Diamond: number }) || {
+    Bronze: 2,
+    Silver: 3,
+    Gold: 4,
+    Diamond: 5
+  }
+});
+
+const transformService = (dbService: Service) => ({
+  id: dbService.id,
+  title: dbService.title,
+  description: dbService.description,
+  price: dbService.price,
+  image: dbService.image,
+  category: dbService.category,
+  isActive: dbService.is_active
+});
+
+const transformOrder = (dbOrder: Order) => ({
+  id: dbOrder.id,
+  customerId: dbOrder.customer_id,
+  customerName: dbOrder.customer_name,
+  customerPhone: dbOrder.customer_phone,
+  customerCode: dbOrder.customer_code,
+  products: (dbOrder.products as any[]) || [],
+  totalAmount: Number(dbOrder.total_amount),
+  pointsUsed: dbOrder.points_used,
+  amountPaid: Number(dbOrder.amount_paid),
+  points: dbOrder.points,
+  status: dbOrder.status as "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "refunded",
+  paymentMethod: dbOrder.payment_method as "cod" | "upi",
+  pincode: dbOrder.pincode,
+  orderDate: dbOrder.order_date,
+  isPendingApproval: dbOrder.is_pending_approval,
+  isPointsAwarded: dbOrder.is_points_awarded,
+  deliveryApproved: dbOrder.delivery_approved,
+  pointsApproved: dbOrder.points_approved,
+  usedPointsDiscount: dbOrder.used_points_discount,
+  mlmDistributionLog: (dbOrder.mlm_distribution_log as string[]) || []
+});
+
+// Authentication methods
+const authenticateCustomer = async (phone: string, password: string) => {
+  try {
+    const { data: customers, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+
+    if (error || !customers) {
+      return { success: false, error: 'Phone number not found' };
+    }
+
+    if (!customers.password_hash) {
+      return { success: false, error: 'Please set up your password' };
+    }
+
+    const isValidPassword = await bcrypt.compare(password, customers.password_hash);
+    
+    if (!isValidPassword) {
+      return { success: false, error: 'Invalid password' };
+    }
+
+    const transformedCustomer = transformCustomer(customers);
+    
+    return {
+      success: true,
+      user: {
+        id: transformedCustomer.id,
+        name: transformedCustomer.name,
+        phone: transformedCustomer.phone,
+        role: 'customer'
+      }
+    };
+  } catch (error) {
+    console.error('Customer authentication error:', error);
+    return { success: false, error: 'Authentication failed' };
+  }
+};
+
+const authenticateAdmin = async (username: string, password: string) => {
+  try {
+    const { data: admin, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('username', username)
+      .single();
+
+    if (error || !admin) {
+      return { success: false, error: 'Username not found' };
+    }
+
+    const isValidPassword = await bcrypt.compare(password, admin.password_hash);
+    
+    if (!isValidPassword) {
+      return { success: false, error: 'Invalid password' };
+    }
+
+    return {
+      success: true,
+      user: {
+        id: admin.id,
+        username: admin.username,
+        name: admin.name,
+        role: admin.role
+      }
+    };
+  } catch (error) {
+    console.error('Admin authentication error:', error);
+    return { success: false, error: 'Authentication failed' };
+  }
+};
 
 // Customer methods
-const getCustomers = async (): Promise<Customer[]> => {
+const getCustomers = async () => {
   const { data, error } = await supabase
     .from('customers')
     .select('*')
@@ -20,13 +181,26 @@ const getCustomers = async (): Promise<Customer[]> => {
     return [];
   }
 
-  return data || [];
+  return (data || []).map(transformCustomer);
 };
 
-const addCustomer = async (customerData: Omit<Customer, "id" | "joinedDate" | "points" | "miniCoins" | "tier" | "totalSpent" | "monthlySpent" | "accumulatedPointMoney">): Promise<Customer | null> => {
+const addCustomer = async (customerData: any) => {
   const { data, error } = await supabase
     .from('customers')
-    .insert([customerData])
+    .insert([{
+      name: customerData.name,
+      phone: customerData.phone,
+      code: customerData.code,
+      parent_code: customerData.parentCode,
+      is_reserved: customerData.isReserved,
+      is_pending: customerData.isPending,
+      password_hash: customerData.passwordHash,
+      mlm_level: customerData.mlmLevel,
+      direct_referrals: customerData.directReferrals,
+      total_downline_count: customerData.totalDownlineCount,
+      monthly_commissions: customerData.monthlyCommissions,
+      total_commissions: customerData.totalCommissions
+    }])
     .select()
     .single();
 
@@ -35,13 +209,29 @@ const addCustomer = async (customerData: Omit<Customer, "id" | "joinedDate" | "p
     return null;
   }
 
-  return data;
+  return data ? transformCustomer(data) : null;
 };
 
-const updateCustomer = async (id: string, customerData: Partial<Customer>): Promise<boolean> => {
-  const { data, error } = await supabase
+const updateCustomer = async (id: string, customerData: any): Promise<boolean> => {
+  const updateData: any = {};
+  
+  if (customerData.points !== undefined) updateData.points = customerData.points;
+  if (customerData.miniCoins !== undefined) updateData.mini_coins = customerData.miniCoins;
+  if (customerData.tier !== undefined) updateData.tier = customerData.tier;
+  if (customerData.parentCode !== undefined) updateData.parent_code = customerData.parentCode;
+  if (customerData.totalSpent !== undefined) updateData.total_spent = customerData.totalSpent;
+  if (customerData.monthlySpent !== undefined) updateData.monthly_spent = customerData.monthlySpent;
+  if (customerData.accumulatedPointMoney !== undefined) updateData.accumulated_point_money = customerData.accumulatedPointMoney;
+  if (customerData.lastMLMDistribution !== undefined) updateData.last_mlm_distribution = customerData.lastMLMDistribution;
+  if (customerData.mlmLevel !== undefined) updateData.mlm_level = customerData.mlmLevel;
+  if (customerData.directReferrals !== undefined) updateData.direct_referrals = customerData.directReferrals;
+  if (customerData.totalDownlineCount !== undefined) updateData.total_downline_count = customerData.totalDownlineCount;
+  if (customerData.monthlyCommissions !== undefined) updateData.monthly_commissions = customerData.monthlyCommissions;
+  if (customerData.totalCommissions !== undefined) updateData.total_commissions = customerData.totalCommissions;
+
+  const { error } = await supabase
     .from('customers')
-    .update(customerData)
+    .update(updateData)
     .eq('id', id);
 
   if (error) {
@@ -67,7 +257,7 @@ const deleteCustomer = async (id: string): Promise<boolean> => {
 };
 
 // Category methods
-const getCategories = async (): Promise<Category[]> => {
+const getCategories = async () => {
   const { data, error } = await supabase
     .from('categories')
     .select('*')
@@ -78,10 +268,10 @@ const getCategories = async (): Promise<Category[]> => {
     return [];
   }
 
-  return data || [];
+  return (data || []).map(transformCategory);
 };
 
-const addCategory = async (categoryData: Omit<Category, "id" | "createdAt" | "updatedAt">): Promise<Category | null> => {
+const addCategory = async (categoryData: any) => {
   const { data, error } = await supabase
     .from('categories')
     .insert([categoryData])
@@ -93,11 +283,11 @@ const addCategory = async (categoryData: Omit<Category, "id" | "createdAt" | "up
     return null;
   }
 
-  return data;
+  return data ? transformCategory(data) : null;
 };
 
-const updateCategory = async (id: string, categoryData: Partial<Category>): Promise<boolean> => {
-  const { data, error } = await supabase
+const updateCategory = async (id: string, categoryData: any): Promise<boolean> => {
+  const { error } = await supabase
     .from('categories')
     .update(categoryData)
     .eq('id', id);
@@ -124,13 +314,39 @@ const deleteCategory = async (id: string): Promise<boolean> => {
   return true;
 };
 
-export const addProduct = async (productData: any) => {
+// Product methods
+const getProducts = async () => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
+
+  return (data || []).map(transformProduct);
+};
+
+const addProduct = async (productData: any) => {
   try {
     console.log('supabaseService.addProduct called with:', productData);
     
     const { data, error } = await supabase
       .from('products')
-      .insert([productData])
+      .insert([{
+        name: productData.name,
+        price: productData.price,
+        mrp: productData.mrp,
+        dummy_price: productData.dummyPrice,
+        image: productData.image,
+        description: productData.description,
+        category: productData.category,
+        in_stock: productData.inStock,
+        stock_quantity: productData.stockQuantity,
+        tier_discounts: productData.tierDiscounts
+      }])
       .select()
       .single();
 
@@ -145,32 +361,30 @@ export const addProduct = async (productData: any) => {
     }
 
     console.log('Product successfully added to database:', data);
-    return data;
+    return transformProduct(data);
   } catch (error) {
     console.error('Error in supabaseService.addProduct:', error);
     throw error;
   }
 };
 
-// Product methods
-const getProducts = async (): Promise<Product[]> => {
-  const { data, error } = await supabase
+const updateProduct = async (id: string, productData: any): Promise<boolean> => {
+  const updateData: any = {};
+  
+  if (productData.name !== undefined) updateData.name = productData.name;
+  if (productData.price !== undefined) updateData.price = productData.price;
+  if (productData.mrp !== undefined) updateData.mrp = productData.mrp;
+  if (productData.dummyPrice !== undefined) updateData.dummy_price = productData.dummyPrice;
+  if (productData.image !== undefined) updateData.image = productData.image;
+  if (productData.description !== undefined) updateData.description = productData.description;
+  if (productData.category !== undefined) updateData.category = productData.category;
+  if (productData.inStock !== undefined) updateData.in_stock = productData.inStock;
+  if (productData.stockQuantity !== undefined) updateData.stock_quantity = productData.stockQuantity;
+  if (productData.tierDiscounts !== undefined) updateData.tier_discounts = productData.tierDiscounts;
+
+  const { error } = await supabase
     .from('products')
-    .select('*')
-    .order('name', { ascending: true });
-
-  if (error) {
-    console.error("Error fetching products:", error);
-    return [];
-  }
-
-  return data || [];
-};
-
-const updateProduct = async (id: string, productData: Partial<Product>): Promise<boolean> => {
-  const { data, error } = await supabase
-    .from('products')
-    .update(productData)
+    .update(updateData)
     .eq('id', id);
 
   if (error) {
@@ -196,7 +410,7 @@ const deleteProduct = async (id: string): Promise<boolean> => {
 };
 
 // Service methods
-const getServices = async (): Promise<Service[]> => {
+const getServices = async () => {
   const { data, error } = await supabase
     .from('services')
     .select('*')
@@ -207,13 +421,20 @@ const getServices = async (): Promise<Service[]> => {
     return [];
   }
 
-  return data || [];
+  return (data || []).map(transformService);
 };
 
-const addService = async (serviceData: Omit<Service, "id">): Promise<Service | null> => {
+const addService = async (serviceData: any) => {
   const { data, error } = await supabase
     .from('services')
-    .insert([serviceData])
+    .insert([{
+      title: serviceData.title,
+      description: serviceData.description,
+      price: serviceData.price,
+      image: serviceData.image,
+      category: serviceData.category,
+      is_active: serviceData.isActive
+    }])
     .select()
     .single();
 
@@ -222,13 +443,22 @@ const addService = async (serviceData: Omit<Service, "id">): Promise<Service | n
     return null;
   }
 
-  return data;
+  return data ? transformService(data) : null;
 };
 
-const updateService = async (id: string, serviceData: Partial<Service>): Promise<boolean> => {
-  const { data, error } = await supabase
+const updateService = async (id: string, serviceData: any): Promise<boolean> => {
+  const updateData: any = {};
+  
+  if (serviceData.title !== undefined) updateData.title = serviceData.title;
+  if (serviceData.description !== undefined) updateData.description = serviceData.description;
+  if (serviceData.price !== undefined) updateData.price = serviceData.price;
+  if (serviceData.image !== undefined) updateData.image = serviceData.image;
+  if (serviceData.category !== undefined) updateData.category = serviceData.category;
+  if (serviceData.isActive !== undefined) updateData.is_active = serviceData.isActive;
+
+  const { error } = await supabase
     .from('services')
-    .update(serviceData)
+    .update(updateData)
     .eq('id', id);
 
   if (error) {
@@ -254,29 +484,40 @@ const deleteService = async (id: string): Promise<boolean> => {
 };
 
 // Order methods
-const getOrders = async (): Promise<Order[]> => {
+const getOrders = async () => {
   const { data, error } = await supabase
     .from('orders')
     .select('*')
-    .order('orderDate', { ascending: false });
+    .order('order_date', { ascending: false });
 
   if (error) {
     console.error("Error fetching orders:", error);
     return [];
   }
 
-  return data || [];
+  return (data || []).map(transformOrder);
 };
 
-const addOrder = async (orderData: Omit<Order, "id" | "orderDate" | "points" | "isPendingApproval" | "isPointsAwarded" | "deliveryApproved" | "pointsApproved">): Promise<Order | null> => {
+const addOrder = async (orderData: any) => {
   const { data, error } = await supabase
     .from('orders')
-    .insert([
-      {
-        ...orderData,
-        orderDate: new Date().toISOString(),
-      }
-    ])
+    .insert([{
+      id: orderData.id || crypto.randomUUID(),
+      customer_id: orderData.customerId,
+      customer_name: orderData.customerName,
+      customer_phone: orderData.customerPhone,
+      customer_code: orderData.customerCode,
+      products: orderData.products,
+      total_amount: orderData.totalAmount,
+      points_used: orderData.pointsUsed,
+      amount_paid: orderData.amountPaid,
+      points: orderData.points,
+      status: orderData.status || 'pending',
+      payment_method: orderData.paymentMethod,
+      pincode: orderData.pincode,
+      order_date: new Date().toISOString(),
+      mlm_distribution_log: orderData.mlmDistributionLog || []
+    }])
     .select()
     .single();
 
@@ -285,15 +526,20 @@ const addOrder = async (orderData: Omit<Order, "id" | "orderDate" | "points" | "
     return null;
   }
 
-  return data;
+  return data ? transformOrder(data) : null;
 };
 
-const updateOrder = async (id: string, orderData: Partial<Order>): Promise<boolean> => {
-  const { data, error } = await supabase
+const updateOrder = async (id: string, orderData: any): Promise<boolean> => {
+  const updateData: any = {};
+  
+  if (orderData.status !== undefined) updateData.status = orderData.status;
+  if (orderData.isPointsAwarded !== undefined) updateData.is_points_awarded = orderData.isPointsAwarded;
+  if (orderData.deliveryApproved !== undefined) updateData.delivery_approved = orderData.deliveryApproved;
+  if (orderData.mlmDistributionLog !== undefined) updateData.mlm_distribution_log = orderData.mlmDistributionLog;
+
+  const { error } = await supabase
     .from('orders')
-    .update({
-      ...orderData
-    })
+    .update(updateData)
     .eq('id', id);
 
   if (error) {
@@ -305,6 +551,10 @@ const updateOrder = async (id: string, orderData: Partial<Order>): Promise<boole
 };
 
 export const supabaseService = {
+  // Authentication methods
+  authenticateCustomer,
+  authenticateAdmin,
+  
   // Customer methods
   getCustomers,
   addCustomer,
@@ -334,3 +584,5 @@ export const supabaseService = {
   addOrder,
   updateOrder,
 };
+
+export { addProduct };
