@@ -156,7 +156,7 @@ const Products = () => {
     });
 
     try {
-      const newProduct = await addProduct({
+      await addProduct({
         name,
         mrp: mrpValue,
         price: priceValue,
@@ -174,30 +174,25 @@ const Products = () => {
         }
       });
 
-      if (newProduct) {
-        const points = calculatePointsForProduct(mrpValue, priceValue);
-        console.log('Product added successfully:', newProduct);
-        console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
-        
-        // Reset form and close dialog first
-        resetForm();
-        setIsAddDialogOpen(false);
-        
-        toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
-        
-        // Force a complete data refresh
-        console.log('Forcing complete data refresh after product addition...');
+      const points = calculatePointsForProduct(mrpValue, priceValue);
+      console.log('Product added successfully');
+      console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
+      
+      // Reset form and close dialog first
+      resetForm();
+      setIsAddDialogOpen(false);
+      
+      toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
+      
+      // Force a complete data refresh
+      console.log('Forcing complete data refresh after product addition...');
+      await refreshData();
+      
+      // Add a small delay and refresh again to ensure the product appears
+      setTimeout(async () => {
         await refreshData();
-        
-        // Add a small delay and refresh again to ensure the product appears
-        setTimeout(async () => {
-          await refreshData();
-          console.log('Final data refresh completed, total products:', products.length);
-        }, 500);
-        
-      } else {
-        throw new Error('Failed to add product - no product returned');
-      }
+        console.log('Final data refresh completed, total products:', products.length);
+      }, 500);
       
     } catch (error) {
       console.error('Error adding product:', error);
