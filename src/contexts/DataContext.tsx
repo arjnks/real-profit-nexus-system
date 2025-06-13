@@ -8,6 +8,7 @@ interface DataContextType {
   products: Product[];
   services: Service[];
   orders: Order[];
+  offers: any[];
   isLoading: boolean;
   refreshData: () => Promise<void>;
   addCustomer: (customerData: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'miniCoins' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>) => Promise<string | null>;
@@ -25,8 +26,12 @@ interface DataContextType {
   addOrder: (orderData: Omit<Order, 'id' | 'orderDate'>) => Promise<string | null>;
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<boolean>;
   awardPoints: (customerId: string, points: number) => Promise<boolean>;
-  isAdmin: () => boolean;
-  calculatePointsForProduct: (productId: string, quantity: number) => number;
+  isAdmin: (customerCode?: string) => boolean;
+  calculatePointsForProduct: (amount: number) => number;
+  getNextAvailableCode: () => string;
+  getDownlineStructure: (customerCode: string) => any;
+  getMLMStatistics: () => any;
+  getMLMCommissionStructure: () => any;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -37,6 +42,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [offers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshData = async () => {
@@ -71,7 +77,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const newCustomer = await supabaseService.addCustomer({
         ...customerData,
-        address: customerData.address || '' // Ensure address is provided
+        address: customerData.address || ''
       });
       
       if (newCustomer) {
@@ -295,20 +301,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
-      // Accumulate point money
       const accumulatedPointMoney = customer.accumulatedPointMoney + points;
       
-      // Calculate points and remaining money
       const newPoints = Math.floor(accumulatedPointMoney / 5);
       const remainingMoney = accumulatedPointMoney % 5;
 
-      // Update customer's points and accumulated point money
       const updateData: Partial<Customer> = {
         points: customer.points + newPoints,
         accumulatedPointMoney: remainingMoney
       };
 
-      // Determine tier based on updated points
       if (updateData.points !== undefined) {
         if (updateData.points >= 160) {
           updateData.tier = 'Diamond';
@@ -337,15 +339,64 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const isAdmin = () => {
-    // In a real app, this would check the current logged-in user
-    // For now, we'll assume admin access for demonstration
+  const isAdmin = (customerCode?: string) => {
+    if (customerCode) {
+      return customerCode === 'A100' || customerCode.startsWith('A');
+    }
     return true;
   };
 
-  const calculatePointsForProduct = (productId: string, quantity: number): number => {
-    const product = products.find(p => p.id === productId);
-    return product ? Math.floor(product.price * quantity / 5) : 0;
+  const calculatePointsForProduct = (amount: number): number => {
+    return Math.floor(amount / 5);
+  };
+
+  const getNextAvailableCode = (): string => {
+    const existingCodes = customers.map(c => c.code);
+    let counter = 1;
+    
+    while (existingCodes.includes(`C${counter.toString().padStart(3, '0')}`)) {
+      counter++;
+    }
+    
+    return `C${counter.toString().padStart(3, '0')}`;
+  };
+
+  const getDownlineStructure = (customerCode: string) => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer) return null;
+
+    const buildDownline = (code: string): any => {
+      const current = customers.find(c => c.code === code);
+      if (!current) return null;
+
+      const children = customers
+        .filter(c => c.parentCode === code)
+        .map(child => buildDownline(child.code))
+        .filter(Boolean);
+
+      return {
+        customer: current,
+        children
+      };
+    };
+
+    return buildDownline(customerCode);
+  };
+
+  const getMLMStatistics = () => {
+    return {
+      totalCustomers: customers.length,
+      totalCommissions: customers.reduce((sum, c) => sum + c.totalCommissions, 0),
+      activeCustomers: customers.filter(c => c.totalSpent > 0).length
+    };
+  };
+
+  const getMLMCommissionStructure = () => {
+    return {
+      level1: 0.05,
+      level2: 0.025,
+      level3: 0.0167
+    };
   };
 
   return (
@@ -356,6 +407,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         products,
         services,
         orders,
+        offers,
         isLoading,
         refreshData,
         addCustomer,
@@ -374,7 +426,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateOrder,
         awardPoints,
         isAdmin,
-        calculatePointsForProduct
+        calculatePointsForProduct,
+        getNextAvailableCode,
+        getDownlineStructure,
+        getMLMStatistics,
+        getMLMCommissionStructure
       }}
     >
       {children}
@@ -389,3 +445,6 @@ export const useData = () => {
   }
   return context;
 };
+
+// Export Product type for useCart
+export type { Product };

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
@@ -7,6 +8,8 @@ interface MLMContextType {
   createDummyCustomers: () => Promise<void>;
   simulatePurchase: (customerCode: string, amount: number) => Promise<void>;
   resetAdminPoints: () => Promise<void>;
+  getMLMStructure: (customerCode: string) => any;
+  getSlotOccupancy: () => Record<number, { filled: number; capacity: number }>;
 }
 
 const MLMContext = createContext<MLMContextType | undefined>(undefined);
@@ -17,7 +20,6 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const calculateMLMDistribution = async (customerCode: string, purchaseAmount: number, orderId: string) => {
     console.log(`Starting MLM distribution for customer ${customerCode} with purchase amount ${purchaseAmount}`);
 
-    // Fetch the customer to get their parent code
     const customer = customers.find(c => c.code === customerCode);
     if (!customer) {
       console.warn(`Customer ${customerCode} not found. MLM distribution aborted.`);
@@ -28,7 +30,7 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     let level = 1;
     let distributionLog = [`Order ${orderId}: MLM distribution started for ${customerCode} (₹${purchaseAmount})`];
 
-    while (currentCustomer.parentCode && level <= 3) { // Limit to 3 levels for demonstration
+    while (currentCustomer.parentCode && level <= 3) {
       const parent = customers.find(c => c.code === currentCustomer.parentCode);
 
       if (!parent) {
@@ -36,17 +38,14 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         break;
       }
 
-      // Calculate commission (simplified for demonstration)
-      const commissionRate = 0.05 / level; // 5% commission for level 1, 2.5% for level 2, etc.
+      const commissionRate = 0.05 / level;
       const commission = purchaseAmount * commissionRate;
 
-      // Award points to the parent
-      const newPoints = parent.points + Math.floor(commission / 5); // Award 1 point for every ₹5 earned
+      const newPoints = parent.points + Math.floor(commission / 5);
       await updateCustomer(parent.id, { points: newPoints });
 
       distributionLog.push(`Level ${level}: ${parent.code} earned ₹${commission.toFixed(2)} (${Math.floor(commission / 5)} points)`);
 
-      // Move to the next level
       currentCustomer = parent;
       level++;
     }
@@ -61,7 +60,6 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     console.log('Creating dummy customers for MLM demonstration...');
     
     try {
-      // Create Alice (C001) - Direct under admin
       await addCustomer({
         name: 'Alice Johnson',
         phone: '9876543210',
@@ -77,7 +75,6 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         totalCommissions: 0,
       });
 
-      // Create Bob (C002) - Direct under Alice
       await addCustomer({
         name: 'Bob Williams',
         phone: '8765432109',
@@ -93,7 +90,6 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         totalCommissions: 0,
       });
 
-      // Create Charlie (C003) - Direct under Bob
       await addCustomer({
         name: 'Charlie Brown',
         phone: '7654321098',
@@ -109,7 +105,6 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         totalCommissions: 0,
       });
 
-      // Create Diana (C004) - Direct under Alice
       await addCustomer({
         name: 'Diana Davis',
         phone: '6543210987',
@@ -125,7 +120,6 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         totalCommissions: 0,
       });
 
-      // Create Eve (C005) - Direct under Diana
       await addCustomer({
         name: 'Eve Wilson',
         phone: '5432109876',
@@ -157,10 +151,8 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         throw new Error(`Customer with code ${customerCode} not found`);
       }
 
-      // Calculate points for the purchase
-      const points = calculatePointsForProduct(amount);
+      const points = Math.floor(amount / 5);
 
-      // Award points to the customer
       const newPoints = customer.points + points;
       await updateCustomer(customer.id, { points: newPoints });
 
@@ -188,11 +180,75 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const getMLMStructure = (customerCode: string) => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer) return null;
+
+    const buildStructure = (code: string, level = 0): any => {
+      const current = customers.find(c => c.code === code);
+      if (!current) return null;
+
+      const children = customers
+        .filter(c => c.parentCode === code)
+        .map(child => buildStructure(child.code, level + 1))
+        .filter(Boolean);
+
+      return {
+        customer: current,
+        children,
+        level
+      };
+    };
+
+    return buildStructure(customerCode);
+  };
+
+  const getSlotOccupancy = () => {
+    const occupancy: Record<number, { filled: number; capacity: number }> = {};
+    
+    // Define capacity for each level
+    const levelCapacities: Record<number, number> = {
+      1: 1,
+      2: 5,
+      3: 25,
+      4: 125,
+      5: 625,
+      6: 3125
+    };
+
+    // Count customers at each level
+    customers.forEach(customer => {
+      const level = customer.mlmLevel || 1;
+      if (!occupancy[level]) {
+        occupancy[level] = {
+          filled: 0,
+          capacity: levelCapacities[level] || 1
+        };
+      }
+      occupancy[level].filled++;
+    });
+
+    // Ensure all levels are represented
+    Object.keys(levelCapacities).forEach(levelStr => {
+      const level = parseInt(levelStr);
+      if (!occupancy[level]) {
+        occupancy[level] = {
+          filled: 0,
+          capacity: levelCapacities[level]
+        };
+      }
+    });
+
+    return occupancy;
+  };
+
   const value: MLMContextType = {
     calculateMLMDistribution,
     createDummyCustomers,
     simulatePurchase,
-    resetAdminPoints
+    resetAdminPoints,
+    getMLMStructure,
+    getSlotOccupancy
   };
 
   return (
@@ -209,3 +265,6 @@ export const useMLM = () => {
   }
   return context;
 };
+
+// Default export for compatibility with App.tsx
+export default MLMProvider;
