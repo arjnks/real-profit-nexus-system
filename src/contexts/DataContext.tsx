@@ -440,7 +440,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (newCategory) {
       setCategories(prev => [...prev, newCategory]);
-      console.log('Category added successfully');
+      console.log('Category added successfully to state, total categories:', categories.length + 1);
+    } else {
+      console.error('Failed to add category to database');
+      throw new Error('Failed to add category');
     }
   };
 
@@ -466,14 +469,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Add a new product
+  // FIXED: Enhanced add product function with immediate state update
   const addProduct = async (product: Omit<Product, "id">) => {
-    console.log('Adding product:', product);
-    const newProduct = await supabaseService.addProduct(product);
+    console.log('Adding product to database:', product);
     
-    if (newProduct) {
-      setProducts(prev => [...prev, newProduct]);
-      console.log('Product added successfully');
+    try {
+      const newProduct = await supabaseService.addProduct(product);
+      
+      if (newProduct) {
+        // Immediately update local state
+        setProducts(prev => {
+          const updated = [...prev, newProduct];
+          console.log('Product added to state successfully. New count:', updated.length);
+          return updated;
+        });
+        
+        console.log('Product added successfully to both database and state');
+        return newProduct;
+      } else {
+        console.error('No product returned from supabaseService.addProduct');
+        throw new Error('Failed to add product - no product returned from database');
+      }
+    } catch (error) {
+      console.error('Error in addProduct:', error);
+      throw error;
     }
   };
 

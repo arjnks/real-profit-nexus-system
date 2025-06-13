@@ -156,7 +156,7 @@ const Products = () => {
     });
 
     try {
-      await addProduct({
+      const newProduct = await addProduct({
         name,
         mrp: mrpValue,
         price: priceValue,
@@ -174,29 +174,24 @@ const Products = () => {
         }
       });
 
-      const points = calculatePointsForProduct(mrpValue, priceValue);
-      console.log('Product added successfully');
-      console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
-      
-      // Reset form and close dialog first
-      resetForm();
-      setIsAddDialogOpen(false);
-      
-      toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
-      
-      // Force a complete data refresh
-      console.log('Forcing complete data refresh after product addition...');
-      await refreshData();
-      
-      // Add a small delay and refresh again to ensure the product appears
-      setTimeout(async () => {
-        await refreshData();
-        console.log('Final data refresh completed, total products:', products.length);
-      }, 500);
+      if (newProduct) {
+        const points = calculatePointsForProduct(mrpValue, priceValue);
+        console.log('Product added successfully:', newProduct);
+        console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
+        
+        // Reset form and close dialog
+        resetForm();
+        setIsAddDialogOpen(false);
+        
+        toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
+        console.log('Current products count after addition:', products.length);
+      } else {
+        throw new Error('Failed to add product');
+      }
       
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast.error('Failed to add product: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
