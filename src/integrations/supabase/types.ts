@@ -102,6 +102,7 @@ export type Database = {
       customers: {
         Row: {
           accumulated_point_money: number
+          address: string | null
           code: string
           created_at: string
           direct_referrals: Json
@@ -127,6 +128,7 @@ export type Database = {
         }
         Insert: {
           accumulated_point_money?: number
+          address?: string | null
           code: string
           created_at?: string
           direct_referrals?: Json
@@ -152,6 +154,7 @@ export type Database = {
         }
         Update: {
           accumulated_point_money?: number
+          address?: string | null
           code?: string
           created_at?: string
           direct_referrals?: Json

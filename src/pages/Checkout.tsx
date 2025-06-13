@@ -130,6 +130,14 @@ const Checkout = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {/* Show customer address if available */}
+                {customer?.address && (
+                  <div className="p-3 bg-gray-50 rounded-md">
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Delivery Address:</h4>
+                    <p className="text-sm text-gray-600">{customer.address}</p>
+                  </div>
+                )}
+                
                 {cart.map((item: any) => (
                   <div key={item.product.id} className="flex justify-between items-center">
                     <div>

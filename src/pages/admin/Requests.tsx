@@ -346,6 +346,16 @@ const Requests = () => {
                   <p className="font-medium">{viewedOrder.customerName}</p>
                   <p className="text-sm">{viewedOrder.customerCode}</p>
                   <p className="text-sm">{viewedOrder.customerPhone}</p>
+                  {/* Display customer address */}
+                  {(() => {
+                    const customer = customers.find(c => c.id === viewedOrder.customerId);
+                    return customer?.address ? (
+                      <div className="mt-2">
+                        <p className="text-xs font-semibold text-muted-foreground">Address:</p>
+                        <p className="text-sm">{customer.address}</p>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
                 
                 <div>

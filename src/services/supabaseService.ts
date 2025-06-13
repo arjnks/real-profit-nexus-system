@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import bcrypt from 'bcryptjs';
@@ -11,29 +10,50 @@ type Service = Database['public']['Tables']['services']['Row'];
 type Order = Database['public']['Tables']['orders']['Row'];
 type AdminUser = Database['public']['Tables']['admin_users']['Row'];
 
-// Transform database rows to application format
-const transformCustomer = (dbCustomer: Customer) => ({
+// Transform database customer to application Customer type
+const transformCustomer = (dbCustomer: any): Customer => ({
   id: dbCustomer.id,
   name: dbCustomer.name,
   phone: dbCustomer.phone,
+  address: dbCustomer.address || '', // Add address field
   code: dbCustomer.code,
+  parentCode: dbCustomer.parent_code,
   points: dbCustomer.points,
   miniCoins: dbCustomer.mini_coins,
-  tier: dbCustomer.tier as 'Bronze' | 'Silver' | 'Gold' | 'Diamond',
-  parentCode: dbCustomer.parent_code,
+  tier: dbCustomer.tier,
   joinedDate: dbCustomer.joined_date,
   isReserved: dbCustomer.is_reserved,
   isPending: dbCustomer.is_pending,
   totalSpent: Number(dbCustomer.total_spent),
-  monthlySpent: (dbCustomer.monthly_spent as Record<string, number>) || {},
+  monthlySpent: dbCustomer.monthly_spent || {},
   accumulatedPointMoney: Number(dbCustomer.accumulated_point_money),
-  lastMLMDistribution: dbCustomer.last_mlm_distribution,
-  passwordHash: dbCustomer.password_hash,
   mlmLevel: dbCustomer.mlm_level,
-  directReferrals: (dbCustomer.direct_referrals as string[]) || [],
+  directReferrals: dbCustomer.direct_referrals || [],
   totalDownlineCount: dbCustomer.total_downline_count,
-  monthlyCommissions: (dbCustomer.monthly_commissions as Record<string, number>) || {},
-  totalCommissions: Number(dbCustomer.total_commissions)
+  monthlyCommissions: dbCustomer.monthly_commissions || {},
+  totalCommissions: Number(dbCustomer.total_commissions),
+  lastMLMDistribution: dbCustomer.last_mlm_distribution
+});
+
+// Transform application Customer to database format
+const transformCustomerToDb = (customer: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'miniCoins' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>): any => ({
+  name: customer.name,
+  phone: customer.phone,
+  address: customer.address || '', // Add address field
+  code: customer.code,
+  parent_code: customer.parentCode || null,
+  is_reserved: customer.isReserved,
+  is_pending: customer.isPending,
+  mlm_level: customer.mlmLevel,
+  direct_referrals: customer.directReferrals || [],
+  total_downline_count: customer.totalDownlineCount,
+  monthly_commissions: customer.monthlyCommissions || {},
+  total_commissions: customer.totalCommissions,
+  last_mlm_distribution: customer.lastMLMDistribution || null,
+  password_hash: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  accumulated_point_money: 0
 });
 
 const transformCategory = (dbCategory: Category) => ({

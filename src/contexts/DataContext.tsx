@@ -6,25 +6,24 @@ export type Customer = {
   id: string;
   name: string;
   phone: string;
+  address: string; // Add address field
   code: string;
+  parentCode?: string;
   points: number;
   miniCoins: number;
   tier: 'Bronze' | 'Silver' | 'Gold' | 'Diamond';
-  parentCode: string | null;
   joinedDate: string;
   isReserved: boolean;
   isPending: boolean;
   totalSpent: number;
   monthlySpent: Record<string, number>;
   accumulatedPointMoney: number;
+  mlmLevel: number;
+  directReferrals: string[];
+  totalDownlineCount: number;
+  monthlyCommissions: Record<string, number>;
+  totalCommissions: number;
   lastMLMDistribution?: string;
-  passwordHash?: string;
-  // New MLM fields
-  mlmLevel: number; // 1-6 levels
-  directReferrals: string[]; // Array of customer codes directly referred
-  totalDownlineCount: number; // Total count of downline members
-  monthlyCommissions: Record<string, number>; // Monthly commission earnings
-  totalCommissions: number; // Total lifetime commissions
 };
 
 export type Category = {
