@@ -116,7 +116,7 @@ interface DataContextType {
   addCategory: (category: Omit<Category, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   updateCategory: (id: string, categoryData: Partial<Category>) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
-  addProduct: (product: Omit<Product, "id">) => Promise<void>;
+  addProduct: (product: Omit<Product, "id">) => Promise<Product>;
   updateProduct: (id: string, productData: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   addService: (service: Omit<Service, "id">) => Promise<void>;
@@ -470,7 +470,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // FIXED: Enhanced add product function with immediate state update
-  const addProduct = async (product: Omit<Product, "id">) => {
+  const addProduct = async (product: Omit<Product, "id">): Promise<Product> => {
     console.log('Adding product to database:', product);
     
     try {

@@ -174,20 +174,16 @@ const Products = () => {
         }
       });
 
-      if (newProduct) {
-        const points = calculatePointsForProduct(mrpValue, priceValue);
-        console.log('Product added successfully:', newProduct);
-        console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
-        
-        // Reset form and close dialog
-        resetForm();
-        setIsAddDialogOpen(false);
-        
-        toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
-        console.log('Current products count after addition:', products.length);
-      } else {
-        throw new Error('Failed to add product');
-      }
+      const points = calculatePointsForProduct(mrpValue, priceValue);
+      console.log('Product added successfully:', newProduct);
+      console.log('Points calculation:', { mrp: mrpValue, price: priceValue, points });
+      
+      // Reset form and close dialog
+      resetForm();
+      setIsAddDialogOpen(false);
+      
+      toast.success(`Product added successfully! Customers will earn ₹${points} point money per unit.`);
+      console.log('Current products count after addition:', products.length);
       
     } catch (error) {
       console.error('Error adding product:', error);
