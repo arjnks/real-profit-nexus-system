@@ -17,7 +17,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { addOrder, customers, products } = useData();
+  const { addOrder, customers, products, updateCustomer } = useData();
   const { calculateMLMDistribution } = useMLM();
   
   const [pincode, setPincode] = useState('');
@@ -96,8 +96,10 @@ const Checkout = () => {
       // Update customer's address in the database if it's different
       if (customer && customer.address !== address.trim()) {
         console.log('Updating customer address:', address.trim());
-        // The address will be available through the customer record when admin views orders
+        updateCustomer(customer.id, { address: address.trim() });
       }
+
+      console.log('Creating order with delivery address:', address.trim());
 
       const orderId = await addOrder({
         customerId: user.id,
@@ -112,7 +114,7 @@ const Checkout = () => {
         status: 'pending',
         paymentMethod: 'cod',
         pincode: pincode.trim(),
-        deliveryAddress: address.trim(), // Store the delivery address
+        deliveryAddress: address.trim(), // Ensure this is properly set
         isPendingApproval: true,
         isPointsAwarded: false,
         deliveryApproved: false,
@@ -120,6 +122,8 @@ const Checkout = () => {
         usedPointsDiscount: false,
         mlmDistributionLog: []
       });
+
+      console.log('Order created with ID:', orderId, 'and delivery address:', address.trim());
 
       // Trigger MLM distribution after successful order creation
       if (customer?.code && totalAmount > 0) {
