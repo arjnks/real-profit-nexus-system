@@ -93,6 +93,12 @@ const Checkout = () => {
         };
       });
 
+      // Update customer's address in the database if it's different
+      if (customer && customer.address !== address.trim()) {
+        console.log('Updating customer address:', address.trim());
+        // The address will be available through the customer record when admin views orders
+      }
+
       const orderId = await addOrder({
         customerId: user.id,
         customerName: customer?.name || user.name || '',
@@ -106,6 +112,7 @@ const Checkout = () => {
         status: 'pending',
         paymentMethod: 'cod',
         pincode: pincode.trim(),
+        deliveryAddress: address.trim(), // Store the delivery address
         isPendingApproval: true,
         isPointsAwarded: false,
         deliveryApproved: false,

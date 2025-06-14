@@ -64,6 +64,12 @@ const Purchases = () => {
     return customers.find(c => c.code === code);
   };
 
+  const getDeliveryAddress = (order: any) => {
+    const customer = getCustomerByCode(order.customerCode);
+    // Priority: customer's stored address, then pincode, then fallback
+    return customer?.address || (order.pincode ? `Pincode: ${order.pincode}` : 'No address provided');
+  };
+
   const openOrderDetails = (order: any) => {
     setSelectedOrder(order);
     setIsDetailsOpen(true);
@@ -118,6 +124,7 @@ const Purchases = () => {
             {filteredOrders.length > 0 ? (
               filteredOrders.map((order) => {
                 const customer = getCustomerByCode(order.customerCode);
+                const deliveryAddress = getDeliveryAddress(order);
                 return (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.id}</TableCell>
@@ -140,8 +147,8 @@ const Purchases = () => {
                     <TableCell>
                       <div className="flex items-center gap-2 max-w-[200px]">
                         <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <span className="text-sm truncate" title={customer?.address || order.pincode || 'No address'}>
-                          {customer?.address || (order.pincode ? `Pincode: ${order.pincode}` : 'No address')}
+                        <span className="text-sm truncate" title={deliveryAddress}>
+                          {deliveryAddress}
                         </span>
                       </div>
                     </TableCell>
@@ -230,12 +237,7 @@ const Purchases = () => {
                       <div className="mt-1 p-2 bg-gray-50 rounded border text-sm">
                         <div className="flex items-start gap-2">
                           <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                          <span>
-                            {(() => {
-                              const customer = getCustomerByCode(selectedOrder.customerCode);
-                              return customer?.address || (selectedOrder.pincode ? `Pincode: ${selectedOrder.pincode}` : 'No delivery address provided');
-                            })()}
-                          </span>
+                          <span>{getDeliveryAddress(selectedOrder)}</span>
                         </div>
                       </div>
                     </div>
