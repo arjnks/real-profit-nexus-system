@@ -107,21 +107,35 @@ export const supabaseService = {
   // Authentication operations
   async authenticateAdmin(username: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
     try {
+      console.log('Attempting admin authentication for username:', username);
+      
       const { data, error } = await supabase
         .from('admin_users')
         .select('*')
         .eq('username', username)
         .single();
 
-      if (error || !data) {
+      console.log('Admin query result:', { data, error });
+
+      if (error) {
+        console.error('Database error during admin auth:', error);
+        return { success: false, error: `Database error: ${error.message}` };
+      }
+      
+      if (!data) {
+        console.log('No admin user found with username:', username);
         return { success: false, error: 'Invalid username or password' };
       }
 
+      console.log('Admin user found, checking password...');
       const isValidPassword = await bcrypt.compare(password, data.password_hash);
+      console.log('Password validation result:', isValidPassword);
+      
       if (!isValidPassword) {
         return { success: false, error: 'Invalid username or password' };
       }
 
+      console.log('Admin authentication successful');
       return {
         success: true,
         user: {
@@ -133,7 +147,7 @@ export const supabaseService = {
       };
     } catch (error) {
       console.error('Admin authentication error:', error);
-      return { success: false, error: 'Authentication failed' };
+      return { success: false, error: `Authentication failed: ${error.message}` };
     }
   },
 
