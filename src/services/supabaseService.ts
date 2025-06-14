@@ -489,9 +489,13 @@ export const supabaseService = {
   },
 
   async addOrder(orderData: Omit<Order, 'id' | 'orderDate'>): Promise<Order | null> {
+    // Generate a unique order ID
+    const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const { data, error } = await supabase
       .from('orders')
       .insert({
+        id: orderId,
         customer_id: orderData.customerId,
         customer_name: orderData.customerName,
         customer_phone: orderData.customerPhone,
