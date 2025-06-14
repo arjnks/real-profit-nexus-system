@@ -80,7 +80,7 @@ export interface Order {
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "refunded";
   paymentMethod: "cod" | "upi";
   pincode: string;
-  deliveryAddress?: string; // Add the deliveryAddress field
+  deliveryAddress?: string; // Optional delivery address field
   orderDate: string;
   isPendingApproval: boolean;
   isPointsAwarded: boolean;
