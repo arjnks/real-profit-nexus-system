@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Eye, Package, Clock, CheckCircle, XCircle, Truck, Calendar } from 'lucide-react';
+import { Search, Eye, Package, Clock, CheckCircle, XCircle, Truck, Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
 const Purchases = () => {
@@ -104,6 +104,7 @@ const Purchases = () => {
               <TableHead>Customer</TableHead>
               <TableHead>Customer Code</TableHead>
               <TableHead>Phone</TableHead>
+              <TableHead>Delivery Address</TableHead>
               <TableHead>Products</TableHead>
               <TableHead>Total Amount</TableHead>
               <TableHead>Amount Paid</TableHead>
@@ -136,6 +137,14 @@ const Purchases = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>{order.customerPhone}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 max-w-[200px]">
+                        <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                        <span className="text-sm truncate" title={customer?.address || order.pincode || 'No address'}>
+                          {customer?.address || (order.pincode ? `Pincode: ${order.pincode}` : 'No address')}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 text-gray-500" />
@@ -178,7 +187,7 @@ const Purchases = () => {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center py-6 text-muted-foreground">
                   No orders found
                 </TableCell>
               </TableRow>
@@ -215,6 +224,20 @@ const Purchases = () => {
                       <Badge variant="secondary" className="ml-2">
                         {selectedOrder.customerCode || 'N/A'}
                       </Badge>
+                    </div>
+                    <div>
+                      <span className="font-medium">Delivery Address:</span>
+                      <div className="mt-1 p-2 bg-gray-50 rounded border text-sm">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                          <span>
+                            {(() => {
+                              const customer = getCustomerByCode(selectedOrder.customerCode);
+                              return customer?.address || (selectedOrder.pincode ? `Pincode: ${selectedOrder.pincode}` : 'No delivery address provided');
+                            })()}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
