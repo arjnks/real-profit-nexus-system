@@ -51,9 +51,24 @@ const Requests = () => {
   // Helper function to get delivery address
   const getDeliveryAddress = (order: any) => {
     const customer = customers.find(c => c.id === order.customerId);
-    return order.deliveryAddress || 
-           customer?.address || 
-           (order.pincode ? `Pincode: ${order.pincode}` : 'No address provided');
+    
+    console.log('Order delivery address:', order.deliveryAddress);
+    console.log('Customer address:', customer?.address);
+    console.log('Order pincode:', order.pincode);
+    
+    if (order.deliveryAddress) {
+      return order.deliveryAddress;
+    }
+    
+    if (customer?.address) {
+      return customer.address;
+    }
+    
+    if (order.pincode) {
+      return `Pincode: ${order.pincode}`;
+    }
+    
+    return 'No address provided';
   };
 
   // Calculate actual points that will be awarded after accumulation
@@ -164,6 +179,7 @@ const Requests = () => {
                   <TableHead>Point Money</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Delivery Address</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -209,6 +225,11 @@ const Requests = () => {
                           }`}>
                             {order.status}
                           </span>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <div className="text-sm truncate" title={getDeliveryAddress(order)}>
+                            {getDeliveryAddress(order)}
+                          </div>
                         </TableCell>
                         <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
                         <TableCell>
@@ -266,7 +287,7 @@ const Requests = () => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                       No pending order requests
                     </TableCell>
                   </TableRow>
@@ -357,14 +378,16 @@ const Requests = () => {
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground">Delivery Information</h3>
-                  <div className="mt-2 p-2 bg-gray-50 rounded border text-sm">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Delivery Information</h3>
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                      <span>{getDeliveryAddress(viewedOrder)}</span>
+                      <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-blue-900">{getDeliveryAddress(viewedOrder)}</p>
+                        <p className="text-sm text-blue-700 mt-1">Pincode: {viewedOrder.pincode}</p>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-sm mt-2">Pincode: {viewedOrder.pincode}</p>
                 </div>
               </div>
               
