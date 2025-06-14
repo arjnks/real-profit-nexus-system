@@ -2,6 +2,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { matrixMLMService } from '@/services/matrixMLMService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface MatrixMLMContextType {
@@ -39,10 +40,11 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
       // Place coins in the matrix
       await matrixMLMService.placeCoinsInLevel(customerCode, targetLevel, coinCount);
 
-      // Update customer's total coins
+      // Update customer's total coins and matrix data
       await updateCustomer(customer.id, {
         totalCoins: (customer.totalCoins || 0) + coinCount,
-        currentLevel: targetLevel
+        currentLevel: targetLevel,
+        matrixEarnings: customer.matrixEarnings || 0
       });
 
       toast.success(`Matrix MLM: ${customerCode} placed ${coinCount} coins in level ${targetLevel}!`);

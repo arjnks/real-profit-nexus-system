@@ -1,4 +1,3 @@
-
 export interface Customer {
   id: string;
   name: string;
@@ -22,6 +21,10 @@ export interface Customer {
   totalCommissions: number;
   lastMLMDistribution?: string;
   passwordHash?: string; // Optional password hash
+  // Matrix MLM properties
+  matrixEarnings?: number;
+  totalCoins?: number;
+  currentLevel?: number;
 }
 
 export interface Product {
