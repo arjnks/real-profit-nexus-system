@@ -1,79 +1,197 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { DataProvider } from '@/contexts/DataContext';
-import { Toaster } from 'sonner';
-import Index from '@/pages/Index';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import Profile from '@/pages/Profile';
-import Shop from '@/pages/Shop';
-import Checkout from '@/pages/Checkout';
-import Orders from '@/pages/Orders';
-import Dashboard from '@/pages/admin/Dashboard';
-import Products from '@/pages/admin/Products';
-import Customers from '@/pages/admin/Customers';
-import AddCustomer from '@/pages/admin/AddCustomer';
-import EditCustomer from '@/pages/admin/EditCustomer';
-import Services from '@/pages/admin/Services';
-import MLMNetwork from '@/pages/admin/MLMNetwork';
-import MLMTree from '@/pages/admin/MLMTree';
-import Purchases from '@/pages/admin/Purchases';
-import Requests from '@/pages/admin/Requests';
-import ClubManagement from '@/pages/admin/ClubManagement';
-import SimpleReferralSystem from '@/components/SimpleReferralSystem';
-import MLMProvider from '@/contexts/MLMContext';
-import NotFound from '@/pages/NotFound';
-import About from '@/pages/About';
-import Contact from '@/pages/Contact';
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { DataProvider } from "@/contexts/DataContext";
+import { MLMProvider } from "@/contexts/MLMContext";
+import { MatrixMLMProvider } from "@/contexts/MatrixMLMContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Index from "./pages/Index";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Services from "./pages/Services";
+import Shop from "./pages/Shop";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import Profile from "./pages/Profile";
+import Orders from "./pages/Orders";
+import Checkout from "./pages/Checkout";
+import NotFound from "./pages/NotFound";
+
+// Admin pages
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminCustomers from "./pages/admin/Customers";
+import AdminProducts from "./pages/admin/Products";
+import AdminServices from "./pages/admin/Services";
+import AdminRequests from "./pages/admin/Requests";
+import AdminPurchases from "./pages/admin/Purchases";
+import AdminMLMTree from "./pages/admin/MLMTree";
+import AdminMLMNetwork from "./pages/admin/MLMNetwork";
+import AdminClubManagement from "./pages/admin/ClubManagement";
+import AddCustomer from "./pages/admin/AddCustomer";
+import EditCustomer from "./pages/admin/EditCustomer";
+
+// Membership pages
+import Bronze from "./pages/membership/Bronze";
+import Silver from "./pages/membership/Silver";
+import Gold from "./pages/membership/Gold";
+import Diamond from "./pages/membership/Diamond";
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <DataProvider>
-            <MLMProvider>
-              <Toaster />
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/services" element={<Services />} />
-                {/* Admin Routes */}
-                <Route path="/admin" element={<Dashboard />} />
-                <Route path="/admin/dashboard" element={<Dashboard />} />
-                <Route path="/admin/products" element={<Products />} />
-                <Route path="/admin/customers" element={<Customers />} />
-                <Route path="/admin/customers/add" element={<AddCustomer />} />
-                <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
-                <Route path="/admin/services" element={<Services />} />
-                <Route path="/admin/purchases" element={<Purchases />} />
-                <Route path="/admin/requests" element={<Requests />} />
-                <Route path="/admin/club-management" element={<ClubManagement />} />
-                {/* MLM */}
-                <Route path="/admin/mlm-network" element={<MLMNetwork />} />
-                <Route path="/admin/mlm-tree" element={<MLMTree />} />
-                <Route path="/admin/mlm" element={<MLMTree />} />
-                {/* Referral test */}
-                <Route path="/referral/:customerCode" element={<SimpleReferralSystem customerCode="A100" />} />
-                {/* 404 */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </MLMProvider>
-          </DataProvider>
-        </AuthProvider>
-      </Router>
+      <TooltipProvider>
+        <Toaster />
+        <BrowserRouter>
+          <AuthProvider>
+            <DataProvider>
+              <MLMProvider>
+                <MatrixMLMProvider>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/services" element={<Services />} />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    
+                    {/* Customer routes */}
+                    <Route 
+                      path="/dashboard" 
+                      element={
+                        <ProtectedRoute>
+                          <CustomerDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/profile" 
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/orders" 
+                      element={
+                        <ProtectedRoute>
+                          <Orders />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Membership routes */}
+                    <Route path="/membership/bronze" element={<Bronze />} />
+                    <Route path="/membership/silver" element={<Silver />} />
+                    <Route path="/membership/gold" element={<Gold />} />
+                    <Route path="/membership/diamond" element={<Diamond />} />
+                    
+                    {/* Admin routes */}
+                    <Route 
+                      path="/admin/dashboard" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/customers" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminCustomers />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/customers/add" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AddCustomer />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/customers/edit/:id" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <EditCustomer />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/products" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminProducts />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/services" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminServices />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/requests" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminRequests />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/purchases" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminPurchases />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/mlm-tree" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminMLMTree />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/mlm-network" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminMLMNetwork />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/club-management" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <AdminClubManagement />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </MatrixMLMProvider>
+              </MLMProvider>
+            </DataProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

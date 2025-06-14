@@ -105,12 +105,14 @@ export type Database = {
           address: string | null
           code: string
           created_at: string
+          current_level: number | null
           direct_referrals: Json
           id: string
           is_pending: boolean
           is_reserved: boolean
           joined_date: string
           last_mlm_distribution: string | null
+          matrix_earnings: number | null
           mini_coins: number
           mlm_level: number
           monthly_commissions: Json
@@ -121,6 +123,7 @@ export type Database = {
           phone: string
           points: number
           tier: string
+          total_coins: number | null
           total_commissions: number
           total_downline_count: number
           total_spent: number
@@ -131,12 +134,14 @@ export type Database = {
           address?: string | null
           code: string
           created_at?: string
+          current_level?: number | null
           direct_referrals?: Json
           id?: string
           is_pending?: boolean
           is_reserved?: boolean
           joined_date?: string
           last_mlm_distribution?: string | null
+          matrix_earnings?: number | null
           mini_coins?: number
           mlm_level?: number
           monthly_commissions?: Json
@@ -147,6 +152,7 @@ export type Database = {
           phone: string
           points?: number
           tier?: string
+          total_coins?: number | null
           total_commissions?: number
           total_downline_count?: number
           total_spent?: number
@@ -157,12 +163,14 @@ export type Database = {
           address?: string | null
           code?: string
           created_at?: string
+          current_level?: number | null
           direct_referrals?: Json
           id?: string
           is_pending?: boolean
           is_reserved?: boolean
           joined_date?: string
           last_mlm_distribution?: string | null
+          matrix_earnings?: number | null
           mini_coins?: number
           mlm_level?: number
           monthly_commissions?: Json
@@ -173,9 +181,91 @@ export type Database = {
           phone?: string
           points?: number
           tier?: string
+          total_coins?: number | null
           total_commissions?: number
           total_downline_count?: number
           total_spent?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mlm_distributions: {
+        Row: {
+          amount: number
+          created_at: string
+          from_customer_code: string
+          from_level: number
+          id: string
+          to_customer_code: string
+          to_level: number
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          from_customer_code: string
+          from_level: number
+          id?: string
+          to_customer_code: string
+          to_level: number
+          transaction_type?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_customer_code?: string
+          from_level?: number
+          id?: string
+          to_customer_code?: string
+          to_level?: number
+          transaction_type?: string
+        }
+        Relationships: []
+      }
+      mlm_level_config: {
+        Row: {
+          capacity: number
+          coin_value: number
+          level: number
+        }
+        Insert: {
+          capacity: number
+          coin_value?: number
+          level: number
+        }
+        Update: {
+          capacity?: number
+          coin_value?: number
+          level?: number
+        }
+        Relationships: []
+      }
+      mlm_slots: {
+        Row: {
+          coin_value: number
+          created_at: string
+          customer_code: string
+          id: string
+          level: number
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          coin_value?: number
+          created_at?: string
+          customer_code: string
+          id?: string
+          level: number
+          position: number
+          updated_at?: string
+        }
+        Update: {
+          coin_value?: number
+          created_at?: string
+          customer_code?: string
+          id?: string
+          level?: number
+          position?: number
           updated_at?: string
         }
         Relationships: []
@@ -395,7 +485,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      distribute_commissions_from_level: {
+        Args: {
+          source_level: number
+          source_customer_code: string
+          coins_count: number
+        }
+        Returns: undefined
+      }
+      get_next_slot_position: {
+        Args: { target_level: number }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
