@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Category, Service, Order } from '@/types';
+import bcrypt from 'bcryptjs';
 
 // Helper function to safely parse JSON fields
 const parseJsonField = (field: any, defaultValue: any) => {
@@ -83,7 +83,96 @@ const transformOrder = (dbOrder: any): Order => ({
   mlmDistributionLog: parseJsonField(dbOrder.mlm_distribution_log, [])
 });
 
+// Transform database category to application Category type
+const transformCategory = (dbCategory: any): Category => ({
+  id: dbCategory.id,
+  name: dbCategory.name,
+  description: dbCategory.description,
+  createdAt: dbCategory.created_at,
+  updatedAt: dbCategory.updated_at
+});
+
+// Transform database service to application Service type
+const transformService = (dbService: any): Service => ({
+  id: dbService.id,
+  title: dbService.title,
+  description: dbService.description,
+  price: dbService.price,
+  image: dbService.image,
+  category: dbService.category,
+  isActive: dbService.is_active
+});
+
 export const supabaseService = {
+  // Authentication operations
+  async authenticateAdmin(username: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('username', username)
+        .single();
+
+      if (error || !data) {
+        return { success: false, error: 'Invalid username or password' };
+      }
+
+      const isValidPassword = await bcrypt.compare(password, data.password_hash);
+      if (!isValidPassword) {
+        return { success: false, error: 'Invalid username or password' };
+      }
+
+      return {
+        success: true,
+        user: {
+          id: data.id,
+          username: data.username,
+          name: data.name,
+          role: 'admin'
+        }
+      };
+    } catch (error) {
+      console.error('Admin authentication error:', error);
+      return { success: false, error: 'Authentication failed' };
+    }
+  },
+
+  async authenticateCustomer(phone: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phone)
+        .single();
+
+      if (error || !data) {
+        return { success: false, error: 'Invalid phone number or password' };
+      }
+
+      if (!data.password_hash) {
+        return { success: false, error: 'No password set for this account' };
+      }
+
+      const isValidPassword = await bcrypt.compare(password, data.password_hash);
+      if (!isValidPassword) {
+        return { success: false, error: 'Invalid phone number or password' };
+      }
+
+      return {
+        success: true,
+        user: {
+          id: data.id,
+          phone: data.phone,
+          name: data.name,
+          role: 'customer'
+        }
+      };
+    } catch (error) {
+      console.error('Customer authentication error:', error);
+      return { success: false, error: 'Authentication failed' };
+    }
+  },
+
   // Customer operations
   async getCustomers(): Promise<Customer[]> {
     const { data, error } = await supabase
@@ -191,7 +280,7 @@ export const supabaseService = {
       throw error;
     }
 
-    return data || [];
+    return data?.map(transformCategory) || [];
   },
 
   async addCategory(categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category | null> {
@@ -206,7 +295,7 @@ export const supabaseService = {
       return null;
     }
 
-    return data;
+    return data ? transformCategory(data) : null;
   },
 
   async updateCategory(id: string, categoryData: Partial<Category>): Promise<boolean> {
@@ -331,13 +420,20 @@ export const supabaseService = {
       throw error;
     }
 
-    return data || [];
+    return data?.map(transformService) || [];
   },
 
   async addService(serviceData: Omit<Service, 'id'>): Promise<Service | null> {
     const { data, error } = await supabase
       .from('services')
-      .insert([serviceData])
+      .insert([{
+        title: serviceData.title,
+        description: serviceData.description,
+        price: serviceData.price,
+        image: serviceData.image,
+        category: serviceData.category,
+        is_active: serviceData.isActive
+      }])
       .select()
       .single();
 
@@ -346,7 +442,7 @@ export const supabaseService = {
       return null;
     }
 
-    return data;
+    return data ? transformService(data) : null;
   },
 
   async updateService(id: string, serviceData: Partial<Service>): Promise<boolean> {

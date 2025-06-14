@@ -27,7 +27,7 @@ interface DataContextType {
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<boolean>;
   awardPoints: (customerId: string, points: number) => Promise<boolean>;
   isAdmin: (customerCode?: string) => boolean;
-  calculatePointsForProduct: (amount: number) => number;
+  calculatePointsForProduct: (mrp: number, price: number) => number;
   getNextAvailableCode: () => string;
   getDownlineStructure: (customerCode: string) => any;
   getMLMStatistics: () => any;
@@ -346,8 +346,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return true;
   };
 
-  const calculatePointsForProduct = (amount: number): number => {
-    return Math.floor(amount / 5);
+  const calculatePointsForProduct = (mrp: number, price: number): number => {
+    // Calculate point money as the difference between MRP and selling price
+    const pointMoney = mrp - price;
+    return Math.max(0, pointMoney);
   };
 
   const getNextAvailableCode = (): string => {
