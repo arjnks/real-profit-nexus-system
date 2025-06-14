@@ -491,7 +491,7 @@ export const supabaseService = {
   async addOrder(orderData: Omit<Order, 'id' | 'orderDate'>): Promise<Order | null> {
     const { data, error } = await supabase
       .from('orders')
-      .insert([{
+      .insert({
         customer_id: orderData.customerId,
         customer_name: orderData.customerName,
         customer_phone: orderData.customerPhone,
@@ -510,7 +510,7 @@ export const supabaseService = {
         points_approved: orderData.pointsApproved,
         used_points_discount: orderData.usedPointsDiscount,
         mlm_distribution_log: orderData.mlmDistributionLog
-      }])
+      })
       .select()
       .single();
 
