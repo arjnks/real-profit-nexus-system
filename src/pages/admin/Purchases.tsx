@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -65,9 +64,10 @@ const Purchases = () => {
   };
 
   const getDeliveryAddress = (order: any) => {
-    const customer = getCustomerByCode(order.customerCode);
-    // Priority: customer's stored address, then pincode, then fallback
-    return customer?.address || (order.pincode ? `Pincode: ${order.pincode}` : 'No address provided');
+    // Priority: order's delivery address, then customer's stored address, then pincode, then fallback
+    return order.deliveryAddress || 
+           getCustomerByCode(order.customerCode)?.address || 
+           (order.pincode ? `Pincode: ${order.pincode}` : 'No address provided');
   };
 
   const openOrderDetails = (order: any) => {
