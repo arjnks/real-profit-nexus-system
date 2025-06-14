@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
@@ -60,12 +59,25 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     console.log('Creating dummy customers for MLM demonstration...');
     
     try {
+      // Check if customers already exist to avoid duplicates
+      const existingCodes = ['C001', 'C002', 'C003', 'C004', 'C005'];
+      const existingCustomers = customers.filter(c => existingCodes.includes(c.code));
+      
+      if (existingCustomers.length > 0) {
+        console.log('Some dummy customers already exist, skipping creation');
+        toast.info('Dummy customers already exist');
+        return;
+      }
+
+      // Create customers with unique timestamps to avoid phone conflicts
+      const timestamp = Date.now();
+      
       await addCustomer({
         name: 'Alice Johnson',
-        phone: '9876543210',
+        phone: `987654321${timestamp % 10}`,
         address: '123 Main Street, Mumbai',
         code: 'C001',
-        parentCode: null,
+        parentCode: 'A100',
         isReserved: false,
         isPending: false,
         mlmLevel: 2,
@@ -77,7 +89,7 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       await addCustomer({
         name: 'Bob Williams',
-        phone: '8765432109',
+        phone: `876543210${(timestamp + 1) % 10}`,
         address: '456 Park Avenue, Delhi',
         code: 'C002',
         parentCode: 'C001',
@@ -92,7 +104,7 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       await addCustomer({
         name: 'Charlie Brown',
-        phone: '7654321098',
+        phone: `765432109${(timestamp + 2) % 10}`,
         address: '789 Gandhi Road, Kolkata',
         code: 'C003',
         parentCode: 'C002',
@@ -107,7 +119,7 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       await addCustomer({
         name: 'Diana Davis',
-        phone: '6543210987',
+        phone: `654321098${(timestamp + 3) % 10}`,
         address: '101 MG Road, Chennai',
         code: 'C004',
         parentCode: 'C001',
@@ -122,7 +134,7 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       await addCustomer({
         name: 'Eve Wilson',
-        phone: '5432109876',
+        phone: `543210987${(timestamp + 4) % 10}`,
         address: '222 Linking Road, Bangalore',
         code: 'C005',
         parentCode: 'C004',
@@ -136,9 +148,10 @@ export const MLMProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
       
       console.log('Successfully created all dummy customers');
+      toast.success('Dummy customers created successfully!');
     } catch (error) {
       console.error('Error creating dummy customers:', error);
-      throw error;
+      toast.error('Some dummy customers may already exist');
     }
   };
 
