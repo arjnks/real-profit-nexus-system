@@ -8,6 +8,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { ShoppingCart, CreditCard } from 'lucide-react';
@@ -20,6 +21,7 @@ const Checkout = () => {
   const { calculateMLMDistribution } = useMLM();
   
   const [pincode, setPincode] = useState('');
+  const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const allowedPincodes = ['680305', '680684', '680683'];
@@ -47,12 +49,25 @@ const Checkout = () => {
 
   // Get customer data from DataContext
   const customer = customers.find(c => c.id === user.id);
+  
+  // Initialize address with customer's existing address if available
+  React.useEffect(() => {
+    if (customer?.address && !address) {
+      setAddress(customer.address);
+    }
+  }, [customer?.address, address]);
+
   // Use MRP (display price) for customer display
   const subtotal = cart.reduce((sum: number, item: any) => sum + (item.product.mrp * item.quantity), 0);
   const totalAmount = subtotal;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!address.trim()) {
+      toast.error('Please enter delivery address');
+      return;
+    }
     
     if (!pincode.trim()) {
       toast.error('Please enter pincode');
@@ -137,14 +152,6 @@ const Checkout = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Show customer address if available */}
-                {customer?.address && (
-                  <div className="p-3 bg-gray-50 rounded-md">
-                    <h4 className="text-sm font-medium text-gray-700 mb-1">Delivery Address:</h4>
-                    <p className="text-sm text-gray-600">{customer.address}</p>
-                  </div>
-                )}
-                
                 {cart.map((item: any) => (
                   <div key={item.product.id} className="flex justify-between items-center">
                     <div>
@@ -172,6 +179,21 @@ const Checkout = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="address">Delivery Address *</Label>
+                  <Textarea
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Enter complete delivery address"
+                    required
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Please provide complete address including house/building number, street, area, city
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="pincode">Pincode *</Label>
                   <Input
@@ -204,7 +226,7 @@ const Checkout = () => {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading || !pincode || !allowedPincodes.includes(pincode)}
+                  disabled={isLoading || !address.trim() || !pincode || !allowedPincodes.includes(pincode)}
                 >
                   <CreditCard className="mr-2 h-4 w-4" />
                   {isLoading ? 'Placing Order...' : `Place Order - ₹${totalAmount.toFixed(2)}`}
