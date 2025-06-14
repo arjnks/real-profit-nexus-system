@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,10 +87,16 @@ const Checkout = () => {
         totalAmount: subtotal, // Customer still pays MRP
         pointsUsed: 0,
         amountPaid: totalAmount, // Customer pays MRP
+        points: Math.floor(totalAmount / 5), // Calculate points earned
         status: 'pending',
         paymentMethod: 'cod',
         pincode: pincode.trim(),
-        usedPointsDiscount: false
+        isPendingApproval: true,
+        isPointsAwarded: false,
+        deliveryApproved: false,
+        pointsApproved: false,
+        usedPointsDiscount: false,
+        mlmDistributionLog: []
       });
 
       // Trigger MLM distribution after successful order creation

@@ -39,13 +39,36 @@ const MLMNetwork = () => {
     );
   };
 
+  // Get MLM statistics for a customer
+  const getCustomerMLMStats = (customerCode: string) => {
+    const customer = customers.find(c => c.code === customerCode);
+    if (!customer) return {
+      directReferrals: 0,
+      totalDownline: 0,
+      monthlyCommissions: 0,
+      totalCommissions: 0
+    };
+
+    return {
+      directReferrals: customer.directReferrals?.length || 0,
+      totalDownline: customer.totalDownlineCount || 0,
+      monthlyCommissions: customer.monthlyCommissions[currentMonth] || 0,
+      totalCommissions: customer.totalCommissions || 0
+    };
+  };
+
+  // Get commission structure
+  const getCommissionStructure = () => {
+    return getMLMCommissionStructure();
+  };
+
   // Render network tree
   const renderNetworkNode = (node: any, level = 0) => {
     if (!node || level > 6) return null;
     
     const isExpanded = expandedNodes.includes(node.code);
     const hasChildren = node.children && node.children.length > 0;
-    const stats = getMLMStatistics(node.code);
+    const stats = getCustomerMLMStats(node.code);
     
     return (
       <div key={node.code} className="mb-1">
@@ -271,7 +294,10 @@ const MLMNetwork = () => {
                 </TableHeader>
                 <TableBody>
                   {[1, 2, 3, 4, 5, 6].map(level => {
-                    const rate = getMLMCommissionStructure(level);
+                    const commissionStructure = getCommissionStructure();
+                    const rate = level === 1 ? commissionStructure.level1 : 
+                                level === 2 ? commissionStructure.level2 : 
+                                commissionStructure.level3;
                     return (
                       <TableRow key={level}>
                         <TableCell>
@@ -331,7 +357,7 @@ const MLMNetwork = () => {
                     .sort((a, b) => b.totalCommissions - a.totalCommissions)
                     .slice(0, 10)
                     .map(customer => {
-                      const stats = getMLMStatistics(customer.code);
+                      const stats = getCustomerMLMStats(customer.code);
                       return (
                         <TableRow key={customer.id}>
                           <TableCell className="font-medium">{customer.name}</TableCell>

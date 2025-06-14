@@ -1,73 +1,46 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
-import type { Customer } from '@/types';
-import bcrypt from 'bcryptjs';
+import type { Customer, Product, Category, Service, Order } from '@/types';
 
-// Define types for your tables
-type DbCustomer = Database['public']['Tables']['customers']['Row'];
-type Category = Database['public']['Tables']['categories']['Row'];
-type Product = Database['public']['Tables']['products']['Row'];
-type Service = Database['public']['Tables']['services']['Row'];
-type Order = Database['public']['Tables']['orders']['Row'];
-type AdminUser = Database['public']['Tables']['admin_users']['Row'];
+// Helper function to safely parse JSON fields
+const parseJsonField = (field: any, defaultValue: any) => {
+  if (field === null || field === undefined) return defaultValue;
+  if (typeof field === 'object') return field;
+  try {
+    return JSON.parse(field);
+  } catch {
+    return defaultValue;
+  }
+};
 
 // Transform database customer to application Customer type
-const transformCustomer = (dbCustomer: DbCustomer): Customer => ({
+const transformCustomer = (dbCustomer: any): Customer => ({
   id: dbCustomer.id,
   name: dbCustomer.name,
   phone: dbCustomer.phone,
   address: dbCustomer.address || '',
   code: dbCustomer.code,
   parentCode: dbCustomer.parent_code,
-  points: dbCustomer.points,
-  miniCoins: dbCustomer.mini_coins,
-  tier: dbCustomer.tier as "Bronze" | "Silver" | "Gold" | "Diamond",
-  joinedDate: dbCustomer.joined_date,
-  isReserved: dbCustomer.is_reserved,
-  isPending: dbCustomer.is_pending,
-  totalSpent: Number(dbCustomer.total_spent),
-  monthlySpent: dbCustomer.monthly_spent || {},
-  accumulatedPointMoney: Number(dbCustomer.accumulated_point_money),
-  mlmLevel: dbCustomer.mlm_level,
-  directReferrals: dbCustomer.direct_referrals || [],
-  totalDownlineCount: dbCustomer.total_downline_count,
-  monthlyCommissions: dbCustomer.monthly_commissions || {},
-  totalCommissions: Number(dbCustomer.total_commissions),
+  points: dbCustomer.points || 0,
+  miniCoins: dbCustomer.mini_coins || 0,
+  tier: dbCustomer.tier || 'Bronze',
+  joinedDate: dbCustomer.joined_date || dbCustomer.created_at,
+  isReserved: dbCustomer.is_reserved || false,
+  isPending: dbCustomer.is_pending || false,
+  totalSpent: Number(dbCustomer.total_spent) || 0,
+  monthlySpent: parseJsonField(dbCustomer.monthly_spent, {}),
+  accumulatedPointMoney: Number(dbCustomer.accumulated_point_money) || 0,
+  mlmLevel: dbCustomer.mlm_level || 1,
+  directReferrals: parseJsonField(dbCustomer.direct_referrals, []),
+  totalDownlineCount: dbCustomer.total_downline_count || 0,
+  monthlyCommissions: parseJsonField(dbCustomer.monthly_commissions, {}),
+  totalCommissions: Number(dbCustomer.total_commissions) || 0,
   lastMLMDistribution: dbCustomer.last_mlm_distribution,
   passwordHash: dbCustomer.password_hash
 });
 
-// Transform application Customer to database format
-const transformCustomerToDb = (customer: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'miniCoins' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>): any => ({
-  name: customer.name,
-  phone: customer.phone,
-  address: customer.address || '',
-  code: customer.code,
-  parent_code: customer.parentCode || null,
-  is_reserved: customer.isReserved,
-  is_pending: customer.isPending,
-  mlm_level: customer.mlmLevel,
-  direct_referrals: customer.directReferrals || [],
-  total_downline_count: customer.totalDownlineCount,
-  monthly_commissions: customer.monthlyCommissions || {},
-  total_commissions: customer.totalCommissions,
-  last_mlm_distribution: customer.lastMLMDistribution || null,
-  password_hash: customer.passwordHash || null,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  accumulated_point_money: 0
-});
-
-const transformCategory = (dbCategory: Category) => ({
-  id: dbCategory.id,
-  name: dbCategory.name,
-  description: dbCategory.description,
-  createdAt: dbCategory.created_at,
-  updatedAt: dbCategory.updated_at
-});
-
-const transformProduct = (dbProduct: Product) => ({
+// Transform database product to application Product type
+const transformProduct = (dbProduct: any): Product => ({
   id: dbProduct.id,
   name: dbProduct.name,
   price: Number(dbProduct.price),
@@ -78,285 +51,208 @@ const transformProduct = (dbProduct: Product) => ({
   category: dbProduct.category,
   inStock: dbProduct.in_stock,
   stockQuantity: dbProduct.stock_quantity,
-  tierDiscounts: (dbProduct.tier_discounts as { Bronze: number; Silver: number; Gold: number; Diamond: number }) || {
+  tierDiscounts: parseJsonField(dbProduct.tier_discounts, {
     Bronze: 2,
     Silver: 3,
     Gold: 4,
     Diamond: 5
-  }
+  })
 });
 
-const transformService = (dbService: Service) => ({
-  id: dbService.id,
-  title: dbService.title,
-  description: dbService.description,
-  price: dbService.price,
-  image: dbService.image,
-  category: dbService.category,
-  isActive: dbService.is_active
-});
-
-const transformOrder = (dbOrder: Order) => ({
+// Transform database order to application Order type
+const transformOrder = (dbOrder: any): Order => ({
   id: dbOrder.id,
   customerId: dbOrder.customer_id,
   customerName: dbOrder.customer_name,
   customerPhone: dbOrder.customer_phone,
-  customerCode: dbOrder.customer_code,
-  products: (dbOrder.products as any[]) || [],
+  customerCode: dbOrder.customer_code || '',
+  products: parseJsonField(dbOrder.products, []),
   totalAmount: Number(dbOrder.total_amount),
-  pointsUsed: dbOrder.points_used,
+  pointsUsed: dbOrder.points_used || 0,
   amountPaid: Number(dbOrder.amount_paid),
-  points: dbOrder.points,
-  status: dbOrder.status as "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "refunded",
-  paymentMethod: dbOrder.payment_method as "cod" | "upi",
-  pincode: dbOrder.pincode,
-  orderDate: dbOrder.order_date,
-  isPendingApproval: dbOrder.is_pending_approval,
-  isPointsAwarded: dbOrder.is_points_awarded,
-  deliveryApproved: dbOrder.delivery_approved,
-  pointsApproved: dbOrder.points_approved,
-  usedPointsDiscount: dbOrder.used_points_discount,
-  mlmDistributionLog: (dbOrder.mlm_distribution_log as string[]) || []
+  points: dbOrder.points || 0,
+  status: dbOrder.status || 'pending',
+  paymentMethod: dbOrder.payment_method || 'cod',
+  pincode: dbOrder.pincode || '',
+  orderDate: dbOrder.order_date || dbOrder.created_at,
+  isPendingApproval: dbOrder.is_pending_approval ?? true,
+  isPointsAwarded: dbOrder.is_points_awarded || false,
+  deliveryApproved: dbOrder.delivery_approved || false,
+  pointsApproved: dbOrder.points_approved || false,
+  usedPointsDiscount: dbOrder.used_points_discount || false,
+  mlmDistributionLog: parseJsonField(dbOrder.mlm_distribution_log, [])
 });
 
-// Authentication methods
-const authenticateCustomer = async (phone: string, password: string) => {
-  try {
-    const { data: customers, error } = await supabase
+export const supabaseService = {
+  // Customer operations
+  async getCustomers(): Promise<Customer[]> {
+    const { data, error } = await supabase
       .from('customers')
       .select('*')
-      .eq('phone', phone)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching customers:', error);
+      throw error;
+    }
+
+    return data?.map(transformCustomer) || [];
+  },
+
+  async addCustomer(customerData: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'miniCoins' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>): Promise<Customer | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .insert([{
+        name: customerData.name,
+        phone: customerData.phone,
+        address: customerData.address || '',
+        code: customerData.code,
+        parent_code: customerData.parentCode,
+        is_reserved: customerData.isReserved,
+        is_pending: customerData.isPending,
+        mlm_level: customerData.mlmLevel,
+        direct_referrals: customerData.directReferrals,
+        total_downline_count: customerData.totalDownlineCount,
+        monthly_commissions: customerData.monthlyCommissions,
+        total_commissions: customerData.totalCommissions,
+        password_hash: customerData.passwordHash
+      }])
+      .select()
       .single();
 
-    if (error || !customers) {
-      return { success: false, error: 'Phone number not found' };
+    if (error) {
+      console.error('Error adding customer:', error);
+      throw error;
     }
 
-    if (!customers.password_hash) {
-      return { success: false, error: 'Please set up your password' };
-    }
+    return data ? transformCustomer(data) : null;
+  },
 
-    const isValidPassword = await bcrypt.compare(password, customers.password_hash);
+  async updateCustomer(id: string, customerData: Partial<Customer>): Promise<boolean> {
+    const updateData: any = {};
     
-    if (!isValidPassword) {
-      return { success: false, error: 'Invalid password' };
+    if (customerData.name !== undefined) updateData.name = customerData.name;
+    if (customerData.phone !== undefined) updateData.phone = customerData.phone;
+    if (customerData.address !== undefined) updateData.address = customerData.address;
+    if (customerData.code !== undefined) updateData.code = customerData.code;
+    if (customerData.parentCode !== undefined) updateData.parent_code = customerData.parentCode;
+    if (customerData.points !== undefined) updateData.points = customerData.points;
+    if (customerData.miniCoins !== undefined) updateData.mini_coins = customerData.miniCoins;
+    if (customerData.tier !== undefined) updateData.tier = customerData.tier;
+    if (customerData.isReserved !== undefined) updateData.is_reserved = customerData.isReserved;
+    if (customerData.isPending !== undefined) updateData.is_pending = customerData.isPending;
+    if (customerData.totalSpent !== undefined) updateData.total_spent = customerData.totalSpent;
+    if (customerData.monthlySpent !== undefined) updateData.monthly_spent = customerData.monthlySpent;
+    if (customerData.accumulatedPointMoney !== undefined) updateData.accumulated_point_money = customerData.accumulatedPointMoney;
+    if (customerData.mlmLevel !== undefined) updateData.mlm_level = customerData.mlmLevel;
+    if (customerData.directReferrals !== undefined) updateData.direct_referrals = customerData.directReferrals;
+    if (customerData.totalDownlineCount !== undefined) updateData.total_downline_count = customerData.totalDownlineCount;
+    if (customerData.monthlyCommissions !== undefined) updateData.monthly_commissions = customerData.monthlyCommissions;
+    if (customerData.totalCommissions !== undefined) updateData.total_commissions = customerData.totalCommissions;
+    if (customerData.lastMLMDistribution !== undefined) updateData.last_mlm_distribution = customerData.lastMLMDistribution;
+    if (customerData.passwordHash !== undefined) updateData.password_hash = customerData.passwordHash;
+
+    const { error } = await supabase
+      .from('customers')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating customer:', error);
+      return false;
     }
 
-    const transformedCustomer = transformCustomer(customers);
-    
-    return {
-      success: true,
-      user: {
-        id: transformedCustomer.id,
-        name: transformedCustomer.name,
-        phone: transformedCustomer.phone,
-        role: 'customer' as const
-      }
-    };
-  } catch (error) {
-    console.error('Customer authentication error:', error);
-    return { success: false, error: 'Authentication failed' };
-  }
-};
+    return true;
+  },
 
-const authenticateAdmin = async (username: string, password: string) => {
-  try {
-    const { data: admin, error } = await supabase
-      .from('admin_users')
+  async deleteCustomer(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting customer:', error);
+      return false;
+    }
+
+    return true;
+  },
+
+  // Category operations
+  async getCategories(): Promise<Category[]> {
+    const { data, error } = await supabase
+      .from('categories')
       .select('*')
-      .eq('username', username)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching categories:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async addCategory(categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category | null> {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([categoryData])
+      .select()
       .single();
 
-    if (error || !admin) {
-      return { success: false, error: 'Username not found' };
+    if (error) {
+      console.error('Error adding category:', error);
+      return null;
     }
 
-    const isValidPassword = await bcrypt.compare(password, admin.password_hash);
-    
-    if (!isValidPassword) {
-      return { success: false, error: 'Invalid password' };
+    return data;
+  },
+
+  async updateCategory(id: string, categoryData: Partial<Category>): Promise<boolean> {
+    const { error } = await supabase
+      .from('categories')
+      .update(categoryData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating category:', error);
+      return false;
     }
 
-    return {
-      success: true,
-      user: {
-        id: admin.id,
-        username: admin.username,
-        name: admin.name,
-        role: admin.role
-      }
-    };
-  } catch (error) {
-    console.error('Admin authentication error:', error);
-    return { success: false, error: 'Authentication failed' };
-  }
-};
+    return true;
+  },
 
-// Customer methods
-const getCustomers = async () => {
-  const { data, error } = await supabase
-    .from('customers')
-    .select('*')
-    .order('name', { ascending: true });
+  async deleteCategory(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
-    console.error("Error fetching customers:", error);
-    return [];
-  }
+    if (error) {
+      console.error('Error deleting category:', error);
+      return false;
+    }
 
-  return (data || []).map(transformCustomer);
-};
+    return true;
+  },
 
-const addCustomer = async (customerData: any) => {
-  const { data, error } = await supabase
-    .from('customers')
-    .insert([{
-      name: customerData.name,
-      phone: customerData.phone,
-      address: customerData.address || '',
-      code: customerData.code,
-      parent_code: customerData.parentCode,
-      is_reserved: customerData.isReserved,
-      is_pending: customerData.isPending,
-      password_hash: customerData.passwordHash,
-      mlm_level: customerData.mlmLevel,
-      direct_referrals: customerData.directReferrals,
-      total_downline_count: customerData.totalDownlineCount,
-      monthly_commissions: customerData.monthlyCommissions,
-      total_commissions: customerData.totalCommissions
-    }])
-    .select()
-    .single();
+  // Product operations
+  async getProducts(): Promise<Product[]> {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error("Error adding customer:", error);
-    return null;
-  }
+    if (error) {
+      console.error('Error fetching products:', error);
+      throw error;
+    }
 
-  return data ? transformCustomer(data) : null;
-};
+    return data?.map(transformProduct) || [];
+  },
 
-const updateCustomer = async (id: string, customerData: any): Promise<boolean> => {
-  const updateData: any = {};
-  
-  if (customerData.points !== undefined) updateData.points = customerData.points;
-  if (customerData.miniCoins !== undefined) updateData.mini_coins = customerData.miniCoins;
-  if (customerData.tier !== undefined) updateData.tier = customerData.tier;
-  if (customerData.parentCode !== undefined) updateData.parent_code = customerData.parentCode;
-  if (customerData.totalSpent !== undefined) updateData.total_spent = customerData.totalSpent;
-  if (customerData.monthlySpent !== undefined) updateData.monthly_spent = customerData.monthlySpent;
-  if (customerData.accumulatedPointMoney !== undefined) updateData.accumulated_point_money = customerData.accumulatedPointMoney;
-  if (customerData.lastMLMDistribution !== undefined) updateData.last_mlm_distribution = customerData.lastMLMDistribution;
-  if (customerData.mlmLevel !== undefined) updateData.mlm_level = customerData.mlmLevel;
-  if (customerData.directReferrals !== undefined) updateData.direct_referrals = customerData.directReferrals;
-  if (customerData.totalDownlineCount !== undefined) updateData.total_downline_count = customerData.totalDownlineCount;
-  if (customerData.monthlyCommissions !== undefined) updateData.monthly_commissions = customerData.monthlyCommissions;
-  if (customerData.totalCommissions !== undefined) updateData.total_commissions = customerData.totalCommissions;
-
-  const { error } = await supabase
-    .from('customers')
-    .update(updateData)
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error updating customer with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-const deleteCustomer = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('customers')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error deleting customer with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-// Category methods
-const getCategories = async () => {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .order('name', { ascending: true });
-
-  if (error) {
-    console.error("Error fetching categories:", error);
-    return [];
-  }
-
-  return (data || []).map(transformCategory);
-};
-
-const addCategory = async (categoryData: any) => {
-  const { data, error } = await supabase
-    .from('categories')
-    .insert([categoryData])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error adding category:", error);
-    return null;
-  }
-
-  return data ? transformCategory(data) : null;
-};
-
-const updateCategory = async (id: string, categoryData: any): Promise<boolean> => {
-  const { error } = await supabase
-    .from('categories')
-    .update(categoryData)
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error updating category with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-const deleteCategory = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('categories')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error deleting category with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-// Product methods
-const getProducts = async () => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('name', { ascending: true });
-
-  if (error) {
-    console.error("Error fetching products:", error);
-    return [];
-  }
-
-  return (data || []).map(transformProduct);
-};
-
-const addProduct = async (productData: any) => {
-  try {
-    console.log('supabaseService.addProduct called with:', productData);
-    
+  async addProduct(productData: Omit<Product, 'id'>): Promise<Product | null> {
     const { data, error } = await supabase
       .from('products')
       .insert([{
@@ -375,238 +271,193 @@ const addProduct = async (productData: any) => {
       .single();
 
     if (error) {
-      console.error('Supabase error adding product:', error);
+      console.error('Error adding product:', error);
+      return null;
+    }
+
+    return data ? transformProduct(data) : null;
+  },
+
+  async updateProduct(id: string, productData: Partial<Product>): Promise<boolean> {
+    const updateData: any = {};
+    
+    if (productData.name !== undefined) updateData.name = productData.name;
+    if (productData.price !== undefined) updateData.price = productData.price;
+    if (productData.mrp !== undefined) updateData.mrp = productData.mrp;
+    if (productData.dummyPrice !== undefined) updateData.dummy_price = productData.dummyPrice;
+    if (productData.image !== undefined) updateData.image = productData.image;
+    if (productData.description !== undefined) updateData.description = productData.description;
+    if (productData.category !== undefined) updateData.category = productData.category;
+    if (productData.inStock !== undefined) updateData.in_stock = productData.inStock;
+    if (productData.stockQuantity !== undefined) updateData.stock_quantity = productData.stockQuantity;
+    if (productData.tierDiscounts !== undefined) updateData.tier_discounts = productData.tierDiscounts;
+
+    const { error } = await supabase
+      .from('products')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating product:', error);
+      return false;
+    }
+
+    return true;
+  },
+
+  async deleteProduct(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting product:', error);
+      return false;
+    }
+
+    return true;
+  },
+
+  // Service operations
+  async getServices(): Promise<Service[]> {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching services:', error);
       throw error;
     }
 
-    if (!data) {
-      console.error('No data returned from product insert');
-      throw new Error('No data returned from product insert');
+    return data || [];
+  },
+
+  async addService(serviceData: Omit<Service, 'id'>): Promise<Service | null> {
+    const { data, error } = await supabase
+      .from('services')
+      .insert([serviceData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding service:', error);
+      return null;
     }
 
-    console.log('Product successfully added to database:', data);
-    return transformProduct(data);
-  } catch (error) {
-    console.error('Error in supabaseService.addProduct:', error);
-    throw error;
+    return data;
+  },
+
+  async updateService(id: string, serviceData: Partial<Service>): Promise<boolean> {
+    const { error } = await supabase
+      .from('services')
+      .update(serviceData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating service:', error);
+      return false;
+    }
+
+    return true;
+  },
+
+  async deleteService(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('services')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting service:', error);
+      return false;
+    }
+
+    return true;
+  },
+
+  // Order operations
+  async getOrders(): Promise<Order[]> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching orders:', error);
+      throw error;
+    }
+
+    return data?.map(transformOrder) || [];
+  },
+
+  async addOrder(orderData: Omit<Order, 'id' | 'orderDate'>): Promise<Order | null> {
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([{
+        customer_id: orderData.customerId,
+        customer_name: orderData.customerName,
+        customer_phone: orderData.customerPhone,
+        customer_code: orderData.customerCode,
+        products: orderData.products,
+        total_amount: orderData.totalAmount,
+        points_used: orderData.pointsUsed,
+        amount_paid: orderData.amountPaid,
+        points: orderData.points,
+        status: orderData.status,
+        payment_method: orderData.paymentMethod,
+        pincode: orderData.pincode,
+        is_pending_approval: orderData.isPendingApproval,
+        is_points_awarded: orderData.isPointsAwarded,
+        delivery_approved: orderData.deliveryApproved,
+        points_approved: orderData.pointsApproved,
+        used_points_discount: orderData.usedPointsDiscount,
+        mlm_distribution_log: orderData.mlmDistributionLog
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding order:', error);
+      throw error;
+    }
+
+    return data ? transformOrder(data) : null;
+  },
+
+  async updateOrder(id: string, orderData: Partial<Order>): Promise<boolean> {
+    const updateData: any = {};
+    
+    if (orderData.customerId !== undefined) updateData.customer_id = orderData.customerId;
+    if (orderData.customerName !== undefined) updateData.customer_name = orderData.customerName;
+    if (orderData.customerPhone !== undefined) updateData.customer_phone = orderData.customerPhone;
+    if (orderData.customerCode !== undefined) updateData.customer_code = orderData.customerCode;
+    if (orderData.products !== undefined) updateData.products = orderData.products;
+    if (orderData.totalAmount !== undefined) updateData.total_amount = orderData.totalAmount;
+    if (orderData.pointsUsed !== undefined) updateData.points_used = orderData.pointsUsed;
+    if (orderData.amountPaid !== undefined) updateData.amount_paid = orderData.amountPaid;
+    if (orderData.points !== undefined) updateData.points = orderData.points;
+    if (orderData.status !== undefined) updateData.status = orderData.status;
+    if (orderData.paymentMethod !== undefined) updateData.payment_method = orderData.paymentMethod;
+    if (orderData.pincode !== undefined) updateData.pincode = orderData.pincode;
+    if (orderData.isPendingApproval !== undefined) updateData.is_pending_approval = orderData.isPendingApproval;
+    if (orderData.isPointsAwarded !== undefined) updateData.is_points_awarded = orderData.isPointsAwarded;
+    if (orderData.deliveryApproved !== undefined) updateData.delivery_approved = orderData.deliveryApproved;
+    if (orderData.pointsApproved !== undefined) updateData.points_approved = orderData.pointsApproved;
+    if (orderData.usedPointsDiscount !== undefined) updateData.used_points_discount = orderData.usedPointsDiscount;
+    if (orderData.mlmDistributionLog !== undefined) updateData.mlm_distribution_log = orderData.mlmDistributionLog;
+
+    const { error } = await supabase
+      .from('orders')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating order:', error);
+      return false;
+    }
+
+    return true;
   }
 };
-
-const updateProduct = async (id: string, productData: any): Promise<boolean> => {
-  const updateData: any = {};
-  
-  if (productData.name !== undefined) updateData.name = productData.name;
-  if (productData.price !== undefined) updateData.price = productData.price;
-  if (productData.mrp !== undefined) updateData.mrp = productData.mrp;
-  if (productData.dummyPrice !== undefined) updateData.dummy_price = productData.dummyPrice;
-  if (productData.image !== undefined) updateData.image = productData.image;
-  if (productData.description !== undefined) updateData.description = productData.description;
-  if (productData.category !== undefined) updateData.category = productData.category;
-  if (productData.inStock !== undefined) updateData.in_stock = productData.inStock;
-  if (productData.stockQuantity !== undefined) updateData.stock_quantity = productData.stockQuantity;
-  if (productData.tierDiscounts !== undefined) updateData.tier_discounts = productData.tierDiscounts;
-
-  const { error } = await supabase
-    .from('products')
-    .update(updateData)
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error updating product with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-const deleteProduct = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error deleting product with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-// Service methods
-const getServices = async () => {
-  const { data, error } = await supabase
-    .from('services')
-    .select('*')
-    .order('title', { ascending: true });
-
-  if (error) {
-    console.error("Error fetching services:", error);
-    return [];
-  }
-
-  return (data || []).map(transformService);
-};
-
-const addService = async (serviceData: any) => {
-  const { data, error } = await supabase
-    .from('services')
-    .insert([{
-      title: serviceData.title,
-      description: serviceData.description,
-      price: serviceData.price,
-      image: serviceData.image,
-      category: serviceData.category,
-      is_active: serviceData.isActive
-    }])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error adding service:", error);
-    return null;
-  }
-
-  return data ? transformService(data) : null;
-};
-
-const updateService = async (id: string, serviceData: any): Promise<boolean> => {
-  const updateData: any = {};
-  
-  if (serviceData.title !== undefined) updateData.title = serviceData.title;
-  if (serviceData.description !== undefined) updateData.description = serviceData.description;
-  if (serviceData.price !== undefined) updateData.price = serviceData.price;
-  if (serviceData.image !== undefined) updateData.image = serviceData.image;
-  if (serviceData.category !== undefined) updateData.category = serviceData.category;
-  if (serviceData.isActive !== undefined) updateData.is_active = serviceData.isActive;
-
-  const { error } = await supabase
-    .from('services')
-    .update(updateData)
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error updating service with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-const deleteService = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('services')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error deleting service with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-// Order methods
-const getOrders = async () => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .order('order_date', { ascending: false });
-
-  if (error) {
-    console.error("Error fetching orders:", error);
-    return [];
-  }
-
-  return (data || []).map(transformOrder);
-};
-
-const addOrder = async (orderData: any) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .insert([{
-      id: orderData.id || crypto.randomUUID(),
-      customer_id: orderData.customerId,
-      customer_name: orderData.customerName,
-      customer_phone: orderData.customerPhone,
-      customer_code: orderData.customerCode,
-      products: orderData.products,
-      total_amount: orderData.totalAmount,
-      points_used: orderData.pointsUsed,
-      amount_paid: orderData.amountPaid,
-      points: orderData.points,
-      status: orderData.status || 'pending',
-      payment_method: orderData.paymentMethod,
-      pincode: orderData.pincode,
-      order_date: new Date().toISOString(),
-      mlm_distribution_log: orderData.mlmDistributionLog || []
-    }])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error adding order:", error);
-    return null;
-  }
-
-  return data ? transformOrder(data) : null;
-};
-
-const updateOrder = async (id: string, orderData: any): Promise<boolean> => {
-  const updateData: any = {};
-  
-  if (orderData.status !== undefined) updateData.status = orderData.status;
-  if (orderData.isPointsAwarded !== undefined) updateData.is_points_awarded = orderData.isPointsAwarded;
-  if (orderData.deliveryApproved !== undefined) updateData.delivery_approved = orderData.deliveryApproved;
-  if (orderData.mlmDistributionLog !== undefined) updateData.mlm_distribution_log = orderData.mlmDistributionLog;
-
-  const { error } = await supabase
-    .from('orders')
-    .update(updateData)
-    .eq('id', id);
-
-  if (error) {
-    console.error(`Error updating order with id ${id}:`, error);
-    return false;
-  }
-
-  return true;
-};
-
-export const supabaseService = {
-  // Authentication methods
-  authenticateCustomer,
-  authenticateAdmin,
-  
-  // Customer methods
-  getCustomers,
-  addCustomer,
-  updateCustomer,
-  deleteCustomer,
-  
-  // Category methods
-  getCategories,
-  addCategory,
-  updateCategory,
-  deleteCategory,
-  
-  // Product methods
-  getProducts,
-  addProduct,
-  updateProduct,
-  deleteProduct,
-  
-  // Service methods
-  getServices,
-  addService,
-  updateService,
-  deleteService,
-  
-  // Order methods
-  getOrders,
-  addOrder,
-  updateOrder,
-};
-
-export { addProduct };
