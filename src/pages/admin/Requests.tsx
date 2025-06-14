@@ -18,7 +18,7 @@ import {
   SelectValue, 
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, XCircle, Eye, Gift } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Gift, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -47,6 +47,14 @@ const Requests = () => {
 
   // Get the currently viewed order details
   const viewedOrder = viewOrderId ? orders.find(order => order.id === viewOrderId) : null;
+
+  // Helper function to get delivery address
+  const getDeliveryAddress = (order: any) => {
+    const customer = customers.find(c => c.id === order.customerId);
+    return order.deliveryAddress || 
+           customer?.address || 
+           (order.pincode ? `Pincode: ${order.pincode}` : 'No address provided');
+  };
 
   // Calculate actual points that will be awarded after accumulation
   const calculateActualPointsAwarded = (orderId: string) => {
@@ -346,22 +354,17 @@ const Requests = () => {
                   <p className="font-medium">{viewedOrder.customerName}</p>
                   <p className="text-sm">{viewedOrder.customerCode}</p>
                   <p className="text-sm">{viewedOrder.customerPhone}</p>
-                  {/* Display customer address */}
-                  {(() => {
-                    const customer = customers.find(c => c.id === viewedOrder.customerId);
-                    return customer?.address ? (
-                      <div className="mt-2">
-                        <p className="text-xs font-semibold text-muted-foreground">Address:</p>
-                        <p className="text-sm">{customer.address}</p>
-                      </div>
-                    ) : null;
-                  })()}
                 </div>
                 
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground">Delivery Information</h3>
-                  <p className="text-sm">Pincode: {viewedOrder.pincode}</p>
-                  <p className="text-xs text-green-600 mt-1">Delivery Available</p>
+                  <div className="mt-2 p-2 bg-gray-50 rounded border text-sm">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                      <span>{getDeliveryAddress(viewedOrder)}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm mt-2">Pincode: {viewedOrder.pincode}</p>
                 </div>
               </div>
               
