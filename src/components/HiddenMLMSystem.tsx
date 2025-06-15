@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useMLM } from '@/contexts/MLMContext';
@@ -7,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Gift, Award, Star, Target, TrendingUp } from 'lucide-react';
+import { Gift, Award, Star, Target, TrendingUp, Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMLMCalculations } from '@/hooks/useMLMCalculations';
+import CoinWallet from './CoinWallet';
 
 interface HiddenMLMSystemProps {
   customerCode: string;
@@ -19,6 +19,7 @@ const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
   const { customers } = useData();
   const { getMLMStructure } = useMLM();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCoinDetails, setShowCoinDetails] = useState(false);
   const mlmStats = useMLMCalculations(customerCode);
 
   const customer = customers.find(c => c.code === customerCode);
@@ -92,13 +93,20 @@ const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
               <div className="text-xs text-green-600 mt-1">Higher levels earn more rewards</div>
             </div>
             
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <Target className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-orange-900">{customer.miniCoins}</div>
-              <div className="text-sm text-orange-700">Bonus Coins</div>
-              <div className="text-xs text-orange-600 mt-1">From system activities</div>
+            <div className="text-center p-4 bg-yellow-50 rounded-lg cursor-pointer" onClick={() => setShowCoinDetails(!showCoinDetails)}>
+              <Coins className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-yellow-900">{customer.totalCoins || 0}</div>
+              <div className="text-sm text-yellow-700">Reward Coins</div>
+              <div className="text-xs text-yellow-600 mt-1">Click to view details</div>
             </div>
           </div>
+
+          {/* Coin Wallet Details */}
+          {showCoinDetails && (
+            <div className="mt-4">
+              <CoinWallet customerCode={customerCode} showTransactions={true} />
+            </div>
+          )}
 
           {/* Level Progress Visualization */}
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -114,9 +122,10 @@ const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
               
               <div className="text-xs text-gray-600 space-y-1">
                 <div>• Earn 1 point for every ₹5 you spend</div>
-                <div>• More points = higher loyalty tier</div>
+                <div>• Earn coins: 1 coin per ₹25 spent (1 coin = ₹5 value)</div>
+                <div>• Coins distributed to your upline network automatically</div>
                 <div>• Higher tiers get more rewards and discounts</div>
-                <div>• Points can be redeemed for purchases</div>
+                <div>• Points and coins can be redeemed for purchases</div>
               </div>
             </div>
           </div>
@@ -128,9 +137,9 @@ const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
               Loyalty Rewards Potential
             </h5>
             <div className="text-sm text-blue-800 space-y-1">
-              <p>Every ₹5 spent in our store = <strong>1 loyalty point</strong></p>
-              <p>Reach higher tiers: Bronze (12 pts), Silver (40 pts), Gold (80 pts), Diamond (160 pts)</p>
-              <p>Higher tiers receive bigger discounts and exclusive offers!</p>
+              <p>Every ₹25 spent = <strong>1 coin</strong> (worth ₹5)</p>
+              <p>Your network purchases also earn you coins automatically</p>
+              <p>More network activity = more coin rewards for you!</p>
             </div>
           </div>
 
@@ -143,8 +152,8 @@ const HiddenMLMSystem: React.FC<HiddenMLMSystemProps> = ({ customerCode }) => {
                 <p className="text-lg font-semibold text-purple-900">{mlmStats.totalNetworkSize}</p>
               </div>
               <div>
-                <span className="text-sm text-purple-700">Total Earnings:</span>
-                <p className="text-lg font-semibold text-purple-900">{mlmStats.totalEarnings}</p>
+                <span className="text-sm text-purple-700">Total Coin Earnings:</span>
+                <p className="text-lg font-semibold text-purple-900">{customer.totalCoins || 0} coins</p>
               </div>
             </div>
 

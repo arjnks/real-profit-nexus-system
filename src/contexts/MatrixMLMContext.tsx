@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { matrixMLMService } from '@/services/matrixMLMService';
+import { coinService } from '@/services/coinService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -20,7 +20,7 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
   const { customers, updateCustomer } = useData();
 
   const processCustomerPurchase = async (customerCode: string, purchaseAmount: number, orderId: string) => {
-    console.log(`Processing matrix purchase for ${customerCode}: ₹${purchaseAmount}`);
+    console.log(`Processing MLM purchase for ${customerCode}: ₹${purchaseAmount}`);
 
     try {
       const customer = customers.find(c => c.code === customerCode);
@@ -29,29 +29,31 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
         return;
       }
 
-      // Calculate coins earned from purchase
-      const coinCount = matrixMLMService.calculateCoinsFromPurchase(purchaseAmount, customer.mlmLevel);
+      // Step 1: Award coins to the purchasing customer
+      const coinsEarned = await coinService.awardCoinsForPurchase(customerCode, purchaseAmount, orderId);
+      console.log(`Customer ${customerCode} earned ${coinsEarned} coins`);
+
+      // Step 2: Distribute coins through MLM hierarchy
+      await coinService.distributeCoinsMLM(customerCode, coinsEarned, orderId, customers);
       
-      // Determine target level for coin placement
-      const targetLevel = matrixMLMService.determineTargetLevel(customerCode, coinCount);
+      // Step 3: Place coins in matrix levels (existing matrix logic)
+      const targetLevel = matrixMLMService.determineTargetLevel(customerCode, coinsEarned);
+      await matrixMLMService.placeCoinsInLevel(customerCode, targetLevel, coinsEarned);
 
-      console.log(`Customer ${customerCode} earned ${coinCount} coins, placing in level ${targetLevel}`);
-
-      // Place coins in the matrix
-      await matrixMLMService.placeCoinsInLevel(customerCode, targetLevel, coinCount);
-
-      // Update customer's total coins and matrix data
+      // Step 4: Update customer's matrix data
       await updateCustomer(customer.id, {
-        totalCoins: (customer.totalCoins || 0) + coinCount,
+        totalCoins: (customer.totalCoins || 0) + coinsEarned,
         currentLevel: targetLevel,
-        matrixEarnings: customer.matrixEarnings || 0
+        matrixEarnings: (customer.matrixEarnings || 0) + (coinsEarned * coinService.getCoinValue())
       });
 
-      toast.success(`Matrix MLM: ${customerCode} placed ${coinCount} coins in level ${targetLevel}!`);
+      toast.success(`MLM Distribution Complete!`, {
+        description: `${customerCode} earned ${coinsEarned} coins (₹${(coinsEarned * coinService.getCoinValue()).toFixed(2)}) and coins distributed to uplines`
+      });
 
     } catch (error) {
-      console.error('Error processing matrix purchase:', error);
-      toast.error('Failed to process matrix MLM distribution');
+      console.error('Error processing MLM purchase:', error);
+      toast.error('Failed to process MLM distribution');
     }
   };
 
@@ -76,10 +78,10 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
   const simulateMatrixPurchase = async (customerCode: string, purchaseAmount: number) => {
     try {
       await processCustomerPurchase(customerCode, purchaseAmount, `SIM-${Date.now()}`);
-      toast.success(`Matrix simulation completed for ${customerCode} with ₹${purchaseAmount}`);
+      toast.success(`MLM simulation completed for ${customerCode} with ₹${purchaseAmount}`);
     } catch (error) {
-      console.error('Error in matrix simulation:', error);
-      toast.error('Matrix simulation failed');
+      console.error('Error in MLM simulation:', error);
+      toast.error('MLM simulation failed');
     }
   };
 
@@ -89,7 +91,7 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
       const { error: slotsError } = await supabase
         .from('mlm_slots')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        .neq('id', '00000000-0000-0000-0000-000000000000');
 
       if (slotsError) throw slotsError;
 
@@ -97,26 +99,41 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
       const { error: distributionsError } = await supabase
         .from('mlm_distributions')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        .neq('id', '00000000-0000-0000-0000-000000000000');
 
       if (distributionsError) throw distributionsError;
 
+      // Clear coin transactions
+      const { error: coinError } = await supabase
+        .from('coin_transactions')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (coinError) throw coinError;
+
+      // Clear coin wallets
+      const { error: walletError } = await supabase
+        .from('coin_wallets')
+        .delete()
+        .neq('user_code', 'non-existent');
+
+      if (walletError) throw walletError;
+
       // Reset customer matrix data
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({
-          matrix_earnings: 0,
-          total_coins: 0,
-          current_level: 1
+      const updates = customers.map(customer => 
+        updateCustomer(customer.id, {
+          matrixEarnings: 0,
+          totalCoins: 0,
+          currentLevel: 1
         })
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all
+      );
 
-      if (customerError) throw customerError;
+      await Promise.all(updates);
 
-      toast.success('Matrix MLM system reset successfully!');
+      toast.success('Complete MLM system reset successfully!');
     } catch (error) {
-      console.error('Error resetting matrix system:', error);
-      toast.error('Failed to reset matrix system');
+      console.error('Error resetting MLM system:', error);
+      toast.error('Failed to reset MLM system');
     }
   };
 
