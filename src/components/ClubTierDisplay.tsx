@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ClubTierData {
@@ -40,7 +39,6 @@ const ClubTierDisplay = () => {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [showDetails, setShowDetails] = useState(true);
 
   useEffect(() => {
     loadClubTierData();
@@ -105,127 +103,86 @@ const ClubTierDisplay = () => {
     return tierData.slice(0, 5);
   };
 
-  // Show only the toggle button when details are hidden
-  if (!showDetails) {
-    return (
-      <div className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          onClick={() => setShowDetails(true)}
-          className="flex items-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          Show Details
-        </Button>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
-      <div>
-        <div className="flex justify-end mb-4">
-          <Button
-            variant="outline"
-            onClick={() => setShowDetails(false)}
-            className="flex items-center gap-2"
-          >
-            <EyeOff className="h-4 w-4" />
-            Hide Details
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {['Bronze', 'Silver', 'Gold', 'Diamond'].map((tier) => (
-            <Card key={tier} className={`border-2 border-${getTierColor(tier)}`}>
-              <CardHeader className="text-center">
-                <div className={`w-12 h-12 bg-${getTierColor(tier)} rounded-full mx-auto mb-2`}></div>
-                <CardTitle className={`text-${getTierColor(tier)}`}>{tier}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-sm text-gray-600">Points discount privilege</p>
-                <div className="mt-4 text-sm text-gray-500">
-                  Loading content...
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {['Bronze', 'Silver', 'Gold', 'Diamond'].map((tier) => (
+          <Card key={tier} className={`border-2 border-${getTierColor(tier)}`}>
+            <CardHeader className="text-center">
+              <div className={`w-12 h-12 bg-${getTierColor(tier)} rounded-full mx-auto mb-2`}></div>
+              <CardTitle className={`text-${getTierColor(tier)}`}>{tier}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-sm text-gray-600">Points discount privilege</p>
+              <div className="mt-4 text-sm text-gray-500">
+                Loading content...
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          onClick={() => setShowDetails(false)}
-          className="flex items-center gap-2"
-        >
-          <EyeOff className="h-4 w-4" />
-          Hide Details
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {['bronze', 'silver', 'gold', 'diamond'].map((tier) => {
-          const tierData = clubTiers[tier as keyof typeof clubTiers];
-          const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
-          const color = getTierColor(tier);
-          const displayedItems = getDisplayedItems(tierData, tier as keyof typeof expandedTiers);
-          const hasMoreItems = tierData.length > 5;
-          const isExpanded = expandedTiers[tier as keyof typeof expandedTiers];
-          
-          return (
-            <Card key={tier} className={`border-2 border-${color}`}>
-              <CardHeader className="text-center">
-                <div className={`w-12 h-12 bg-${color} rounded-full mx-auto mb-2`}></div>
-                <CardTitle className={`text-${color}`}>{tierName}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-sm text-gray-600 mb-4">Points discount privilege</p>
-                
-                {/* Display dynamic content from club management */}
-                {tierData.length > 0 && (
-                  <div className="space-y-3">
-                    {displayedItems.map((item) => (
-                      <div key={item.id} className="text-left">
-                        {item.image_url && (
-                          <img 
-                            src={item.image_url} 
-                            alt={item.title}
-                            className="w-full h-auto object-contain rounded mb-2"
-                          />
-                        )}
-                        <h4 className="font-semibold text-sm">{item.title}</h4>
-                        <p className="text-xs text-gray-600 mb-1">{item.description}</p>
-                        <p className="text-sm font-bold text-green-600">{item.price}</p>
-                      </div>
-                    ))}
-                    
-                    {hasMoreItems && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleExpanded(tier as keyof typeof expandedTiers)}
-                        className="w-full mt-3"
-                      >
-                        {isExpanded ? 'Show Less' : `Show More (${tierData.length - 5} more)`}
-                      </Button>
-                    )}
-                  </div>
-                )}
-                
-                {tierData.length === 0 && (
-                  <div className="mt-4 text-sm text-gray-500">
-                    No special offers available
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {['bronze', 'silver', 'gold', 'diamond'].map((tier) => {
+        const tierData = clubTiers[tier as keyof typeof clubTiers];
+        const tierName = tier.charAt(0).toUpperCase() + tier.slice(1);
+        const color = getTierColor(tier);
+        const displayedItems = getDisplayedItems(tierData, tier as keyof typeof expandedTiers);
+        const hasMoreItems = tierData.length > 5;
+        const isExpanded = expandedTiers[tier as keyof typeof expandedTiers];
+        
+        return (
+          <Card key={tier} className={`border-2 border-${color}`}>
+            <CardHeader className="text-center">
+              <div className={`w-12 h-12 bg-${color} rounded-full mx-auto mb-2`}></div>
+              <CardTitle className={`text-${color}`}>{tierName}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-sm text-gray-600 mb-4">Points discount privilege</p>
+              
+              {/* Display dynamic content from club management */}
+              {tierData.length > 0 && (
+                <div className="space-y-3">
+                  {displayedItems.map((item) => (
+                    <div key={item.id} className="text-left">
+                      {item.image_url && (
+                        <img 
+                          src={item.image_url} 
+                          alt={item.title}
+                          className="w-full h-auto object-contain rounded mb-2"
+                        />
+                      )}
+                      <h4 className="font-semibold text-sm">{item.title}</h4>
+                      <p className="text-xs text-gray-600 mb-1">{item.description}</p>
+                      <p className="text-sm font-bold text-green-600">{item.price}</p>
+                    </div>
+                  ))}
+                  
+                  {hasMoreItems && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleExpanded(tier as keyof typeof expandedTiers)}
+                      className="w-full mt-3"
+                    >
+                      {isExpanded ? 'Show Less' : `Show More (${tierData.length - 5} more)`}
+                    </Button>
+                  )}
+                </div>
+              )}
+              
+              {tierData.length === 0 && (
+                <div className="mt-4 text-sm text-gray-500">
+                  No special offers available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };
