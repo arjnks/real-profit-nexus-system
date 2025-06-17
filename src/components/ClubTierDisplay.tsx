@@ -105,26 +105,33 @@ const ClubTierDisplay = () => {
     return tierData.slice(0, 5);
   };
 
+  // Show only the toggle button when details are hidden
+  if (!showDetails) {
+    return (
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="outline"
+          onClick={() => setShowDetails(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          Show Details
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div>
         <div className="flex justify-end mb-4">
           <Button
             variant="outline"
-            onClick={() => setShowDetails(!showDetails)}
+            onClick={() => setShowDetails(false)}
             className="flex items-center gap-2"
           >
-            {showDetails ? (
-              <>
-                <EyeOff className="h-4 w-4" />
-                Hide Details
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4" />
-                Show Details
-              </>
-            )}
+            <EyeOff className="h-4 w-4" />
+            Hide Details
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -152,20 +159,11 @@ const ClubTierDisplay = () => {
       <div className="flex justify-end mb-4">
         <Button
           variant="outline"
-          onClick={() => setShowDetails(!showDetails)}
+          onClick={() => setShowDetails(false)}
           className="flex items-center gap-2"
         >
-          {showDetails ? (
-            <>
-              <EyeOff className="h-4 w-4" />
-              Hide Details
-            </>
-          ) : (
-            <>
-              <Eye className="h-4 w-4" />
-              Show Details
-            </>
-          )}
+          <EyeOff className="h-4 w-4" />
+          Hide Details
         </Button>
       </div>
 
@@ -188,7 +186,7 @@ const ClubTierDisplay = () => {
                 <p className="text-sm text-gray-600 mb-4">Points discount privilege</p>
                 
                 {/* Display dynamic content from club management */}
-                {showDetails && tierData.length > 0 && (
+                {tierData.length > 0 && (
                   <div className="space-y-3">
                     {displayedItems.map((item) => (
                       <div key={item.id} className="text-left">
@@ -218,15 +216,9 @@ const ClubTierDisplay = () => {
                   </div>
                 )}
                 
-                {showDetails && tierData.length === 0 && (
+                {tierData.length === 0 && (
                   <div className="mt-4 text-sm text-gray-500">
                     No special offers available
-                  </div>
-                )}
-
-                {!showDetails && (
-                  <div className="mt-4 text-sm text-gray-500">
-                    Details hidden
                   </div>
                 )}
               </CardContent>
