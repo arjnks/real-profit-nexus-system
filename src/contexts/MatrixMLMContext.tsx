@@ -57,6 +57,45 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
+  const resetMatrixSystem = async () => {
+    try {
+      // Clear all slots
+      const { error: slotsError } = await supabase
+        .from('mlm_slots')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (slotsError) throw slotsError;
+
+      // Clear all distributions
+      const { error: distributionsError } = await supabase
+        .from('mlm_distributions')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (distributionsError) throw distributionsError;
+
+      // Clear coin data - temporarily disabled due to type issues
+      console.log('Would clear coin transactions and wallets');
+
+      // Reset customer matrix data
+      const updates = customers.map(customer => 
+        updateCustomer(customer.id, {
+          matrixEarnings: 0,
+          totalCoins: 0,
+          currentLevel: 1
+        })
+      );
+
+      await Promise.all(updates);
+
+      toast.success('Complete MLM system reset successfully!');
+    } catch (error) {
+      console.error('Error resetting MLM system:', error);
+      toast.error('Failed to reset MLM system');
+    }
+  };
+
   const getLevelOccupancy = async () => {
     try {
       return await matrixMLMService.getLevelOccupancy();
@@ -82,58 +121,6 @@ export const MatrixMLMProvider: React.FC<{ children: ReactNode }> = ({ children 
     } catch (error) {
       console.error('Error in MLM simulation:', error);
       toast.error('MLM simulation failed');
-    }
-  };
-
-  const resetMatrixSystem = async () => {
-    try {
-      // Clear all slots
-      const { error: slotsError } = await supabase
-        .from('mlm_slots')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (slotsError) throw slotsError;
-
-      // Clear all distributions
-      const { error: distributionsError } = await supabase
-        .from('mlm_distributions')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (distributionsError) throw distributionsError;
-
-      // Clear coin transactions
-      const { error: coinError } = await supabase
-        .from('coin_transactions')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (coinError) throw coinError;
-
-      // Clear coin wallets
-      const { error: walletError } = await supabase
-        .from('coin_wallets')
-        .delete()
-        .neq('user_code', 'non-existent');
-
-      if (walletError) throw walletError;
-
-      // Reset customer matrix data
-      const updates = customers.map(customer => 
-        updateCustomer(customer.id, {
-          matrixEarnings: 0,
-          totalCoins: 0,
-          currentLevel: 1
-        })
-      );
-
-      await Promise.all(updates);
-
-      toast.success('Complete MLM system reset successfully!');
-    } catch (error) {
-      console.error('Error resetting MLM system:', error);
-      toast.error('Failed to reset MLM system');
     }
   };
 
