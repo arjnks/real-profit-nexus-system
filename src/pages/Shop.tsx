@@ -9,12 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Search, Plus, Minus, Package, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, Package, AlertTriangle, RefreshCw, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 const Shop = () => {
-  const { products, isLoading, refreshData } = useData();
+  const { products, isLoading, error, refreshData } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,30 +30,56 @@ const Shop = () => {
     getTotalPrice
   } = useCart();
 
-  // Debug: Log products when they change
   useEffect(() => {
     console.log('Shop page - Products updated:', products.length, 'products loaded');
-    if (products.length === 0 && !isLoading) {
+    if (products.length === 0 && !isLoading && !error) {
       console.warn('No products found in shop page');
     }
-  }, [products, isLoading]);
+  }, [products, isLoading, error]);
 
-  // Auto-refresh data when component mounts
   useEffect(() => {
     console.log('Shop page mounted, refreshing data...');
     refreshData();
   }, []);
 
-  // Filter products
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // Filter products safely
+  const filteredProducts = React.useMemo(() => {
+    if (!Array.isArray(products)) {
+      console.warn('Products is not an array:', products);
+      return [];
+    }
 
-  // Get unique categories
-  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
+    return products.filter(product => {
+      if (!product || typeof product !== 'object') {
+        console.warn('Invalid product object:', product);
+        return false;
+      }
+
+      const productName = product.name || '';
+      const productCategory = product.category || '';
+      
+      const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           productCategory.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || productCategory === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, selectedCategory]);
+
+  // Get unique categories safely
+  const categories = React.useMemo(() => {
+    if (!Array.isArray(products)) {
+      return ['all'];
+    }
+
+    const uniqueCategories = new Set(
+      products
+        .filter(p => p && p.category)
+        .map(p => p.category)
+    );
+    
+    return ['all', ...Array.from(uniqueCategories)];
+  }, [products]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -61,10 +87,10 @@ const Shop = () => {
       console.log('Manual refresh triggered...');
       await refreshData();
       console.log('Manual refresh completed, products count:', products.length);
-      toast.success('Products refreshed');
+      toast.success('Products refreshed successfully');
     } catch (error) {
       console.error('Failed to refresh products:', error);
-      toast.error('Failed to refresh products');
+      toast.error(`Failed to refresh products: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsRefreshing(false);
     }
@@ -77,20 +103,24 @@ const Shop = () => {
       return;
     }
     
-    // Convert cart items to the format expected by checkout page
-    const cartItems = getCartItems(products).map(item => ({
-      product: {
-        id: item.productId,
-        name: item.name,
-        price: item.price,
-        mrp: item.mrp
-      },
-      quantity: item.quantity
-    }));
+    try {
+      const cartItems = getCartItems(products).map(item => ({
+        product: {
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          mrp: item.mrp
+        },
+        quantity: item.quantity
+      }));
 
-    navigate('/checkout', { 
-      state: { cart: cartItems }
-    });
+      navigate('/checkout', { 
+        state: { cart: cartItems }
+      });
+    } catch (error) {
+      console.error('Error preparing checkout:', error);
+      toast.error('Failed to prepare checkout. Please try again.');
+    }
   };
 
   const getStockBadge = (stockQuantity: number) => {
@@ -119,6 +149,30 @@ const Shop = () => {
     return null;
   };
 
+  const handleAddToCart = (product: any) => {
+    try {
+      if (!product || !product.id) {
+        toast.error('Invalid product data');
+        return;
+      }
+      addToCart(product);
+      toast.success(`${product.name} added to cart`);
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add item to cart');
+    }
+  };
+
+  const handleRemoveFromCart = (productId: string) => {
+    try {
+      removeFromCart(productId);
+      toast.success('Item removed from cart');
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      toast.error('Failed to remove item from cart');
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -132,13 +186,40 @@ const Shop = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-8">
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                <div>
+                  <p className="text-red-600 font-medium">Failed to load products</p>
+                  <p className="text-red-500 text-sm">{error}</p>
+                </div>
+              </div>
+              <Button 
+                onClick={handleRefresh} 
+                className="mt-4"
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Shop</h1>
           <div className="flex items-center gap-4">
-            {/* Debug info */}
             <div className="text-sm text-gray-500">
               {products.length} products available
             </div>
@@ -191,81 +272,91 @@ const Shop = () => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className={`${product.stockQuantity === 0 ? 'opacity-60' : ''}`}>
-              <CardHeader className="p-4">
-                <img 
-                  src={product.image} 
-                  alt={product.name}
-                  className="w-full h-48 object-cover rounded-md mb-2"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder.svg';
-                  }}
-                />
-                <CardTitle className="text-lg">{product.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{product.description}</p>
-                <Badge variant="outline" className="w-fit">{product.category}</Badge>
-                {getStockBadge(product.stockQuantity)}
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="space-y-2">
-                  {product.dummyPrice && (
-                    <div className="text-sm text-gray-500 line-through">
-                      Was ₹{product.dummyPrice.toFixed(2)}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-blue-600">
-                      ₹{product.mrp.toFixed(2)}
-                    </span>
+          {filteredProducts.map((product) => {
+            if (!product || !product.id) {
+              return null;
+            }
+
+            const stockQuantity = product.stockQuantity || 0;
+            const isOutOfStock = stockQuantity === 0;
+            const cartQuantity = cart[product.id] || 0;
+
+            return (
+              <Card key={product.id} className={`${isOutOfStock ? 'opacity-60' : ''}`}>
+                <CardHeader className="p-4">
+                  <img 
+                    src={product.image || '/placeholder.svg'} 
+                    alt={product.name || 'Product'}
+                    className="w-full h-48 object-cover rounded-md mb-2"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
+                  <CardTitle className="text-lg">{product.name || 'Unnamed Product'}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{product.description || 'No description available'}</p>
+                  <Badge variant="outline" className="w-fit">{product.category || 'Uncategorized'}</Badge>
+                  {getStockBadge(stockQuantity)}
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="space-y-2">
                     {product.dummyPrice && (
-                      <Badge variant="destructive" className="text-xs">
-                        Save ₹{(product.dummyPrice - product.mrp).toFixed(2)}
-                      </Badge>
+                      <div className="text-sm text-gray-500 line-through">
+                        Was ₹{Number(product.dummyPrice).toFixed(2)}
+                      </div>
                     )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-blue-600">
+                        ₹{Number(product.mrp || 0).toFixed(2)}
+                      </span>
+                      {product.dummyPrice && (
+                        <Badge variant="destructive" className="text-xs">
+                          Save ₹{(Number(product.dummyPrice) - Number(product.mrp || 0)).toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Stock: {stockQuantity} available
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    Stock: {product.stockQuantity} available
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="p-4 pt-0">
-                {product.stockQuantity === 0 ? (
-                  <Button disabled className="w-full">
-                    Out of Stock
-                  </Button>
-                ) : cart[product.id] ? (
-                  <div className="flex items-center justify-between w-full">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeFromCart(product.id)}
-                    >
-                      <Minus className="h-4 w-4" />
+                </CardContent>
+                <CardFooter className="p-4 pt-0">
+                  {isOutOfStock ? (
+                    <Button disabled className="w-full">
+                      Out of Stock
                     </Button>
-                    <span className="font-medium">{cart[product.id]}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => addToCart(product)}
-                      disabled={cart[product.id] >= product.stockQuantity}
+                  ) : cartQuantity > 0 ? (
+                    <div className="flex items-center justify-between w-full">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleRemoveFromCart(product.id)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="font-medium">{cartQuantity}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleAddToCart(product)}
+                        disabled={cartQuantity >= stockQuantity}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      className="w-full" 
+                      onClick={() => handleAddToCart(product)}
                     >
-                      <Plus className="h-4 w-4" />
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Add to Cart
                     </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    className="w-full" 
-                    onClick={() => addToCart(product)}
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Add to Cart
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
 
         {filteredProducts.length === 0 && (
@@ -280,8 +371,8 @@ const Shop = () => {
             </p>
             {products.length === 0 && (
               <div className="mt-4">
-                <Button onClick={handleRefresh} variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                   Refresh Products
                 </Button>
               </div>
