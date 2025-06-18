@@ -39,7 +39,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { icon: Briefcase, label: 'Services', path: '/admin/services' },
     { icon: ShoppingCart, label: 'Purchases', path: '/admin/purchases' },
     { icon: FileText, label: 'Requests', path: '/admin/requests' },
-    { icon: BarChart4, label: 'Sales Dashboard', path: '/admin/sales' },
+    { icon: BarChart4, label: 'Sales Dashboard', path: '/admin/sales-dashboard' },
     { icon: Trophy, label: 'Leaderboard', path: '/admin/leaderboard' },
     { icon: Award, label: 'Club Management', path: '/admin/club-management' },
     { icon: TreePine, label: 'MLM Tree', path: '/admin/mlm-tree' },

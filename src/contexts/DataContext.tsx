@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 import type { Customer, Product, Category, Service, Order } from '@/types';
@@ -45,67 +44,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [orders, setOrders] = useState<Order[]>([]);
   const [offers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const refreshData = async () => {
-    console.log('DataContext: Starting data refresh...');
     setIsLoading(true);
-    setError(null);
-    
     try {
-      // Fetch products first as they're most commonly needed
-      console.log('DataContext: Fetching products...');
+      const fetchedCustomers = await supabaseService.getCustomers();
+      setCustomers(fetchedCustomers);
+
+      const fetchedCategories = await supabaseService.getCategories();
+      setCategories(fetchedCategories);
+
       const fetchedProducts = await supabaseService.getProducts();
-      console.log(`DataContext: Got ${fetchedProducts.length} products`);
       setProducts(fetchedProducts);
 
-      // Fetch other data in parallel but don't let failures block products
-      try {
-        const [fetchedCustomers, fetchedCategories, fetchedServices, fetchedOrders] = await Promise.allSettled([
-          supabaseService.getCustomers(),
-          supabaseService.getCategories(),
-          supabaseService.getServices(),
-          supabaseService.getOrders()
-        ]);
+      const fetchedServices = await supabaseService.getServices();
+      setServices(fetchedServices);
 
-        if (fetchedCustomers.status === 'fulfilled') {
-          setCustomers(fetchedCustomers.value);
-        } else {
-          console.warn('Failed to fetch customers:', fetchedCustomers.reason);
-        }
-
-        if (fetchedCategories.status === 'fulfilled') {
-          setCategories(fetchedCategories.value);
-        } else {
-          console.warn('Failed to fetch categories:', fetchedCategories.reason);
-        }
-
-        if (fetchedServices.status === 'fulfilled') {
-          setServices(fetchedServices.value);
-        } else {
-          console.warn('Failed to fetch services:', fetchedServices.reason);
-        }
-
-        if (fetchedOrders.status === 'fulfilled') {
-          setOrders(fetchedOrders.value);
-        } else {
-          console.warn('Failed to fetch orders:', fetchedOrders.reason);
-        }
-      } catch (error) {
-        console.warn('Some data failed to load:', error);
-      }
-
+      const fetchedOrders = await supabaseService.getOrders();
+      setOrders(fetchedOrders);
     } catch (error) {
-      console.error("Critical error fetching data:", error);
-      setError(error instanceof Error ? error.message : 'Failed to load data');
+      console.error("Error fetching data:", error);
     } finally {
       setIsLoading(false);
-      console.log('DataContext: Data refresh completed');
     }
   };
 
   useEffect(() => {
-    console.log('DataContext: Initial data load...');
     refreshData();
   }, []);
 

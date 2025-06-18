@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Search, Plus, Minus, Package, AlertTriangle, RefreshCw, Wifi } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, Package, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,7 +20,6 @@ const Shop = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
   
   const {
     cart,
@@ -30,78 +30,40 @@ const Shop = () => {
     getTotalPrice
   } = useCart();
 
-  // Monitor products loading
+  // Debug: Log products when they change
   useEffect(() => {
-    console.log('Shop: Products state changed -', {
-      productsCount: products?.length || 0,
-      isLoading,
-      hasProducts: products && products.length > 0
-    });
-
-    if (!isLoading && (!products || products.length === 0)) {
-      console.warn('Shop: No products available after loading completed');
-      setLoadingError('No products found. This might be a connection issue.');
-    } else if (products && products.length > 0) {
-      setLoadingError(null);
+    console.log('Shop page - Products updated:', products.length, 'products loaded');
+    if (products.length === 0 && !isLoading) {
+      console.warn('No products found in shop page');
     }
   }, [products, isLoading]);
 
-  // Initial data refresh with retry logic
+  // Auto-refresh data when component mounts
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    const loadWithRetry = async () => {
-      try {
-        console.log(`Shop: Loading data attempt ${retryCount + 1}/${maxRetries}`);
-        await refreshData();
-        setLoadingError(null);
-      } catch (error) {
-        console.error(`Shop: Load attempt ${retryCount + 1} failed:`, error);
-        retryCount++;
-        
-        if (retryCount < maxRetries) {
-          setTimeout(loadWithRetry, 2000 * retryCount); // Exponential backoff
-        } else {
-          setLoadingError('Failed to load products after multiple attempts. Please check your connection.');
-        }
-      }
-    };
-
-    loadWithRetry();
+    console.log('Shop page mounted, refreshing data...');
+    refreshData();
   }, []);
 
-  // Filter products safely
-  const filteredProducts = (products || []).filter(product => {
-    if (!product) return false;
-    
-    const productName = product.name || '';
-    const productCategory = product.category || '';
-    
-    const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         productCategory.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || productCategory === selectedCategory;
+  // Filter products
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  // Get unique categories safely
-  const categories = ['all', ...Array.from(new Set(
-    (products || [])
-      .map(p => p?.category)
-      .filter(Boolean)
-  ))];
+  // Get unique categories
+  const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    setLoadingError(null);
-    
     try {
-      console.log('Shop: Manual refresh initiated');
+      console.log('Manual refresh triggered...');
       await refreshData();
-      toast.success('Products refreshed successfully');
+      console.log('Manual refresh completed, products count:', products.length);
+      toast.success('Products refreshed');
     } catch (error) {
-      console.error('Shop: Manual refresh failed:', error);
-      setLoadingError('Failed to refresh products. Please try again.');
+      console.error('Failed to refresh products:', error);
       toast.error('Failed to refresh products');
     } finally {
       setIsRefreshing(false);
@@ -157,14 +119,13 @@ const Shop = () => {
     return null;
   };
 
-  if (isLoading && (!products || products.length === 0)) {
+  if (isLoading) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="h-8 w-8 animate-spin mr-3" />
             <span className="text-lg">Loading products...</span>
-            <p className="text-sm text-gray-500">This may take a moment</p>
           </div>
         </div>
       </Layout>
@@ -177,15 +138,9 @@ const Shop = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Shop</h1>
           <div className="flex items-center gap-4">
-            {loadingError && (
-              <div className="flex items-center text-red-600 text-sm">
-                <Wifi className="h-4 w-4 mr-1" />
-                Connection Issue
-              </div>
-            )}
-            
+            {/* Debug info */}
             <div className="text-sm text-gray-500">
-              {(products || []).length} products available
+              {products.length} products available
             </div>
             
             <Button
@@ -197,7 +152,6 @@ const Shop = () => {
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            
             {getTotalItems() > 0 && (
               <Button className="relative" onClick={handleCheckout}>
                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -209,27 +163,6 @@ const Shop = () => {
             )}
           </div>
         </div>
-
-        {loadingError && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
-              <div>
-                <p className="text-yellow-800 font-medium">Connection Issue</p>
-                <p className="text-yellow-600 text-sm">{loadingError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  className="mt-2"
-                  disabled={isRefreshing}
-                >
-                  Try Again
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Search and Filter */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -262,7 +195,7 @@ const Shop = () => {
             <Card key={product.id} className={`${product.stockQuantity === 0 ? 'opacity-60' : ''}`}>
               <CardHeader className="p-4">
                 <img 
-                  src={product.image || '/placeholder.svg'} 
+                  src={product.image} 
                   alt={product.name}
                   className="w-full h-48 object-cover rounded-md mb-2"
                   onError={(e) => {
@@ -335,21 +268,21 @@ const Shop = () => {
           ))}
         </div>
 
-        {filteredProducts.length === 0 && !isLoading && (
+        {filteredProducts.length === 0 && (
           <div className="text-center py-12">
             <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-lg">
-              {(products || []).length === 0 
+              {products.length === 0 
                 ? 'No products available at the moment.' 
                 : searchTerm || selectedCategory !== 'all' 
                   ? 'No products found matching your criteria.' 
                   : 'No products available at the moment.'}
             </p>
-            {(products || []).length === 0 && (
+            {products.length === 0 && (
               <div className="mt-4">
-                <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Try Loading Again
+                <Button onClick={handleRefresh} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Products
                 </Button>
               </div>
             )}
@@ -358,8 +291,8 @@ const Shop = () => {
 
         {/* Cart Summary */}
         <CartSummary
-          cartItems={getCartItems(products || [])}
-          totalPrice={getTotalPrice(products || [])}
+          cartItems={getCartItems(products)}
+          totalPrice={getTotalPrice(products)}
           totalItems={getTotalItems()}
           onCheckout={handleCheckout}
           isLoggedIn={!!user}
