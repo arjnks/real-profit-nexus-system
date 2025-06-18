@@ -58,7 +58,7 @@ const Profile = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Member Since</label>
-                <p>{customer?.joinedDate ? new Date(customer.joinedDate).to LocaleDateString() : 'N/A'}</p>
+                <p>{customer?.joinedDate ? new Date(customer.joinedDate).toLocaleDateString() : 'N/A'}</p>
               </div>
             </CardContent>
           </Card>
