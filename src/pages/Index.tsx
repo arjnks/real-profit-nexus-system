@@ -2,11 +2,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import Leaderboard from '@/components/Leaderboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart, Users, Award, Mail, Star, Gift } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
+  const { isAuthenticated, user } = useAuth();
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -26,21 +30,40 @@ const Index = () => {
                   Shop Now
                 </Link>
               </Button>
-              <Button asChild size="lg" className="bg-realprofit-green text-white hover:bg-realprofit-green/90">
-                <Link to="/register">
-                  <Users className="mr-2 h-5 w-5" />
-                  Register Now
-                </Link>
-              </Button>
-              <Button asChild size="lg" className="bg-realprofit-gold text-white hover:bg-realprofit-gold/90">
-                <Link to="/login">
-                  Login Now
-                </Link>
-              </Button>
+              {!isAuthenticated ? (
+                <>
+                  <Button asChild size="lg" className="bg-realprofit-green text-white hover:bg-realprofit-green/90">
+                    <Link to="/register">
+                      <Users className="mr-2 h-5 w-5" />
+                      Register Now
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" className="bg-realprofit-gold text-white hover:bg-realprofit-gold/90">
+                    <Link to="/login">
+                      Login Now
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <Button asChild size="lg" className="bg-realprofit-gold text-white hover:bg-realprofit-gold/90">
+                  <Link to="/profile">
+                    Welcome, {user?.name}
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </section>
+
+      {/* Leaderboard Section for Signed-in Customers */}
+      {isAuthenticated && user?.role === 'customer' && (
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Leaderboard isAdmin={false} showOffer={true} />
+          </div>
+        </section>
+      )}
 
       {/* Malayalam System Description */}
       <section className="py-16 bg-gradient-to-r from-blue-50 to-green-50">

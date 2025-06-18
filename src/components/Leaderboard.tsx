@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Medal, Award, Crown } from 'lucide-react';
+import { Trophy, Medal, Award, Crown, AlertCircle } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import type { LeaderboardEntry, LeaderboardConfig } from '@/types';
+import { toast } from 'sonner';
 
 interface LeaderboardProps {
   isAdmin?: boolean;
@@ -15,31 +16,38 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isAdmin = false, showOffer = 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [config, setConfig] = useState<LeaderboardConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLeaderboard();
-    if (showOffer) {
-      fetchConfig();
-    }
-  }, [showOffer]);
+    fetchLeaderboardData();
+  }, [isAdmin, showOffer]);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboardData = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      const data = await supabaseService.getLeaderboard(isAdmin ? undefined : 50);
-      setLeaderboard(data);
+      console.log('Fetching leaderboard data...');
+      
+      // Fetch leaderboard data
+      const leaderboardData = await supabaseService.getLeaderboard(isAdmin ? undefined : 50);
+      console.log('Leaderboard data received:', leaderboardData);
+      setLeaderboard(leaderboardData || []);
+
+      // Fetch config if needed
+      if (showOffer) {
+        const configData = await supabaseService.getLeaderboardConfig();
+        console.log('Leaderboard config received:', configData);
+        setConfig(configData);
+      }
+      
+      toast.success('Leaderboard loaded successfully');
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      console.error('Error fetching leaderboard data:', error);
+      setError('Failed to load leaderboard data');
+      toast.error('Failed to load leaderboard');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchConfig = async () => {
-    try {
-      const configData = await supabaseService.getLeaderboardConfig();
-      setConfig(configData);
-    } catch (error) {
-      console.error('Error fetching leaderboard config:', error);
     }
   };
 
@@ -70,11 +78,37 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isAdmin = false, showOffer = 
     return config && rank <= config.top_count;
   };
 
+  const formatCurrency = (amount: number) => {
+    return `₹${Number(amount).toFixed(2)}`;
+  };
+
   if (loading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <div className="text-center">Loading leaderboard...</div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading leaderboard...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <button 
+              onClick={fetchLeaderboardData}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -117,14 +151,18 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isAdmin = false, showOffer = 
           <div className="space-y-4">
             {leaderboard.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No customers found
+                <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">No customers found</p>
+                <p className="text-sm">Start shopping to appear on the leaderboard!</p>
               </div>
             ) : (
               leaderboard.map((entry) => (
                 <div
                   key={entry.id}
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
-                    isTopPerformer(entry.rank) ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'
+                  className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                    isTopPerformer(entry.rank) 
+                      ? 'border-yellow-200 bg-yellow-50 shadow-sm' 
+                      : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-center gap-4">
@@ -152,7 +190,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isAdmin = false, showOffer = 
                   <div className="text-right">
                     <div className="font-bold text-lg">{entry.points.toLocaleString()} pts</div>
                     <div className="text-sm text-muted-foreground">
-                      ₹{entry.total_spent.toFixed(2)} spent
+                      {formatCurrency(entry.total_spent)} spent
                     </div>
                   </div>
                 </div>

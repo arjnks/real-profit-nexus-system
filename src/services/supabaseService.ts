@@ -13,6 +13,15 @@ const parseJsonField = (field: any, defaultValue: any) => {
   }
 };
 
+// Helper function to add timeout to queries
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 10000): Promise<T> => {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Query timeout')), timeoutMs);
+  });
+  
+  return Promise.race([promise, timeoutPromise]);
+};
+
 // Transform database customer to application Customer type
 const transformCustomer = (dbCustomer: any): Customer => ({
   id: dbCustomer.id,
@@ -42,15 +51,15 @@ const transformCustomer = (dbCustomer: any): Customer => ({
 // Transform database product to application Product type
 const transformProduct = (dbProduct: any): Product => ({
   id: dbProduct.id,
-  name: dbProduct.name,
-  price: Number(dbProduct.price),
-  mrp: Number(dbProduct.mrp),
+  name: dbProduct.name || '',
+  price: Number(dbProduct.price) || 0,
+  mrp: Number(dbProduct.mrp) || 0,
   dummyPrice: dbProduct.dummy_price ? Number(dbProduct.dummy_price) : undefined,
-  image: dbProduct.image,
-  description: dbProduct.description,
-  category: dbProduct.category,
-  inStock: dbProduct.in_stock,
-  stockQuantity: dbProduct.stock_quantity,
+  image: dbProduct.image || '/placeholder.svg',
+  description: dbProduct.description || '',
+  category: dbProduct.category || 'General',
+  inStock: dbProduct.in_stock !== false,
+  stockQuantity: Number(dbProduct.stock_quantity) || 0,
   tierDiscounts: parseJsonField(dbProduct.tier_discounts, {
     Bronze: 2,
     Silver: 3,
@@ -403,19 +412,37 @@ export const supabaseService = {
     return true;
   },
 
-  // Product operations
+  // Product operations with improved error handling
   async getProducts(): Promise<Product[]> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      console.log('Fetching products from Supabase...');
+      
+      const query = supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching products:', error);
+      const { data, error } = await withTimeout(query, 8000);
+
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn('No product data returned from Supabase');
+        return [];
+      }
+
+      console.log(`Successfully fetched ${data.length} products`);
+      return data.map(transformProduct);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      if (error.message === 'Query timeout') {
+        throw new Error('Products are taking too long to load. Please try again.');
+      }
       throw error;
     }
-
-    return data?.map(transformProduct) || [];
   },
 
   async addProduct(productData: Omit<Product, 'id'>): Promise<Product | null> {
