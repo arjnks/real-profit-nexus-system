@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ImageUploader from '@/components/ImageUploader';
+import ImageModal from '@/components/ImageModal';
 import { Edit, Save, X, Plus, Trash2 } from 'lucide-react';
 
 interface ClubImage {
@@ -165,11 +166,16 @@ const ClubTierCard = ({ title, images = [], color, onUpdate, isAdmin = false }: 
             <div key={img.id} className="border rounded-lg p-3">
               {img.image && (
                 <div className="mb-3">
-                  <img
-                    src={img.image}
+                  <ImageModal 
+                    src={img.image} 
                     alt={img.title || `${title} image ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-md"
-                  />
+                  >
+                    <img
+                      src={img.image}
+                      alt={img.title || `${title} image ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-md hover:opacity-90 transition-opacity"
+                    />
+                  </ImageModal>
                 </div>
               )}
               {img.title && (
