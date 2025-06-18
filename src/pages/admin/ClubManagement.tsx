@@ -1,10 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import ClubTierCard from '@/components/ClubTierCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Eye, EyeOff } from 'lucide-react';
 
 interface ClubImage {
   id: string;
@@ -29,7 +28,6 @@ const ClubManagement = () => {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [showDetails, setShowDetails] = useState(true);
 
   // Load club tier data from database on component mount
   useEffect(() => {
@@ -160,31 +158,11 @@ const ClubManagement = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Club Management</h1>
-            <p className="text-muted-foreground">
-              Manage club tier images and special prices to attract customers
-            </p>
-          </div>
-          
-          <Button
-            variant="outline"
-            onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-2"
-          >
-            {showDetails ? (
-              <>
-                <EyeOff className="h-4 w-4" />
-                Hide Details
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4" />
-                Show Details
-              </>
-            )}
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Club Management</h1>
+          <p className="text-muted-foreground">
+            Manage club tier images and special prices to attract customers
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -221,17 +199,15 @@ const ClubManagement = () => {
           />
         </div>
 
-        {showDetails && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-medium text-blue-900 mb-2">How it works</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Upload multiple attractive images for each club tier to showcase benefits</li>
-              <li>• Add individual titles, descriptions, and prices for each image</li>
-              <li>• These will be displayed on the homepage to attract new customers</li>
-              <li>• Changes are saved automatically to the database when you click Save</li>
-            </ul>
-          </div>
-        )}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-medium text-blue-900 mb-2">How it works</h3>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• Upload multiple attractive images for each club tier to showcase benefits</li>
+            <li>• Add individual titles, descriptions, and prices for each image</li>
+            <li>• These will be displayed on the homepage to attract new customers</li>
+            <li>• Changes are saved automatically to the database when you click Save</li>
+          </ul>
+        </div>
       </div>
     </AdminLayout>
   );

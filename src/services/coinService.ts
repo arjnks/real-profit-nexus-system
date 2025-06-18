@@ -37,18 +37,27 @@ export const coinService = {
     const coinsEarned = this.calculateCoinsFromPurchase(purchaseAmount);
     const coinValue = this.getCoinValue();
     
-    try {
-      // Record coin transaction - temporarily disabled due to type issues
-      console.log(`Would award ${coinsEarned} coins to ${customerCode} for order ${orderId}`);
-      
-      // Update user's coin wallet
-      await this.updateCoinWallet(customerCode);
-      
-      return coinsEarned;
-    } catch (error) {
+    // Record coin transaction
+    const { error } = await supabase
+      .from('coin_transactions')
+      .insert({
+        user_code: customerCode,
+        transaction_type: 'earned',
+        amount: coinsEarned,
+        coin_value: coinValue,
+        source_order_id: orderId,
+        description: `Coins earned from purchase order ${orderId}`
+      });
+
+    if (error) {
       console.error('Error recording coin transaction:', error);
       throw error;
     }
+
+    // Update user's coin wallet
+    await this.updateCoinWallet(customerCode);
+    
+    return coinsEarned;
   },
 
   // Distribute coins through MLM hierarchy
@@ -71,8 +80,18 @@ export const coinService = {
       const coinsToDistribute = Math.floor(coinsEarned * distributionRate);
       
       if (coinsToDistribute > 0) {
-        // Record distribution transaction - temporarily disabled
-        console.log(`Would distribute ${coinsToDistribute} coins to ${parent.code} from ${customerCode} (Level ${level})`);
+        // Record distribution transaction
+        await supabase
+          .from('coin_transactions')
+          .insert({
+            user_code: parent.code,
+            transaction_type: 'received',
+            amount: coinsToDistribute,
+            coin_value: coinValue,
+            source_order_id: orderId,
+            source_user_code: customerCode,
+            description: `MLM distribution from ${customerCode} (Level ${level})`
+          });
 
         // Update parent's coin wallet
         await this.updateCoinWallet(parent.code);
@@ -85,46 +104,65 @@ export const coinService = {
 
   // Update coin wallet balance
   async updateCoinWallet(userCode: string): Promise<void> {
-    try {
-      // Temporarily disabled due to type issues
-      console.log(`Would update coin wallet for ${userCode}`);
-      
-      const totalCoins = 0; // Placeholder
-      const totalValue = totalCoins * this.getCoinValue();
+    const { data: transactions, error } = await supabase
+      .from('coin_transactions')
+      .select('amount, transaction_type')
+      .eq('user_code', userCode);
 
-      // Upsert coin wallet - temporarily disabled
-      console.log(`Wallet update: ${userCode} - ${totalCoins} coins, ₹${totalValue}`);
-    } catch (error) {
-      console.error('Error updating coin wallet:', error);
+    if (error) {
+      console.error('Error fetching coin transactions:', error);
+      return;
     }
+
+    const totalCoins = transactions?.reduce((sum, tx) => {
+      return tx.transaction_type === 'redeemed' 
+        ? sum - tx.amount 
+        : sum + tx.amount;
+    }, 0) || 0;
+
+    const totalValue = totalCoins * this.getCoinValue();
+
+    // Upsert coin wallet
+    await supabase
+      .from('coin_wallets')
+      .upsert({
+        user_code: userCode,
+        total_coins: totalCoins,
+        total_value: totalValue,
+        last_updated: new Date().toISOString()
+      }, { onConflict: 'user_code' });
   },
 
   // Get user's coin wallet
   async getCoinWallet(userCode: string): Promise<CoinWallet | null> {
-    try {
-      // Temporarily return mock data
-      return {
-        user_code: userCode,
-        total_coins: 0,
-        total_value: 0,
-        last_updated: new Date().toISOString()
-      };
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('coin_wallets')
+      .select('*')
+      .eq('user_code', userCode)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
       console.error('Error fetching coin wallet:', error);
       return null;
     }
+
+    return data;
   },
 
   // Get coin transaction history
   async getCoinTransactions(userCode: string): Promise<CoinTransaction[]> {
-    try {
-      // Temporarily return empty array
-      console.log(`Would fetch coin transactions for ${userCode}`);
-      return [];
-    } catch (error) {
+    const { data, error } = await supabase
+      .from('coin_transactions')
+      .select('*')
+      .eq('user_code', userCode)
+      .order('created_at', { ascending: false });
+
+    if (error) {
       console.error('Error fetching coin transactions:', error);
       return [];
     }
+
+    return data || [];
   },
 
   // Redeem coins (convert to discount/cash)
@@ -136,17 +174,26 @@ export const coinService = {
 
     const coinValue = this.getCoinValue();
     
-    try {
-      // Record redemption transaction - temporarily disabled
-      console.log(`Would redeem ${coinsToRedeem} coins for ${userCode}${orderId ? ` for order ${orderId}` : ''}`);
+    // Record redemption transaction
+    const { error } = await supabase
+      .from('coin_transactions')
+      .insert({
+        user_code: userCode,
+        transaction_type: 'redeemed',
+        amount: coinsToRedeem,
+        coin_value: coinValue,
+        source_order_id: orderId,
+        description: `Coins redeemed${orderId ? ` for order ${orderId}` : ''}`
+      });
 
-      // Update wallet
-      await this.updateCoinWallet(userCode);
-      
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error recording coin redemption:', error);
       throw error;
     }
+
+    // Update wallet
+    await this.updateCoinWallet(userCode);
+    
+    return true;
   }
 };

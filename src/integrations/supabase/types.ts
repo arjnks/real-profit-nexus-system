@@ -99,63 +99,6 @@ export type Database = {
         }
         Relationships: []
       }
-      coin_transactions: {
-        Row: {
-          amount: number
-          coin_value: number
-          created_at: string
-          description: string
-          id: string
-          source_order_id: string | null
-          source_user_code: string | null
-          transaction_type: string
-          user_code: string
-        }
-        Insert: {
-          amount: number
-          coin_value?: number
-          created_at?: string
-          description: string
-          id?: string
-          source_order_id?: string | null
-          source_user_code?: string | null
-          transaction_type: string
-          user_code: string
-        }
-        Update: {
-          amount?: number
-          coin_value?: number
-          created_at?: string
-          description?: string
-          id?: string
-          source_order_id?: string | null
-          source_user_code?: string | null
-          transaction_type?: string
-          user_code?: string
-        }
-        Relationships: []
-      }
-      coin_wallets: {
-        Row: {
-          last_updated: string
-          total_coins: number
-          total_value: number
-          user_code: string
-        }
-        Insert: {
-          last_updated?: string
-          total_coins?: number
-          total_value?: number
-          user_code: string
-        }
-        Update: {
-          last_updated?: string
-          total_coins?: number
-          total_value?: number
-          user_code?: string
-        }
-        Relationships: []
-      }
       customers: {
         Row: {
           accumulated_point_money: number
