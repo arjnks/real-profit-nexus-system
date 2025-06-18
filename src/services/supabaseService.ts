@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
 import bcrypt from 'bcryptjs';
@@ -153,14 +152,13 @@ export const supabaseService = {
     try {
       console.log('Attempting admin authentication for username:', username);
       
-      const { data, error } = await withTimeout(
-        supabase
-          .from('admin_users')
-          .select('*')
-          .eq('username', username)
-          .single(),
-        8000
-      );
+      const query = supabase
+        .from('admin_users')
+        .select('*')
+        .eq('username', username)
+        .single();
+
+      const { data, error } = await withTimeout(query, 8000);
 
       console.log('Admin query result:', { data, error });
 
