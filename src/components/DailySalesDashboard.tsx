@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
+import { Calendar, TrendingUp, DollarSign, ShoppingCart, AlertCircle } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import type { DailySales } from '@/types';
+import { toast } from 'sonner';
 
 const DailySalesDashboard = () => {
   const [todaysSales, setTodaysSales] = useState<DailySales | null>(null);
@@ -14,43 +15,75 @@ const DailySalesDashboard = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
-    fetchTodaysSales();
-    fetchRecentSales();
+    fetchInitialData();
   }, []);
 
-  const fetchTodaysSales = async () => {
+  const fetchInitialData = async () => {
+    setLoading(true);
     try {
-      const sales = await supabaseService.getTodaysSales();
-      setTodaysSales(sales);
-    } catch (error) {
-      console.error('Error fetching today\'s sales:', error);
-    }
-  };
+      console.log('Fetching initial sales data...');
+      
+      // Fetch today's sales
+      const todaySales = await supabaseService.getTodaysSales();
+      console.log('Today\'s sales:', todaySales);
+      setTodaysSales(todaySales);
 
-  const fetchRecentSales = async () => {
-    try {
-      const sales = await supabaseService.getDailySales();
-      setHistoricalSales(sales.slice(0, 30)); // Last 30 days
-      setLoading(false);
+      // Fetch recent sales (last 30 days)
+      const recentSales = await supabaseService.getDailySales();
+      console.log('Recent sales:', recentSales);
+      setHistoricalSales(recentSales.slice(0, 30));
+      
+      toast.success('Sales data loaded successfully');
     } catch (error) {
-      console.error('Error fetching recent sales:', error);
+      console.error('Error fetching initial sales data:', error);
+      toast.error('Failed to load sales data');
+    } finally {
       setLoading(false);
     }
   };
 
   const handleDateRangeSearch = async () => {
-    if (!startDate || !endDate) return;
+    if (!startDate || !endDate) {
+      toast.error('Please select both start and end dates');
+      return;
+    }
     
-    setLoading(true);
+    if (new Date(startDate) > new Date(endDate)) {
+      toast.error('Start date cannot be after end date');
+      return;
+    }
+    
+    setSearchLoading(true);
     try {
+      console.log('Searching sales by date range:', { startDate, endDate });
       const sales = await supabaseService.getSalesByDateRange(startDate, endDate);
+      console.log('Date range sales:', sales);
       setHistoricalSales(sales);
+      toast.success(`Found ${sales.length} sales records`);
     } catch (error) {
       console.error('Error fetching sales by date range:', error);
+      toast.error('Failed to fetch sales data for selected date range');
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
+    }
+  };
+
+  const resetToRecentSales = async () => {
+    setStartDate('');
+    setEndDate('');
+    setSearchLoading(true);
+    try {
+      const recentSales = await supabaseService.getDailySales();
+      setHistoricalSales(recentSales.slice(0, 30));
+      toast.success('Reset to recent sales data');
+    } catch (error) {
+      console.error('Error resetting to recent sales:', error);
+      toast.error('Failed to reset sales data');
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -62,15 +95,36 @@ const DailySalesDashboard = () => {
     });
   };
 
-  const totalHistoricalSales = historicalSales.reduce((sum, sale) => sum + sale.total_sales, 0);
-  const totalHistoricalPoints = historicalSales.reduce((sum, sale) => sum + sale.total_points, 0);
-  const totalHistoricalOrders = historicalSales.reduce((sum, sale) => sum + sale.total_orders, 0);
+  const formatCurrency = (amount: number) => {
+    return `₹${amount.toFixed(2)}`;
+  };
+
+  const totalHistoricalSales = historicalSales.reduce((sum, sale) => sum + Number(sale.total_sales), 0);
+  const totalHistoricalPoints = historicalSales.reduce((sum, sale) => sum + Number(sale.total_points), 0);
+  const totalHistoricalOrders = historicalSales.reduce((sum, sale) => sum + Number(sale.total_orders), 0);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Daily Sales Dashboard</h2>
+          <p className="text-muted-foreground">Loading sales data...</p>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p>Loading sales dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Daily Sales Dashboard</h2>
-        <p className="text-muted-foreground">Track daily sales performance and points awarded</p>
+        <p className="text-muted-foreground">Track daily sales performance and points awarded from Supabase</p>
       </div>
 
       {/* Today's Sales */}
@@ -81,7 +135,9 @@ const DailySalesDashboard = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{todaysSales?.total_sales?.toFixed(2) || '0.00'}</div>
+            <div className="text-2xl font-bold">
+              {todaysSales ? formatCurrency(Number(todaysSales.total_sales)) : '₹0.00'}
+            </div>
             <p className="text-xs text-muted-foreground">
               {todaysSales?.total_orders || 0} orders today
             </p>
@@ -115,10 +171,10 @@ const DailySalesDashboard = () => {
       <Card>
         <CardHeader>
           <CardTitle>Historical Sales</CardTitle>
-          <CardDescription>View sales data for specific date range</CardDescription>
+          <CardDescription>View sales data for specific date range (Data from Supabase)</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-end mb-4">
+          <div className="flex flex-wrap gap-4 items-end mb-4">
             <div className="grid w-full max-w-sm items-center gap-1.5">
               <label htmlFor="start-date" className="text-sm font-medium">Start Date</label>
               <Input
@@ -137,17 +193,29 @@ const DailySalesDashboard = () => {
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
-            <Button onClick={handleDateRangeSearch} disabled={!startDate || !endDate}>
-              <Calendar className="h-4 w-4 mr-2" />
-              Search
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleDateRangeSearch} 
+                disabled={!startDate || !endDate || searchLoading}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {searchLoading ? 'Searching...' : 'Search'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={resetToRecentSales}
+                disabled={searchLoading}
+              >
+                Reset
+              </Button>
+            </div>
           </div>
 
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-3 mb-6">
             <Card>
               <CardContent className="pt-6">
-                <div className="text-2xl font-bold">₹{totalHistoricalSales.toFixed(2)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(totalHistoricalSales)}</div>
                 <p className="text-xs text-muted-foreground">Total Sales</p>
               </CardContent>
             </Card>
@@ -178,30 +246,57 @@ const DailySalesDashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {searchLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
+                        Loading sales data...
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ) : historicalSales.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">No sales data found</TableCell>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="flex flex-col items-center">
+                        <AlertCircle className="h-12 w-12 text-muted-foreground mb-2" />
+                        <p className="text-lg font-medium">No sales data found</p>
+                        <p className="text-sm text-muted-foreground">
+                          {startDate && endDate 
+                            ? `No sales found for the selected date range`
+                            : 'No sales data available in the database'
+                          }
+                        </p>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ) : (
-                  historicalSales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell>{formatDate(sale.sale_date)}</TableCell>
-                      <TableCell>₹{sale.total_sales.toFixed(2)}</TableCell>
-                      <TableCell>{sale.total_points}</TableCell>
-                      <TableCell>{sale.total_orders}</TableCell>
-                      <TableCell>
-                        ₹{sale.total_orders > 0 ? (sale.total_sales / sale.total_orders).toFixed(2) : '0.00'}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  historicalSales.map((sale) => {
+                    const totalSales = Number(sale.total_sales);
+                    const totalOrders = Number(sale.total_orders);
+                    const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+                    
+                    return (
+                      <TableRow key={sale.id}>
+                        <TableCell className="font-medium">{formatDate(sale.sale_date)}</TableCell>
+                        <TableCell>{formatCurrency(totalSales)}</TableCell>
+                        <TableCell>{sale.total_points}</TableCell>
+                        <TableCell>{totalOrders}</TableCell>
+                        <TableCell>{formatCurrency(avgOrderValue)}</TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {historicalSales.length > 0 && (
+            <div className="mt-4 text-sm text-muted-foreground">
+              Showing {historicalSales.length} sales record{historicalSales.length !== 1 ? 's' : ''} 
+              {startDate && endDate ? ` from ${formatDate(startDate)} to ${formatDate(endDate)}` : ' (last 30 days)'}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
