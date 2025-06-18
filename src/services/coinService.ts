@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface CoinTransaction {
   id: string;
   user_code: string;
-  transaction_type: 'earned' | 'received' | 'redeemed';
+  transaction_type: string; // Changed from union type to string to match database
   amount: number;
   coin_value: number;
   source_order_id?: string;
