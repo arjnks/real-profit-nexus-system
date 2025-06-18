@@ -31,8 +31,9 @@ const Shop = () => {
   } = useCart();
 
   useEffect(() => {
-    console.log('Shop page - Products updated:', products.length, 'products loaded');
-    if (products.length === 0 && !isLoading && !error) {
+    console.log('Shop page - Products updated:', products?.length || 0, 'products loaded');
+    console.log('Shop page - Products data:', products);
+    if ((!products || products.length === 0) && !isLoading && !error) {
       console.warn('No products found in shop page');
     }
   }, [products, isLoading, error]);
@@ -40,12 +41,12 @@ const Shop = () => {
   useEffect(() => {
     console.log('Shop page mounted, refreshing data...');
     refreshData();
-  }, []);
+  }, [refreshData]);
 
   // Filter products safely
   const filteredProducts = React.useMemo(() => {
-    if (!Array.isArray(products)) {
-      console.warn('Products is not an array:', products);
+    if (!Array.isArray(products) || products.length === 0) {
+      console.warn('Products is not an array or empty:', products);
       return [];
     }
 
@@ -68,7 +69,7 @@ const Shop = () => {
 
   // Get unique categories safely
   const categories = React.useMemo(() => {
-    if (!Array.isArray(products)) {
+    if (!Array.isArray(products) || products.length === 0) {
       return ['all'];
     }
 
@@ -86,7 +87,7 @@ const Shop = () => {
     try {
       console.log('Manual refresh triggered...');
       await refreshData();
-      console.log('Manual refresh completed, products count:', products.length);
+      console.log('Manual refresh completed, products count:', products?.length || 0);
       toast.success('Products refreshed successfully');
     } catch (error) {
       console.error('Failed to refresh products:', error);
@@ -104,7 +105,7 @@ const Shop = () => {
     }
     
     try {
-      const cartItems = getCartItems(products).map(item => ({
+      const cartItems = getCartItems(products || []).map(item => ({
         product: {
           id: item.productId,
           name: item.name,
@@ -221,7 +222,7 @@ const Shop = () => {
           <h1 className="text-3xl font-bold">Shop</h1>
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-500">
-              {products.length} products available
+              {(products?.length || 0)} products available
             </div>
             
             <Button
@@ -363,13 +364,13 @@ const Shop = () => {
           <div className="text-center py-12">
             <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-lg">
-              {products.length === 0 
+              {(!products || products.length === 0)
                 ? 'No products available at the moment.' 
                 : searchTerm || selectedCategory !== 'all' 
                   ? 'No products found matching your criteria.' 
                   : 'No products available at the moment.'}
             </p>
-            {products.length === 0 && (
+            {(!products || products.length === 0) && (
               <div className="mt-4">
                 <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
                   <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -382,8 +383,8 @@ const Shop = () => {
 
         {/* Cart Summary */}
         <CartSummary
-          cartItems={getCartItems(products)}
-          totalPrice={getTotalPrice(products)}
+          cartItems={getCartItems(products || [])}
+          totalPrice={getTotalPrice(products || [])}
           totalItems={getTotalItems()}
           onCheckout={handleCheckout}
           isLoggedIn={!!user}

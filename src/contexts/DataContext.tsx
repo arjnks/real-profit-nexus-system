@@ -58,7 +58,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Fetch all data concurrently but handle errors individually
       const [
         fetchedCustomers,
-        fetchedCategories,
+        fetchedCategories, 
         fetchedProducts,
         fetchedServices,
         fetchedOrders
@@ -86,29 +86,44 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ]);
 
       // Set data based on results
-      if (fetchedCustomers.status === 'fulfilled') {
+      if (fetchedCustomers.status === 'fulfilled' && Array.isArray(fetchedCustomers.value)) {
         setCustomers(fetchedCustomers.value);
         console.log(`Loaded ${fetchedCustomers.value.length} customers`);
+      } else {
+        console.warn('Failed to load customers:', fetchedCustomers);
+        setCustomers([]);
       }
       
-      if (fetchedCategories.status === 'fulfilled') {
+      if (fetchedCategories.status === 'fulfilled' && Array.isArray(fetchedCategories.value)) {
         setCategories(fetchedCategories.value);
         console.log(`Loaded ${fetchedCategories.value.length} categories`);
+      } else {
+        console.warn('Failed to load categories:', fetchedCategories);
+        setCategories([]);
       }
       
-      if (fetchedProducts.status === 'fulfilled') {
+      if (fetchedProducts.status === 'fulfilled' && Array.isArray(fetchedProducts.value)) {
         setProducts(fetchedProducts.value);
         console.log(`Loaded ${fetchedProducts.value.length} products`);
+      } else {
+        console.warn('Failed to load products:', fetchedProducts);
+        setProducts([]);
       }
       
-      if (fetchedServices.status === 'fulfilled') {
+      if (fetchedServices.status === 'fulfilled' && Array.isArray(fetchedServices.value)) {
         setServices(fetchedServices.value);
         console.log(`Loaded ${fetchedServices.value.length} services`);
+      } else {
+        console.warn('Failed to load services:', fetchedServices);
+        setServices([]);
       }
       
-      if (fetchedOrders.status === 'fulfilled') {
+      if (fetchedOrders.status === 'fulfilled' && Array.isArray(fetchedOrders.value)) {
         setOrders(fetchedOrders.value);
         console.log(`Loaded ${fetchedOrders.value.length} orders`);
+      } else {
+        console.warn('Failed to load orders:', fetchedOrders);
+        setOrders([]);
       }
 
       // Check if any critical data failed to load
@@ -122,7 +137,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (failedRequests.length > 0) {
         console.warn(`${failedRequests.length} requests failed during data refresh`);
-        setError(`Some data failed to load. Please try refreshing the page.`);
+        // Don't set error state unless all requests failed
+        if (failedRequests.length === 5) {
+          setError(`Failed to load data. Please try refreshing the page.`);
+        }
       }
 
       console.log('Data refresh completed successfully');
