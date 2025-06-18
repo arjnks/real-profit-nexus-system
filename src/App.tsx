@@ -20,6 +20,7 @@ import Profile from "./pages/Profile";
 import Orders from "./pages/Orders";
 import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
+import LeaderboardPage from "./pages/LeaderboardPage";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -33,6 +34,8 @@ import AdminMLMNetwork from "./pages/admin/MLMNetwork";
 import AdminClubManagement from "./pages/admin/ClubManagement";
 import AddCustomer from "./pages/admin/AddCustomer";
 import EditCustomer from "./pages/admin/EditCustomer";
+import SalesDashboard from "./pages/admin/SalesDashboard";
+import LeaderboardAdmin from "./pages/admin/LeaderboardAdmin";
 
 // Membership pages
 import Bronze from "./pages/membership/Bronze";
@@ -61,6 +64,7 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/leaderboard" element={<LeaderboardPage />} />
                     
                     {/* Customer routes */}
                     <Route 
@@ -156,6 +160,22 @@ function App() {
                       element={
                         <ProtectedRoute requiredRole="admin">
                           <AdminPurchases />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/sales" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <SalesDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/leaderboard" 
+                      element={
+                        <ProtectedRoute requiredRole="admin">
+                          <LeaderboardAdmin />
                         </ProtectedRoute>
                       } 
                     />
