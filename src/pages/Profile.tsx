@@ -6,7 +6,7 @@ import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { User, Phone, CreditCard, Trophy, Mail, Award } from 'lucide-react';
+import { User, Phone, CreditCard, Mail, Award } from 'lucide-react';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -17,16 +17,6 @@ const Profile = () => {
   }
 
   const customer = customers.find(c => c.id === user.id);
-
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'Bronze': return 'text-amber-700 bg-amber-100';
-      case 'Silver': return 'text-gray-700 bg-gray-100';
-      case 'Gold': return 'text-yellow-700 bg-yellow-100';
-      case 'Diamond': return 'text-blue-700 bg-blue-100';
-      default: return 'text-gray-700 bg-gray-100';
-    }
-  };
 
   return (
     <Layout>
@@ -66,8 +56,8 @@ const Profile = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Trophy className="h-5 w-5 mr-2" />
-                Membership Status
+                <CreditCard className="h-5 w-5 mr-2" />
+                Account Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -77,12 +67,6 @@ const Profile = () => {
                   <CreditCard className="h-4 w-4 mr-2" />
                   {customer?.code}
                 </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Current Tier</label>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getTierColor(customer?.tier || 'Bronze')}`}>
-                  {customer?.tier}
-                </span>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Total Spent</label>

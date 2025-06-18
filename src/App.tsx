@@ -37,12 +37,6 @@ import EditCustomer from "./pages/admin/EditCustomer";
 import SalesDashboard from "./pages/admin/SalesDashboard";
 import LeaderboardAdmin from "./pages/admin/LeaderboardAdmin";
 
-// Membership pages
-import Bronze from "./pages/membership/Bronze";
-import Silver from "./pages/membership/Silver";
-import Gold from "./pages/membership/Gold";
-import Diamond from "./pages/membership/Diamond";
-
 const queryClient = new QueryClient();
 
 function App() {
@@ -91,12 +85,6 @@ function App() {
                         </ProtectedRoute>
                       } 
                     />
-                    
-                    {/* Membership routes */}
-                    <Route path="/membership/bronze" element={<Bronze />} />
-                    <Route path="/membership/silver" element={<Silver />} />
-                    <Route path="/membership/gold" element={<Gold />} />
-                    <Route path="/membership/diamond" element={<Diamond />} />
                     
                     {/* Admin routes */}
                     <Route 
