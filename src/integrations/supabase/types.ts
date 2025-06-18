@@ -246,6 +246,69 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_sales: {
+        Row: {
+          created_at: string | null
+          id: string
+          sale_date: string
+          total_orders: number
+          total_points: number
+          total_sales: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          sale_date: string
+          total_orders?: number
+          total_points?: number
+          total_sales?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          sale_date?: string
+          total_orders?: number
+          total_points?: number
+          total_sales?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      leaderboard_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean
+          offer_description: string
+          offer_discount_percentage: number
+          offer_title: string
+          top_count: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          offer_description?: string
+          offer_discount_percentage?: number
+          offer_title?: string
+          top_count?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          offer_description?: string
+          offer_discount_percentage?: number
+          offer_title?: string
+          top_count?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       mlm_distributions: {
         Row: {
           amount: number
@@ -441,7 +504,21 @@ export type Database = {
             foreignKeyName: "fk_orders_customer"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_orders_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_leaderboard"
             referencedColumns: ["id"]
           },
           {
@@ -539,7 +616,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_leaderboard: {
+        Row: {
+          code: string | null
+          id: string | null
+          name: string | null
+          points: number | null
+          rank: number | null
+          tier: string | null
+          total_spent: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       distribute_commissions_from_level: {

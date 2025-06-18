@@ -100,3 +100,34 @@ export interface User {
   username?: string;
   role: 'customer' | 'admin';
 }
+
+export interface DailySales {
+  id: string;
+  sale_date: string;
+  total_sales: number;
+  total_points: number;
+  total_orders: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeaderboardConfig {
+  id: string;
+  top_count: number;
+  offer_title: string;
+  offer_description: string;
+  offer_discount_percentage: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  name: string;
+  code: string;
+  points: number;
+  total_spent: number;
+  tier: "Bronze" | "Silver" | "Gold" | "Diamond";
+  rank: number;
+}

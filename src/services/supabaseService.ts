@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import type { Customer, Product, Category, Service, Order } from '@/types';
+import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
 import bcrypt from 'bcryptjs';
 
 // Helper function to safely parse JSON fields
@@ -102,6 +101,40 @@ const transformService = (dbService: any): Service => ({
   image: dbService.image,
   category: dbService.category,
   isActive: dbService.is_active
+});
+
+// Transform database daily sales to application DailySales type
+const transformDailySales = (dbDailySales: any): DailySales => ({
+  id: dbDailySales.id,
+  sale_date: dbDailySales.sale_date,
+  total_sales: Number(dbDailySales.total_sales),
+  total_points: dbDailySales.total_points,
+  total_orders: dbDailySales.total_orders,
+  created_at: dbDailySales.created_at,
+  updated_at: dbDailySales.updated_at
+});
+
+// Transform database leaderboard config to application LeaderboardConfig type
+const transformLeaderboardConfig = (dbConfig: any): LeaderboardConfig => ({
+  id: dbConfig.id,
+  top_count: dbConfig.top_count,
+  offer_title: dbConfig.offer_title,
+  offer_description: dbConfig.offer_description,
+  offer_discount_percentage: dbConfig.offer_discount_percentage,
+  is_active: dbConfig.is_active,
+  created_at: dbConfig.created_at,
+  updated_at: dbConfig.updated_at
+});
+
+// Transform database leaderboard entry to application LeaderboardEntry type
+const transformLeaderboardEntry = (dbEntry: any): LeaderboardEntry => ({
+  id: dbEntry.id,
+  name: dbEntry.name,
+  code: dbEntry.code,
+  points: dbEntry.points,
+  total_spent: Number(dbEntry.total_spent),
+  tier: dbEntry.tier,
+  rank: dbEntry.rank
 });
 
 export const supabaseService = {
@@ -599,6 +632,103 @@ export const supabaseService = {
 
     if (error) {
       console.error('Error updating order:', error);
+      return false;
+    }
+
+    return true;
+  },
+
+  // Daily Sales operations
+  async getDailySales(): Promise<DailySales[]> {
+    const { data, error } = await supabase
+      .from('daily_sales')
+      .select('*')
+      .order('sale_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching daily sales:', error);
+      throw error;
+    }
+
+    return data?.map(transformDailySales) || [];
+  },
+
+  async getTodaysSales(): Promise<DailySales | null> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from('daily_sales')
+      .select('*')
+      .eq('sale_date', today)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching today\'s sales:', error);
+      return null;
+    }
+
+    return data ? transformDailySales(data) : null;
+  },
+
+  async getSalesByDateRange(startDate: string, endDate: string): Promise<DailySales[]> {
+    const { data, error } = await supabase
+      .from('daily_sales')
+      .select('*')
+      .gte('sale_date', startDate)
+      .lte('sale_date', endDate)
+      .order('sale_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching sales by date range:', error);
+      throw error;
+    }
+
+    return data?.map(transformDailySales) || [];
+  },
+
+  // Leaderboard operations
+  async getLeaderboard(limit?: number): Promise<LeaderboardEntry[]> {
+    let query = supabase
+      .from('customer_leaderboard')
+      .select('*');
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching leaderboard:', error);
+      throw error;
+    }
+
+    return data?.map(transformLeaderboardEntry) || [];
+  },
+
+  async getLeaderboardConfig(): Promise<LeaderboardConfig | null> {
+    const { data, error } = await supabase
+      .from('leaderboard_config')
+      .select('*')
+      .eq('is_active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching leaderboard config:', error);
+      return null;
+    }
+
+    return data ? transformLeaderboardConfig(data) : null;
+  },
+
+  async updateLeaderboardConfig(configData: Partial<LeaderboardConfig>): Promise<boolean> {
+    const { error } = await supabase
+      .from('leaderboard_config')
+      .update(configData)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error updating leaderboard config:', error);
       return false;
     }
 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -13,6 +12,7 @@ import {
   UserPlus,
   BarChart4,
   Calendar,
+  Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -125,20 +125,15 @@ const Dashboard = () => {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="h-auto py-4 justify-start">
-                <Link to="/admin/requests" className="flex flex-col items-center text-center">
-                  <ClipboardList className="h-6 w-6 mb-2" />
-                  <span>Review Requests</span>
-                  {pendingOrders > 0 && (
-                    <span className="text-xs bg-red-500 text-white rounded-full px-2 py-0.5 mt-1">
-                      {pendingOrders}
-                    </span>
-                  )}
+                <Link to="/admin/sales-dashboard" className="flex flex-col items-center text-center">
+                  <BarChart4 className="h-6 w-6 mb-2" />
+                  <span>Sales Dashboard</span>
                 </Link>
               </Button>
               <Button asChild variant="outline" className="h-auto py-4 justify-start">
-                <Link to="/admin/mlm" className="flex flex-col items-center text-center">
-                  <BarChart4 className="h-6 w-6 mb-2" />
-                  <span>MLM Tree</span>
+                <Link to="/admin/leaderboard" className="flex flex-col items-center text-center">
+                  <Trophy className="h-6 w-6 mb-2" />
+                  <span>Leaderboard</span>
                 </Link>
               </Button>
             </div>
