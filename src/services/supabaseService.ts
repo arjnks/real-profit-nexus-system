@@ -158,7 +158,8 @@ export const supabaseService = {
           .from('admin_users')
           .select('*')
           .eq('username', username)
-          .single(),
+          .single()
+          .then(result => result),
         8000
       );
 
@@ -332,7 +333,8 @@ export const supabaseService = {
         supabase
           .from('products')
           .select('*')
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .then(result => result),
         8000
       );
 
