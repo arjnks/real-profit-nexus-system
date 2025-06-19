@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
 import bcrypt from 'bcryptjs';
@@ -281,18 +280,61 @@ export const supabaseService = {
   },
 
   async addCustomer(customerData: any): Promise<Customer | null> {
-    console.log('addCustomer method needs implementation');
-    return null;
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .insert([customerData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding customer:', error);
+        throw error;
+      }
+
+      return data ? transformCustomer(data) : null;
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      return null;
+    }
   },
 
   async updateCustomer(id: string, customerData: any): Promise<boolean> {
-    console.log('updateCustomer method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update(customerData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating customer:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      return false;
+    }
   },
 
   async deleteCustomer(id: string): Promise<boolean> {
-    console.log('deleteCustomer method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting customer:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      return false;
+    }
   },
 
   // Category operations
@@ -311,18 +353,61 @@ export const supabaseService = {
   },
 
   async addCategory(categoryData: any): Promise<Category | null> {
-    console.log('addCategory method needs implementation');
-    return null;
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([categoryData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding category:', error);
+        throw error;
+      }
+
+      return data ? transformCategory(data) : null;
+    } catch (error) {
+      console.error('Error adding category:', error);
+      return null;
+    }
   },
 
   async updateCategory(id: string, categoryData: any): Promise<boolean> {
-    console.log('updateCategory method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update(categoryData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating category:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating category:', error);
+      return false;
+    }
   },
 
   async deleteCategory(id: string): Promise<boolean> {
-    console.log('deleteCategory method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting category:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      return false;
+    }
   },
 
   // Product operations with improved error handling
@@ -362,18 +447,61 @@ export const supabaseService = {
   },
 
   async addProduct(productData: any): Promise<Product | null> {
-    console.log('addProduct method needs implementation');
-    return null;
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([productData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding product:', error);
+        throw error;
+      }
+
+      return data ? transformProduct(data) : null;
+    } catch (error) {
+      console.error('Error adding product:', error);
+      return null;
+    }
   },
 
   async updateProduct(id: string, productData: any): Promise<boolean> {
-    console.log('updateProduct method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update(productData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating product:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating product:', error);
+      return false;
+    }
   },
 
   async deleteProduct(id: string): Promise<boolean> {
-    console.log('deleteProduct method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting product:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      return false;
+    }
   },
 
   // Service operations
@@ -392,43 +520,134 @@ export const supabaseService = {
   },
 
   async addService(serviceData: any): Promise<Service | null> {
-    console.log('addService method needs implementation');
-    return null;
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .insert([serviceData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding service:', error);
+        throw error;
+      }
+
+      return data ? transformService(data) : null;
+    } catch (error) {
+      console.error('Error adding service:', error);
+      return null;
+    }
   },
 
   async updateService(id: string, serviceData: any): Promise<boolean> {
-    console.log('updateService method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update(serviceData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating service:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating service:', error);
+      return false;
+    }
   },
 
   async deleteService(id: string): Promise<boolean> {
-    console.log('deleteService method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting service:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      return false;
+    }
   },
 
   // Order operations
   async getOrders(): Promise<Order[]> {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      console.log('Fetching orders from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching orders:', error);
+      if (error) {
+        console.error('Error fetching orders:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn('No order data returned from Supabase');
+        return [];
+      }
+
+      console.log(`Successfully fetched ${data.length} orders`);
+      return data.map(transformOrder);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
       throw error;
     }
-
-    return data?.map(transformOrder) || [];
   },
 
   async addOrder(orderData: any): Promise<Order | null> {
-    console.log('addOrder method needs implementation');
-    return null;
+    try {
+      console.log('Adding order to database:', orderData);
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([{
+          ...orderData,
+          order_date: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding order:', error);
+        throw error;
+      }
+
+      console.log('Order added successfully:', data);
+      return data ? transformOrder(data) : null;
+    } catch (error) {
+      console.error('Error adding order:', error);
+      return null;
+    }
   },
 
   async updateOrder(id: string, orderData: any): Promise<boolean> {
-    console.log('updateOrder method needs implementation');
-    return false;
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update(orderData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating order:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating order:', error);
+      return false;
+    }
   },
 
   // Daily Sales operations

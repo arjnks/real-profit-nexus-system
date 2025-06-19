@@ -5,8 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
-import { MLMProvider } from "@/contexts/MLMContext";
-import { MatrixMLMProvider } from "@/contexts/MatrixMLMContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import About from "./pages/About";
@@ -47,155 +45,151 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
             <DataProvider>
-              <MLMProvider>
-                <MatrixMLMProvider>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/services" element={<Services />} />
-                    <Route path="/shop" element={<Shop />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/leaderboard" element={<LeaderboardPage />} />
-                    
-                    {/* Customer routes */}
-                    <Route 
-                      path="/dashboard" 
-                      element={
-                        <ProtectedRoute>
-                          <CustomerDashboard />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/profile" 
-                      element={
-                        <ProtectedRoute>
-                          <Profile />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/orders" 
-                      element={
-                        <ProtectedRoute>
-                          <Orders />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    
-                    {/* Admin routes */}
-                    <Route 
-                      path="/admin/dashboard" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminDashboard />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/customers" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminCustomers />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/customers/add" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AddCustomer />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/customers/edit/:id" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <EditCustomer />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/products" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminProducts />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/services" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminServices />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/requests" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminRequests />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/purchases" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminPurchases />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/sales" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <SalesDashboard />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/leaderboard" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <LeaderboardAdmin />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/mlm-tree" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminMLMTree />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/mlm-network" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminMLMNetwork />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin/club-management" 
-                      element={
-                        <ProtectedRoute requiredRole="admin">
-                          <AdminClubManagement />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </MatrixMLMProvider>
-              </MLMProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
+                
+                {/* Customer routes */}
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ProtectedRoute>
+                      <CustomerDashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/orders" 
+                  element={
+                    <ProtectedRoute>
+                      <Orders />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                {/* Admin routes */}
+                <Route 
+                  path="/admin/dashboard" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/customers" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminCustomers />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/customers/add" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AddCustomer />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/customers/edit/:id" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <EditCustomer />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/products" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminProducts />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/services" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminServices />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/requests" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminRequests />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/purchases" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminPurchases />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/sales" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <SalesDashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/leaderboard" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <LeaderboardAdmin />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/mlm-tree" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminMLMTree />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/mlm-network" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminMLMNetwork />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/club-management" 
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminClubManagement />
+                    </ProtectedRoute>
+                  } 
+                />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </DataProvider>
           </AuthProvider>
         </BrowserRouter>
