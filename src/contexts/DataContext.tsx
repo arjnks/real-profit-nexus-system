@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 import type { Customer, Product, Category, Service, Order } from '@/types';
@@ -53,46 +52,51 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     try {
-      // Fetch products first as they're most commonly needed
-      console.log('DataContext: Fetching products...');
-      const fetchedProducts = await supabaseService.getProducts();
-      console.log(`DataContext: Got ${fetchedProducts.length} products`);
-      setProducts(fetchedProducts);
+      // Fetch all data in parallel
+      console.log('DataContext: Fetching all data...');
+      const [fetchedCustomers, fetchedCategories, fetchedProducts, fetchedServices, fetchedOrders] = await Promise.allSettled([
+        supabaseService.getCustomers(),
+        supabaseService.getCategories(),
+        supabaseService.getProducts(),
+        supabaseService.getServices(),
+        supabaseService.getOrders()
+      ]);
 
-      // Fetch other data in parallel but don't let failures block products
-      try {
-        const [fetchedCustomers, fetchedCategories, fetchedServices, fetchedOrders] = await Promise.allSettled([
-          supabaseService.getCustomers(),
-          supabaseService.getCategories(),
-          supabaseService.getServices(),
-          supabaseService.getOrders()
-        ]);
+      if (fetchedCustomers.status === 'fulfilled') {
+        console.log(`DataContext: Got ${fetchedCustomers.value.length} customers`);
+        setCustomers(fetchedCustomers.value);
+      } else {
+        console.warn('Failed to fetch customers:', fetchedCustomers.reason);
+      }
 
-        if (fetchedCustomers.status === 'fulfilled') {
-          setCustomers(fetchedCustomers.value);
-        } else {
-          console.warn('Failed to fetch customers:', fetchedCustomers.reason);
-        }
+      if (fetchedCategories.status === 'fulfilled') {
+        console.log(`DataContext: Got ${fetchedCategories.value.length} categories`);
+        setCategories(fetchedCategories.value);
+      } else {
+        console.warn('Failed to fetch categories:', fetchedCategories.reason);
+      }
 
-        if (fetchedCategories.status === 'fulfilled') {
-          setCategories(fetchedCategories.value);
-        } else {
-          console.warn('Failed to fetch categories:', fetchedCategories.reason);
-        }
+      if (fetchedProducts.status === 'fulfilled') {
+        console.log(`DataContext: Got ${fetchedProducts.value.length} products`);
+        setProducts(fetchedProducts.value);
+      } else {
+        console.warn('Failed to fetch products:', fetchedProducts.reason);
+      }
 
-        if (fetchedServices.status === 'fulfilled') {
-          setServices(fetchedServices.value);
-        } else {
-          console.warn('Failed to fetch services:', fetchedServices.reason);
-        }
+      if (fetchedServices.status === 'fulfilled') {
+        console.log(`DataContext: Got ${fetchedServices.value.length} services`);
+        setServices(fetchedServices.value);
+      } else {
+        console.warn('Failed to fetch services:', fetchedServices.reason);
+      }
 
-        if (fetchedOrders.status === 'fulfilled') {
-          setOrders(fetchedOrders.value);
-        } else {
-          console.warn('Failed to fetch orders:', fetchedOrders.reason);
-        }
-      } catch (error) {
-        console.warn('Some data failed to load:', error);
+      if (fetchedOrders.status === 'fulfilled') {
+        console.log(`DataContext: Got ${fetchedOrders.value.length} orders`);
+        setOrders(fetchedOrders.value);
+      } else {
+        console.error('Failed to fetch orders:', fetchedOrders.reason);
+        console.warn('Orders will be empty due to fetch failure');
+        setOrders([]);
       }
 
     } catch (error) {

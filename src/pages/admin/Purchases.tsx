@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -25,10 +24,17 @@ import { Search, Eye, Package, Clock, CheckCircle, XCircle, Truck, Calendar, Map
 import { format } from 'date-fns';
 
 const Purchases = () => {
-  const { orders, customers } = useData();
+  const { orders, customers, isLoading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // Add debugging
+  useEffect(() => {
+    console.log('Purchases page - Orders data:', orders);
+    console.log('Purchases page - Orders count:', orders.length);
+    console.log('Purchases page - Is loading:', isLoading);
+  }, [orders, isLoading]);
 
   // Filter orders
   const filteredOrders = orders.filter(order =>
@@ -86,123 +92,140 @@ const Purchases = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Purchase History</h1>
           <p className="text-muted-foreground">
-            View all customer orders and purchase history
+            View all customer orders and purchase history ({orders.length} orders found)
           </p>
         </div>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by customer name, phone, order ID, or customer code..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {isLoading && (
+        <div className="text-center py-6">
+          <p>Loading orders...</p>
         </div>
-      </div>
+      )}
 
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Customer Code</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Delivery Address</TableHead>
-              <TableHead>Products</TableHead>
-              <TableHead>Total Amount</TableHead>
-              <TableHead>Amount Paid</TableHead>
-              <TableHead>Points Earned</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Order Date</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order) => {
-                const customer = getCustomerByCode(order.customerCode);
-                const deliveryAddress = getDeliveryAddress(order);
-                return (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{order.customerName}</span>
-                        {customer && (
-                          <Badge variant="outline" className="text-xs w-fit">
-                            {customer.tier}
+      {!isLoading && orders.length === 0 && (
+        <div className="text-center py-6 text-muted-foreground">
+          <p>No orders found in the database.</p>
+          <p className="text-sm mt-2">This might indicate a data fetching issue.</p>
+        </div>
+      )}
+
+      {!isLoading && orders.length > 0 && (
+        <>
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by customer name, phone, order ID, or customer code..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Customer Code</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Delivery Address</TableHead>
+                  <TableHead>Products</TableHead>
+                  <TableHead>Total Amount</TableHead>
+                  <TableHead>Amount Paid</TableHead>
+                  <TableHead>Points Earned</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Order Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrders.length > 0 ? (
+                  filteredOrders.map((order) => {
+                    const customer = getCustomerByCode(order.customerCode);
+                    const deliveryAddress = getDeliveryAddress(order);
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.id}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{order.customerName}</span>
+                            {customer && (
+                              <Badge variant="outline" className="text-xs w-fit">
+                                {customer.tier}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="font-mono">
+                            {order.customerCode || 'N/A'}
                           </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="font-mono">
-                        {order.customerCode || 'N/A'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{order.customerPhone}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 max-w-[200px]">
-                        <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                        <span className="text-sm truncate" title={deliveryAddress}>
-                          {deliveryAddress}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-gray-500" />
-                        <span>{order.products.length} item(s)</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">₹{order.totalAmount.toFixed(2)}</TableCell>
-                    <TableCell className="text-green-600 font-medium">₹{order.amountPaid.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-blue-600 font-medium">₹{order.points}</span>
-                        {order.isPointsAwarded && (
-                          <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                            Awarded
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {format(new Date(order.orderDate), 'MMM dd, yyyy')}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openOrderDetails(order)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
+                        </TableCell>
+                        <TableCell>{order.customerPhone}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 max-w-[200px]">
+                            <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                            <span className="text-sm truncate" title={deliveryAddress}>
+                              {deliveryAddress}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-gray-500" />
+                            <span>{order.products.length} item(s)</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">₹{order.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell className="text-green-600 font-medium">₹{order.amountPaid.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="text-blue-600 font-medium">₹{order.points}</span>
+                            {order.isPointsAwarded && (
+                              <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                Awarded
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(order.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm">
+                              {format(new Date(order.orderDate), 'MMM dd, yyyy')}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openOrderDetails(order)}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-6 text-muted-foreground">
+                      No orders found
                     </TableCell>
                   </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={12} className="text-center py-6 text-muted-foreground">
-                  No orders found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
 
       {/* Order Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>

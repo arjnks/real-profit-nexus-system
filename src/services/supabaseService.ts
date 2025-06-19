@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
 import bcrypt from 'bcryptjs';
@@ -597,8 +598,10 @@ export const supabaseService = {
         return [];
       }
 
-      console.log(`Successfully fetched ${data.length} orders`);
-      return data.map(transformOrder);
+      console.log(`Successfully fetched ${data.length} orders from database:`, data);
+      const transformedOrders = data.map(transformOrder);
+      console.log('Transformed orders:', transformedOrders);
+      return transformedOrders;
     } catch (error) {
       console.error('Failed to fetch orders:', error);
       throw error;
