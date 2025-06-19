@@ -154,12 +154,13 @@ export const supabaseService = {
       console.log('Attempting admin authentication for username:', username);
       
       const { data, error } = await withTimeout(
-        supabase
-          .from('admin_users')
-          .select('*')
-          .eq('username', username)
-          .single()
-          .then(result => result),
+        Promise.resolve(
+          supabase
+            .from('admin_users')
+            .select('*')
+            .eq('username', username)
+            .single()
+        ),
         8000
       );
 
@@ -330,11 +331,12 @@ export const supabaseService = {
       console.log('Fetching products from Supabase...');
       
       const { data, error } = await withTimeout(
-        supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .then(result => result),
+        Promise.resolve(
+          supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false })
+        ),
         8000
       );
 
