@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -18,7 +19,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Search, Eye, Package, Clock, CheckCircle, XCircle, Truck, Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
@@ -29,14 +29,12 @@ const Purchases = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  // Add debugging
   useEffect(() => {
     console.log('Purchases page - Orders data:', orders);
     console.log('Purchases page - Orders count:', orders.length);
     console.log('Purchases page - Is loading:', isLoading);
   }, [orders, isLoading]);
 
-  // Filter orders
   const filteredOrders = orders.filter(order =>
     order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.customerPhone.includes(searchTerm) ||
@@ -71,7 +69,6 @@ const Purchases = () => {
   };
 
   const getDeliveryAddress = (order: any) => {
-    // Priority: order's delivery address, then customer's stored address, then pincode, then fallback
     return order.deliveryAddress || 
            getCustomerByCode(order.customerCode)?.address || 
            (order.pincode ? `Pincode: ${order.pincode}` : 'No address provided');
@@ -343,18 +340,6 @@ const Purchases = () => {
                   </div>
                 </div>
               </div>
-
-              {/* MLM Distribution Log */}
-              {selectedOrder.mlmDistributionLog && selectedOrder.mlmDistributionLog.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-2">MLM Distribution Log</h3>
-                  <div className="bg-gray-50 p-3 rounded-md text-sm">
-                    {selectedOrder.mlmDistributionLog.map((log: string, index: number) => (
-                      <div key={index}>{log}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>

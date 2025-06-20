@@ -99,80 +99,16 @@ export type Database = {
         }
         Relationships: []
       }
-      coin_transactions: {
-        Row: {
-          amount: number
-          coin_value: number
-          created_at: string
-          description: string
-          id: string
-          source_order_id: string | null
-          source_user_code: string | null
-          transaction_type: string
-          user_code: string
-        }
-        Insert: {
-          amount: number
-          coin_value?: number
-          created_at?: string
-          description: string
-          id?: string
-          source_order_id?: string | null
-          source_user_code?: string | null
-          transaction_type: string
-          user_code: string
-        }
-        Update: {
-          amount?: number
-          coin_value?: number
-          created_at?: string
-          description?: string
-          id?: string
-          source_order_id?: string | null
-          source_user_code?: string | null
-          transaction_type?: string
-          user_code?: string
-        }
-        Relationships: []
-      }
-      coin_wallets: {
-        Row: {
-          last_updated: string
-          total_coins: number
-          total_value: number
-          user_code: string
-        }
-        Insert: {
-          last_updated?: string
-          total_coins?: number
-          total_value?: number
-          user_code: string
-        }
-        Update: {
-          last_updated?: string
-          total_coins?: number
-          total_value?: number
-          user_code?: string
-        }
-        Relationships: []
-      }
       customers: {
         Row: {
           accumulated_point_money: number
           address: string | null
           code: string
           created_at: string
-          current_level: number | null
-          direct_referrals: Json
           id: string
           is_pending: boolean
           is_reserved: boolean
           joined_date: string
-          last_mlm_distribution: string | null
-          matrix_earnings: number | null
-          mini_coins: number
-          mlm_level: number
-          monthly_commissions: Json
           monthly_spent: Json
           name: string
           parent_code: string | null
@@ -180,9 +116,6 @@ export type Database = {
           phone: string
           points: number
           tier: string
-          total_coins: number | null
-          total_commissions: number
-          total_downline_count: number
           total_spent: number
           updated_at: string
         }
@@ -191,17 +124,10 @@ export type Database = {
           address?: string | null
           code: string
           created_at?: string
-          current_level?: number | null
-          direct_referrals?: Json
           id?: string
           is_pending?: boolean
           is_reserved?: boolean
           joined_date?: string
-          last_mlm_distribution?: string | null
-          matrix_earnings?: number | null
-          mini_coins?: number
-          mlm_level?: number
-          monthly_commissions?: Json
           monthly_spent?: Json
           name: string
           parent_code?: string | null
@@ -209,9 +135,6 @@ export type Database = {
           phone: string
           points?: number
           tier?: string
-          total_coins?: number | null
-          total_commissions?: number
-          total_downline_count?: number
           total_spent?: number
           updated_at?: string
         }
@@ -220,17 +143,10 @@ export type Database = {
           address?: string | null
           code?: string
           created_at?: string
-          current_level?: number | null
-          direct_referrals?: Json
           id?: string
           is_pending?: boolean
           is_reserved?: boolean
           joined_date?: string
-          last_mlm_distribution?: string | null
-          matrix_earnings?: number | null
-          mini_coins?: number
-          mlm_level?: number
-          monthly_commissions?: Json
           monthly_spent?: Json
           name?: string
           parent_code?: string | null
@@ -238,9 +154,6 @@ export type Database = {
           phone?: string
           points?: number
           tier?: string
-          total_coins?: number | null
-          total_commissions?: number
-          total_downline_count?: number
           total_spent?: number
           updated_at?: string
         }
@@ -309,87 +222,6 @@ export type Database = {
         }
         Relationships: []
       }
-      mlm_distributions: {
-        Row: {
-          amount: number
-          created_at: string
-          from_customer_code: string
-          from_level: number
-          id: string
-          to_customer_code: string
-          to_level: number
-          transaction_type: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          from_customer_code: string
-          from_level: number
-          id?: string
-          to_customer_code: string
-          to_level: number
-          transaction_type?: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          from_customer_code?: string
-          from_level?: number
-          id?: string
-          to_customer_code?: string
-          to_level?: number
-          transaction_type?: string
-        }
-        Relationships: []
-      }
-      mlm_level_config: {
-        Row: {
-          capacity: number
-          coin_value: number
-          level: number
-        }
-        Insert: {
-          capacity: number
-          coin_value?: number
-          level: number
-        }
-        Update: {
-          capacity?: number
-          coin_value?: number
-          level?: number
-        }
-        Relationships: []
-      }
-      mlm_slots: {
-        Row: {
-          coin_value: number
-          created_at: string
-          customer_code: string
-          id: string
-          level: number
-          position: number
-          updated_at: string
-        }
-        Insert: {
-          coin_value?: number
-          created_at?: string
-          customer_code: string
-          id?: string
-          level: number
-          position: number
-          updated_at?: string
-        }
-        Update: {
-          coin_value?: number
-          created_at?: string
-          customer_code?: string
-          id?: string
-          level?: number
-          position?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       offers: {
         Row: {
           created_at: string
@@ -434,11 +266,11 @@ export type Database = {
           customer_id: string
           customer_name: string
           customer_phone: string
+          delivery_address: string | null
           delivery_approved: boolean
           id: string
           is_pending_approval: boolean
           is_points_awarded: boolean
-          mlm_distribution_log: Json
           order_date: string
           payment_method: string
           pincode: string
@@ -449,7 +281,6 @@ export type Database = {
           status: string
           total_amount: number
           updated_at: string
-          used_points_discount: boolean | null
         }
         Insert: {
           amount_paid: number
@@ -458,11 +289,11 @@ export type Database = {
           customer_id: string
           customer_name: string
           customer_phone: string
+          delivery_address?: string | null
           delivery_approved?: boolean
           id: string
           is_pending_approval?: boolean
           is_points_awarded?: boolean
-          mlm_distribution_log?: Json
           order_date?: string
           payment_method: string
           pincode: string
@@ -473,7 +304,6 @@ export type Database = {
           status?: string
           total_amount: number
           updated_at?: string
-          used_points_discount?: boolean | null
         }
         Update: {
           amount_paid?: number
@@ -482,11 +312,11 @@ export type Database = {
           customer_id?: string
           customer_name?: string
           customer_phone?: string
+          delivery_address?: string | null
           delivery_approved?: boolean
           id?: string
           is_pending_approval?: boolean
           is_points_awarded?: boolean
-          mlm_distribution_log?: Json
           order_date?: string
           payment_method?: string
           pincode?: string
@@ -497,7 +327,6 @@ export type Database = {
           status?: string
           total_amount?: number
           updated_at?: string
-          used_points_discount?: boolean | null
         }
         Relationships: [
           {
@@ -630,18 +459,7 @@ export type Database = {
       }
     }
     Functions: {
-      distribute_commissions_from_level: {
-        Args: {
-          source_level: number
-          source_customer_code: string
-          coins_count: number
-        }
-        Returns: undefined
-      }
-      get_next_slot_position: {
-        Args: { target_level: number }
-        Returns: number
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

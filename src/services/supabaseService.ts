@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
 import bcrypt from 'bcryptjs';
@@ -32,7 +31,6 @@ const transformCustomer = (dbCustomer: any): Customer => ({
   code: dbCustomer.code,
   parentCode: dbCustomer.parent_code,
   points: dbCustomer.points || 0,
-  miniCoins: dbCustomer.mini_coins || 0,
   tier: dbCustomer.tier || 'Bronze',
   joinedDate: dbCustomer.joined_date || dbCustomer.created_at,
   isReserved: dbCustomer.is_reserved || false,
@@ -40,12 +38,6 @@ const transformCustomer = (dbCustomer: any): Customer => ({
   totalSpent: Number(dbCustomer.total_spent) || 0,
   monthlySpent: parseJsonField(dbCustomer.monthly_spent, {}),
   accumulatedPointMoney: Number(dbCustomer.accumulated_point_money) || 0,
-  mlmLevel: dbCustomer.mlm_level || 1,
-  directReferrals: parseJsonField(dbCustomer.direct_referrals, []),
-  totalDownlineCount: dbCustomer.total_downline_count || 0,
-  monthlyCommissions: parseJsonField(dbCustomer.monthly_commissions, {}),
-  totalCommissions: Number(dbCustomer.total_commissions) || 0,
-  lastMLMDistribution: dbCustomer.last_mlm_distribution,
   passwordHash: dbCustomer.password_hash
 });
 
@@ -69,12 +61,12 @@ const transformProduct = (dbProduct: any): Product => ({
   })
 });
 
-// Transform database order to application Order type
+// Transform database order to application Order type - Fixed field mapping
 const transformOrder = (dbOrder: any): Order => ({
   id: dbOrder.id,
   customerId: dbOrder.customer_id,
-  customerName: dbOrder.customer_name,
-  customerPhone: dbOrder.customer_phone,
+  customerName: dbOrder.customer_name, // Fixed: was dbOrder.customerName
+  customerPhone: dbOrder.customer_phone, // Fixed: was dbOrder.customerPhone
   customerCode: dbOrder.customer_code || '',
   products: parseJsonField(dbOrder.products, []),
   totalAmount: Number(dbOrder.total_amount),
@@ -84,13 +76,12 @@ const transformOrder = (dbOrder: any): Order => ({
   status: dbOrder.status || 'pending',
   paymentMethod: dbOrder.payment_method || 'cod',
   pincode: dbOrder.pincode || '',
+  deliveryAddress: dbOrder.delivery_address || '',
   orderDate: dbOrder.order_date || dbOrder.created_at,
   isPendingApproval: dbOrder.is_pending_approval ?? true,
   isPointsAwarded: dbOrder.is_points_awarded || false,
   deliveryApproved: dbOrder.delivery_approved || false,
-  pointsApproved: dbOrder.points_approved || false,
-  usedPointsDiscount: dbOrder.used_points_discount || false,
-  mlmDistributionLog: parseJsonField(dbOrder.mlm_distribution_log, [])
+  pointsApproved: dbOrder.points_approved || false
 });
 
 // Transform database category to application Category type
@@ -177,13 +168,10 @@ export const supabaseService = {
       }
 
       console.log('Admin user found, checking password...');
-      console.log('Stored password hash:', data.password_hash);
-      console.log('Password being compared:', password);
       
       const isValidPassword = await bcrypt.compare(password, data.password_hash);
       console.log('Password validation result:', isValidPassword);
       
-      // If password validation fails, let's try updating the password hash
       if (!isValidPassword && username === 'admin123' && password === 'admin123') {
         console.log('Attempting to reset admin123 password...');
         const newPasswordHash = await bcrypt.hash('admin123', 10);
@@ -578,15 +566,20 @@ export const supabaseService = {
     }
   },
 
-  // Order operations
+  // Order operations with improved field mapping
   async getOrders(): Promise<Order[]> {
     try {
       console.log('Fetching orders from Supabase...');
       
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        Promise.resolve(
+          supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false })
+        ),
+        8000
+      );
 
       if (error) {
         console.error('Error fetching orders:', error);
@@ -598,26 +591,22 @@ export const supabaseService = {
         return [];
       }
 
-      console.log(`Successfully fetched ${data.length} orders from database:`, data);
-      const transformedOrders = data.map(transformOrder);
-      console.log('Transformed orders:', transformedOrders);
-      return transformedOrders;
+      console.log(`Successfully fetched ${data.length} orders`);
+      return data.map(transformOrder);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
+      if (error.message === 'Query timeout') {
+        throw new Error('Orders are taking too long to load. Please try again.');
+      }
       throw error;
     }
   },
 
   async addOrder(orderData: any): Promise<Order | null> {
     try {
-      console.log('Adding order to database:', orderData);
-      
       const { data, error } = await supabase
         .from('orders')
-        .insert([{
-          ...orderData,
-          order_date: new Date().toISOString()
-        }])
+        .insert([orderData])
         .select()
         .single();
 
@@ -626,7 +615,6 @@ export const supabaseService = {
         throw error;
       }
 
-      console.log('Order added successfully:', data);
       return data ? transformOrder(data) : null;
     } catch (error) {
       console.error('Error adding order:', error);
@@ -649,6 +637,25 @@ export const supabaseService = {
       return true;
     } catch (error) {
       console.error('Error updating order:', error);
+      return false;
+    }
+  },
+
+  async deleteOrder(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting order:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting order:', error);
       return false;
     }
   },

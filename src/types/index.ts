@@ -1,12 +1,12 @@
+
 export interface Customer {
   id: string;
   name: string;
   phone: string;
-  address?: string; // Optional address field
+  address?: string;
   code: string;
   parentCode: string | null;
   points: number;
-  miniCoins: number;
   tier: "Bronze" | "Silver" | "Gold" | "Diamond";
   joinedDate: string;
   isReserved: boolean;
@@ -14,17 +14,7 @@ export interface Customer {
   totalSpent: number;
   monthlySpent: Record<string, number>;
   accumulatedPointMoney: number;
-  mlmLevel: number;
-  directReferrals: string[];
-  totalDownlineCount: number;
-  monthlyCommissions: Record<string, number>;
-  totalCommissions: number;
-  lastMLMDistribution?: string;
-  passwordHash?: string; // Optional password hash
-  // Matrix MLM properties
-  matrixEarnings?: number;
-  totalCoins?: number;
-  currentLevel?: number;
+  passwordHash?: string;
 }
 
 export interface Product {
@@ -83,14 +73,12 @@ export interface Order {
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "refunded";
   paymentMethod: "cod" | "upi";
   pincode: string;
-  deliveryAddress?: string; // Optional delivery address field
+  deliveryAddress?: string;
   orderDate: string;
   isPendingApproval: boolean;
   isPointsAwarded: boolean;
   deliveryApproved: boolean;
   pointsApproved: boolean;
-  usedPointsDiscount: boolean;
-  mlmDistributionLog: string[];
 }
 
 export interface User {
