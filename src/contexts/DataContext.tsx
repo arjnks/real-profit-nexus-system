@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 import type { Customer, Product, Category, Service, Order } from '@/types';
@@ -11,7 +12,7 @@ interface DataContextType {
   offers: any[];
   isLoading: boolean;
   refreshData: () => Promise<void>;
-  addCustomer: (customerData: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'miniCoins' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>) => Promise<string | null>;
+  addCustomer: (customerData: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>) => Promise<string | null>;
   updateCustomer: (id: string, customerData: Partial<Customer>) => Promise<boolean>;
   deleteCustomer: (id: string) => Promise<boolean>;
   addCategory: (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Category | null>;
@@ -29,9 +30,6 @@ interface DataContextType {
   isAdmin: (customerCode?: string) => boolean;
   calculatePointsForProduct: (mrp: number, price: number) => number;
   getNextAvailableCode: () => string;
-  getDownlineStructure: (customerCode: string) => any;
-  getMLMStatistics: () => any;
-  getMLMCommissionStructure: () => any;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -113,7 +111,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     refreshData();
   }, []);
 
-  const addCustomer = async (customerData: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'miniCoins' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>) => {
+  const addCustomer = async (customerData: Omit<Customer, 'id' | 'points' | 'tier' | 'joinedDate' | 'totalSpent' | 'monthlySpent' | 'accumulatedPointMoney'>) => {
     try {
       const newCustomer = await supabaseService.addCustomer({
         ...customerData,
@@ -403,44 +401,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return `C${counter.toString().padStart(3, '0')}`;
   };
 
-  const getDownlineStructure = (customerCode: string) => {
-    const customer = customers.find(c => c.code === customerCode);
-    if (!customer) return null;
-
-    const buildDownline = (code: string): any => {
-      const current = customers.find(c => c.code === code);
-      if (!current) return null;
-
-      const children = customers
-        .filter(c => c.parentCode === code)
-        .map(child => buildDownline(child.code))
-        .filter(Boolean);
-
-      return {
-        customer: current,
-        children
-      };
-    };
-
-    return buildDownline(customerCode);
-  };
-
-  const getMLMStatistics = () => {
-    return {
-      totalCustomers: customers.length,
-      totalCommissions: customers.reduce((sum, c) => sum + c.totalCommissions, 0),
-      activeCustomers: customers.filter(c => c.totalSpent > 0).length
-    };
-  };
-
-  const getMLMCommissionStructure = () => {
-    return {
-      level1: 0.05,
-      level2: 0.025,
-      level3: 0.0167
-    };
-  };
-
   return (
     <DataContext.Provider
       value={{
@@ -469,10 +429,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         awardPoints,
         isAdmin,
         calculatePointsForProduct,
-        getNextAvailableCode,
-        getDownlineStructure,
-        getMLMStatistics,
-        getMLMCommissionStructure
+        getNextAvailableCode
       }}
     >
       {children}

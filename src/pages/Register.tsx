@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -93,11 +94,6 @@ const Register = () => {
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
         isReserved: false,
         isPending: false,
-        mlmLevel: 2,
-        directReferrals: [],
-        totalDownlineCount: 0,
-        monthlyCommissions: {},
-        totalCommissions: 0,
         passwordHash: hashedPassword
       });
 

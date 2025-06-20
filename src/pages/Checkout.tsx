@@ -1,147 +1,103 @@
 
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '@/hooks/useCart';
 import { useData } from '@/contexts/DataContext';
-import { useMatrixMLM } from '@/contexts/MatrixMLMContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { ShoppingCart, CreditCard } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, CreditCard, Truck } from 'lucide-react';
 
 const Checkout = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const { addOrder, customers } = useData();
   const { user } = useAuth();
-  const { addOrder, customers, products, updateCustomer } = useData();
-  const { processCustomerPurchase } = useMatrixMLM();
+  const navigate = useNavigate();
   
-  const [pincode, setPincode] = useState('');
-  const [address, setAddress] = useState('');
+  const [customerInfo, setCustomerInfo] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    pincode: '',
+    address: ''
+  });
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
+  const [pointsToUse, setPointsToUse] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const allowedPincodes = ['680305', '680684', '680683'];
+  const customer = customers.find(c => c.id === user?.id || c.phone === user?.phone);
+  const availablePoints = customer?.points || 0;
+  const totalPrice = getTotalPrice();
+  const maxPointsUsable = Math.min(availablePoints, Math.floor(totalPrice * 0.5)); // Max 50% of total
+  const pointDiscount = pointsToUse * 1; // 1 rupee per point
+  const finalAmount = Math.max(0, totalPrice - pointDiscount);
 
-  // Get cart from location state or redirect to shop
-  const cart = location.state?.cart || [];
-
-  if (!user || user.role !== 'customer') {
-    return <Layout><div>Access denied</div></Layout>;
-  }
-
-  if (cart.length === 0) {
+  if (items.length === 0) {
     return (
       <Layout>
-        <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-          <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-          <Button asChild>
-            <a href="/shop">Continue Shopping</a>
-          </Button>
+        <div className="container mx-auto px-4 py-8 text-center">
+          <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h1 className="text-2xl font-bold mb-2">Your cart is empty</h1>
+          <p className="text-muted-foreground mb-4">Add some products to your cart to proceed with checkout.</p>
+          <Button onClick={() => navigate('/shop')}>Continue Shopping</Button>
         </div>
       </Layout>
     );
   }
 
-  // Get customer data from DataContext
-  const customer = customers.find(c => c.id === user.id);
-  
-  // Initialize address with customer's existing address if available
-  React.useEffect(() => {
-    if (customer?.address && !address) {
-      setAddress(customer.address);
-    }
-  }, [customer?.address, address]);
-
-  // Use MRP (display price) for customer display
-  const subtotal = cart.reduce((sum: number, item: any) => sum + (item.product.mrp * item.quantity), 0);
-  const totalAmount = subtotal;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!address.trim()) {
-      toast.error('Please enter delivery address');
-      return;
-    }
-    
-    if (!pincode.trim()) {
-      toast.error('Please enter pincode');
-      return;
-    }
-
-    if (!allowedPincodes.includes(pincode)) {
-      toast.error(`Delivery not available for this pincode. Available pincodes: ${allowedPincodes.join(', ')}`);
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const orderProducts = cart.map((item: any) => {
-        // Get the actual product data to access the real selling price
-        const productData = products.find(p => p.id === item.product.id);
-        return {
-          productId: item.product.id,
-          name: item.product.name,
-          price: productData?.price || item.product.price, // Use actual selling price, not MRP
-          quantity: item.quantity
-        };
-      });
-
-      // Update customer's address in the database if it's different
-      if (customer && customer.address !== address.trim()) {
-        console.log('Updating customer address:', address.trim());
-        updateCustomer(customer.id, { address: address.trim() });
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.pincode) {
+        toast.error('Please fill in all required fields');
+        setIsLoading(false);
+        return;
       }
 
-      console.log('Creating order with delivery address:', address.trim());
-
-      const orderId = await addOrder({
-        customerId: user.id,
-        customerName: customer?.name || user.name || '',
-        customerPhone: customer?.phone || '',
+      const orderData = {
+        customerId: customer?.id || '',
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
         customerCode: customer?.code || '',
-        products: orderProducts,
-        totalAmount: subtotal, // Customer still pays MRP
-        pointsUsed: 0,
-        amountPaid: totalAmount, // Customer pays MRP
-        points: Math.floor(totalAmount / 5), // Calculate points earned
-        status: 'pending',
-        paymentMethod: 'cod',
-        pincode: pincode.trim(),
-        deliveryAddress: address.trim(), // Ensure this is properly set
+        products: items.map(item => ({
+          productId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        totalAmount: finalAmount,
+        pointsUsed: pointsToUse,
+        amountPaid: finalAmount,
+        points: Math.floor(finalAmount * 0.1), // 10% points
+        status: 'pending' as const,
+        paymentMethod,
+        pincode: customerInfo.pincode,
+        deliveryAddress: customerInfo.address,
         isPendingApproval: true,
         isPointsAwarded: false,
         deliveryApproved: false,
-        pointsApproved: false,
-        usedPointsDiscount: false,
-        mlmDistributionLog: []
-      });
+        pointsApproved: false
+      };
 
-      console.log('Order created with ID:', orderId, 'and delivery address:', address.trim());
-
-      // Process Matrix MLM distribution after successful order creation
-      if (customer?.code && totalAmount > 0) {
-        console.log(`Processing Matrix MLM for customer ${customer.code} with purchase amount ${totalAmount}`);
-        await processCustomerPurchase(customer.code, totalAmount, orderId);
-        toast.success('Order placed and Matrix MLM distribution completed!');
-      } else {
+      const orderId = await addOrder(orderData);
+      
+      if (orderId) {
+        clearCart();
         toast.success('Order placed successfully!');
+        navigate('/orders');
+      } else {
+        toast.error('Failed to place order. Please try again.');
       }
-
-      toast.success('Order placed successfully!', {
-        description: `Order ${orderId} is now pending approval.`
-      });
-
-      navigate('/orders');
     } catch (error) {
-      toast.error('Failed to place order. Please try again.');
       console.error('Checkout error:', error);
+      toast.error('An error occurred while placing your order.');
     } finally {
       setIsLoading(false);
     }
@@ -149,102 +105,207 @@ const Checkout = () => {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
-          <p className="text-gray-600">Complete your order</p>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-2">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Order Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {cart.map((item: any) => (
-                  <div key={item.product.id} className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-medium">{item.product.name}</h4>
-                      <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {items.map((item) => (
+                  <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium">{item.name}</h3>
+                      <p className="text-sm text-muted-foreground">₹{item.price}</p>
                     </div>
-                    <span className="font-medium">₹{(item.product.mrp * item.quantity).toFixed(2)}</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-8 text-center">{item.quantity}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeFromCart(item.id)}
+                    >
+                      Remove
+                    </Button>
                   </div>
                 ))}
                 
-                <div className="border-t pt-4 space-y-2">
+                <Separator />
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>₹{totalPrice}</span>
+                  </div>
+                  {pointsToUse > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Points Discount ({pointsToUse} points):</span>
+                      <span>-₹{pointDiscount}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>₹{totalAmount.toFixed(2)}</span>
+                    <span>₹{finalAmount}</span>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Checkout Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Delivery Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="address">Delivery Address *</Label>
-                  <Textarea
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter complete delivery address"
-                    required
-                    rows={3}
-                  />
-                  <p className="text-xs text-gray-500">
-                    Please provide complete address including house/building number, street, area, city
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="pincode">Pincode *</Label>
-                  <Input
-                    id="pincode"
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
-                    placeholder="Enter pincode"
-                    required
-                  />
-                  {allowedPincodes.includes(pincode) && (
-                    <p className="text-sm text-green-600">
-                      ✓ Delivery available
-                    </p>
+          <div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Customer Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Delivery Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!user && (
+                    <Alert>
+                      <AlertDescription>
+                        Please login to proceed with checkout or fill in your details below.
+                      </AlertDescription>
+                    </Alert>
                   )}
-                  {pincode && !allowedPincodes.includes(pincode) && (
-                    <p className="text-sm text-red-600">
-                      ✗ Delivery not available for this pincode. Available: {allowedPincodes.join(', ')}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Payment Method</Label>
-                  <div className="p-3 border rounded-md bg-gray-50">
-                    <p className="text-sm font-medium">Cash on Delivery (COD)</p>
-                    <p className="text-xs text-gray-600">Pay when your order is delivered</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input
+                        id="name"
+                        value={customerInfo.name}
+                        onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Input
+                        id="phone"
+                        value={customerInfo.phone}
+                        onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-                
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading || !address.trim() || !pincode || !allowedPincodes.includes(pincode)}
-                >
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  {isLoading ? 'Placing Order...' : `Place Order - ₹${totalAmount.toFixed(2)}`}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                  
+                  <div>
+                    <Label htmlFor="pincode">Pincode *</Label>
+                    <Input
+                      id="pincode"
+                      value={customerInfo.pincode}
+                      onChange={(e) => setCustomerInfo({...customerInfo, pincode: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="address">Delivery Address</Label>
+                    <Input
+                      id="address"
+                      value={customerInfo.address}
+                      onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
+                      placeholder="Optional delivery address"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Points Usage */}
+              {user && availablePoints > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Use Points</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        You have {availablePoints} points available. You can use up to {maxPointsUsable} points for this order.
+                      </p>
+                      <div>
+                        <Label htmlFor="points">Points to use</Label>
+                        <Input
+                          id="points"
+                          type="number"
+                          min="0"
+                          max={maxPointsUsable}
+                          value={pointsToUse}
+                          onChange={(e) => setPointsToUse(Math.min(maxPointsUsable, parseInt(e.target.value) || 0))}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Payment Method */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Method
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        value="cod"
+                        checked={paymentMethod === 'cod'}
+                        onChange={(e) => setPaymentMethod(e.target.value as 'cod')}
+                      />
+                      Cash on Delivery
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        value="upi"
+                        checked={paymentMethod === 'upi'}
+                        onChange={(e) => setPaymentMethod(e.target.value as 'upi')}
+                      />
+                      UPI Payment
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? 'Placing Order...' : `Place Order - ₹${finalAmount}`}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </Layout>
