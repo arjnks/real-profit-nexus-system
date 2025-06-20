@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '@/hooks/useCart';
+import { useCart } from '@/contexts/CartContext';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';

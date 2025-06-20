@@ -1,85 +1,103 @@
 
-import { useState, useCallback } from 'react';
-import { Product } from '@/contexts/DataContext';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import { Product } from '@/types';
 
 export interface CartItem {
-  productId: string;
+  id: string;
   name: string;
   price: number;
-  mrp: number;
   quantity: number;
-  maxStock: number;
+  image: string;
 }
 
 export const useCart = () => {
   const [cart, setCart] = useState<{ [key: string]: number }>({});
 
-  const addToCart = useCallback((product: Product) => {
-    if (product.stockQuantity === 0) {
-      toast.error('This product is out of stock');
-      return false;
+  // Load cart from localStorage on mount
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
     }
+  }, []);
 
-    const currentQuantity = cart[product.id] || 0;
-    if (currentQuantity >= product.stockQuantity) {
-      toast.error(`Only ${product.stockQuantity} items available in stock`);
-      return false;
-    }
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
 
+  const addToCart = (product: Product): boolean => {
     setCart(prev => ({
       ...prev,
-      [product.id]: currentQuantity + 1
+      [product.id]: (prev[product.id] || 0) + 1
     }));
-    toast.success('Added to cart');
     return true;
-  }, [cart]);
+  };
 
-  const removeFromCart = useCallback((productId: string) => {
+  const removeFromCart = (productId: string) => {
     setCart(prev => {
       const newCart = { ...prev };
-      if (newCart[productId] > 1) {
-        newCart[productId] -= 1;
-      } else {
-        delete newCart[productId];
-      }
+      delete newCart[productId];
       return newCart;
     });
-  }, []);
+  };
 
-  const clearCart = useCallback(() => {
+  const updateQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+    } else {
+      setCart(prev => ({
+        ...prev,
+        [productId]: quantity
+      }));
+    }
+  };
+
+  const clearCart = () => {
     setCart({});
-  }, []);
+  };
 
-  const getTotalItems = useCallback(() => {
-    return Object.values(cart).reduce((sum, quantity) => sum + quantity, 0);
-  }, [cart]);
+  const getTotalItems = (): number => {
+    return Object.values(cart).reduce((total, quantity) => total + quantity, 0);
+  };
 
-  const getCartItems = useCallback((products: Product[]): CartItem[] => {
+  const getCartItems = (products: Product[]): CartItem[] => {
     return Object.entries(cart).map(([productId, quantity]) => {
       const product = products.find(p => p.id === productId);
-      return product ? {
-        productId: product.id,
+      if (!product) return null;
+      return {
+        id: product.id,
         name: product.name,
         price: product.price,
-        mrp: product.mrp,
         quantity,
-        maxStock: product.stockQuantity
-      } : null;
+        image: product.image
+      };
     }).filter(Boolean) as CartItem[];
-  }, [cart]);
+  };
 
-  const getTotalPrice = useCallback((products: Product[]) => {
-    return Object.entries(cart).reduce((sum, [productId, quantity]) => {
+  const getTotalPrice = (products?: Product[]): number => {
+    if (!products) {
+      // For checkout page where items are already available
+      return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    }
+    return Object.entries(cart).reduce((total, [productId, quantity]) => {
       const product = products.find(p => p.id === productId);
-      return sum + (product ? product.mrp * quantity : 0);
+      return total + (product ? product.price * quantity : 0);
     }, 0);
-  }, [cart]);
+  };
+
+  // Get cart items directly for checkout
+  const items = Object.entries(cart).map(([productId, quantity]) => {
+    // This will be populated by the checkout page with actual product data
+    return { id: productId, quantity };
+  });
 
   return {
     cart,
+    items: [], // Will be populated by components that have access to products
     addToCart,
     removeFromCart,
+    updateQuantity,
     clearCart,
     getTotalItems,
     getCartItems,
