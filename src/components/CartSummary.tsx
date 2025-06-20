@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart } from 'lucide-react';
-import { CartItem } from '@/hooks/useCart';
+import { CartItem } from '@/contexts/CartContext';
 
 interface CartSummaryProps {
   cartItems: CartItem[];
@@ -33,12 +33,12 @@ const CartSummary: React.FC<CartSummaryProps> = ({
       </h3>
       <div className="space-y-1 text-sm max-h-48 overflow-y-auto">
         {cartItems.map((item) => (
-          <div key={item.productId} className="flex justify-between items-center">
+          <div key={item.id} className="flex justify-between items-center">
             <span className="truncate flex-1 mr-2">
               {item.name} x{item.quantity}
             </span>
             <span className="font-medium">
-              ₹{(item.mrp * item.quantity).toFixed(2)}
+              ₹{(item.price * item.quantity).toFixed(2)}
             </span>
           </div>
         ))}

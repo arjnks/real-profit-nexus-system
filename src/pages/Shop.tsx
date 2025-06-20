@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/hooks/useCart';
+import { useCart } from '@/contexts/CartContext';
 import Layout from '@/components/Layout';
 import CartSummary from '@/components/CartSummary';
 import { Button } from '@/components/ui/button';
@@ -22,11 +23,11 @@ const Shop = () => {
   const [loadingError, setLoadingError] = useState<string | null>(null);
   
   const {
-    cart,
+    items,
     addToCart,
     removeFromCart,
+    updateQuantity,
     getTotalItems,
-    getCartItems,
     getTotalPrice
   } = useCart();
 
@@ -115,20 +116,7 @@ const Shop = () => {
       return;
     }
     
-    // Convert cart items to the format expected by checkout page
-    const cartItems = getCartItems(products).map(item => ({
-      product: {
-        id: item.productId,
-        name: item.name,
-        price: item.price,
-        mrp: item.mrp
-      },
-      quantity: item.quantity
-    }));
-
-    navigate('/checkout', { 
-      state: { cart: cartItems }
-    });
+    navigate('/checkout');
   };
 
   const getStockBadge = (stockQuantity: number) => {
@@ -155,6 +143,12 @@ const Shop = () => {
       );
     }
     return null;
+  };
+
+  // Helper function to check if product is in cart
+  const getCartQuantity = (productId: string) => {
+    const cartItem = items.find(item => item.id === productId);
+    return cartItem ? cartItem.quantity : 0;
   };
 
   if (isLoading && (!products || products.length === 0)) {
@@ -258,81 +252,85 @@ const Shop = () => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className={`${product.stockQuantity === 0 ? 'opacity-60' : ''}`}>
-              <CardHeader className="p-4">
-                <img 
-                  src={product.image || '/placeholder.svg'} 
-                  alt={product.name}
-                  className="w-full h-48 object-cover rounded-md mb-2"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder.svg';
-                  }}
-                />
-                <CardTitle className="text-lg">{product.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{product.description}</p>
-                <Badge variant="outline" className="w-fit">{product.category}</Badge>
-                {getStockBadge(product.stockQuantity)}
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="space-y-2">
-                  {product.dummyPrice && (
-                    <div className="text-sm text-gray-500 line-through">
-                      Was ₹{product.dummyPrice.toFixed(2)}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-blue-600">
-                      ₹{product.mrp.toFixed(2)}
-                    </span>
+          {filteredProducts.map((product) => {
+            const cartQuantity = getCartQuantity(product.id);
+            
+            return (
+              <Card key={product.id} className={`${product.stockQuantity === 0 ? 'opacity-60' : ''}`}>
+                <CardHeader className="p-4">
+                  <img 
+                    src={product.image || '/placeholder.svg'} 
+                    alt={product.name}
+                    className="w-full h-48 object-cover rounded-md mb-2"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
+                  <CardTitle className="text-lg">{product.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{product.description}</p>
+                  <Badge variant="outline" className="w-fit">{product.category}</Badge>
+                  {getStockBadge(product.stockQuantity)}
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="space-y-2">
                     {product.dummyPrice && (
-                      <Badge variant="destructive" className="text-xs">
-                        Save ₹{(product.dummyPrice - product.mrp).toFixed(2)}
-                      </Badge>
+                      <div className="text-sm text-gray-500 line-through">
+                        Was ₹{product.dummyPrice.toFixed(2)}
+                      </div>
                     )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-blue-600">
+                        ₹{product.price.toFixed(2)}
+                      </span>
+                      {product.dummyPrice && (
+                        <Badge variant="destructive" className="text-xs">
+                          Save ₹{(product.dummyPrice - product.price).toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Stock: {product.stockQuantity} available
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    Stock: {product.stockQuantity} available
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="p-4 pt-0">
-                {product.stockQuantity === 0 ? (
-                  <Button disabled className="w-full">
-                    Out of Stock
-                  </Button>
-                ) : cart[product.id] ? (
-                  <div className="flex items-center justify-between w-full">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeFromCart(product.id)}
-                    >
-                      <Minus className="h-4 w-4" />
+                </CardContent>
+                <CardFooter className="p-4 pt-0">
+                  {product.stockQuantity === 0 ? (
+                    <Button disabled className="w-full">
+                      Out of Stock
                     </Button>
-                    <span className="font-medium">{cart[product.id]}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
+                  ) : cartQuantity > 0 ? (
+                    <div className="flex items-center justify-between w-full">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateQuantity(product.id, Math.max(0, cartQuantity - 1))}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="font-medium">{cartQuantity}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => updateQuantity(product.id, cartQuantity + 1)}
+                        disabled={cartQuantity >= product.stockQuantity}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      className="w-full" 
                       onClick={() => addToCart(product)}
-                      disabled={cart[product.id] >= product.stockQuantity}
                     >
-                      <Plus className="h-4 w-4" />
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Add to Cart
                     </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    className="w-full" 
-                    onClick={() => addToCart(product)}
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Add to Cart
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
 
         {filteredProducts.length === 0 && !isLoading && (
@@ -358,8 +356,8 @@ const Shop = () => {
 
         {/* Cart Summary */}
         <CartSummary
-          cartItems={getCartItems(products || [])}
-          totalPrice={getTotalPrice(products || [])}
+          cartItems={items}
+          totalPrice={getTotalPrice()}
           totalItems={getTotalItems()}
           onCheckout={handleCheckout}
           isLoggedIn={!!user}
