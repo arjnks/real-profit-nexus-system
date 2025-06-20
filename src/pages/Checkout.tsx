@@ -61,34 +61,40 @@ const Checkout = () => {
         return;
       }
 
+      // Generate a unique order ID
+      const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
       const orderData = {
-        customerId: customer?.id || '',
-        customerName: customerInfo.name,
-        customerPhone: customerInfo.phone,
-        customerCode: customer?.code || '',
+        id: orderId,
+        customer_id: customer?.id || '',
+        customer_name: customerInfo.name,
+        customer_phone: customerInfo.phone,
+        customer_code: customer?.code || '',
         products: items.map(item => ({
           productId: item.id,
           name: item.name,
           price: item.price,
           quantity: item.quantity
         })),
-        totalAmount: finalAmount,
-        pointsUsed: pointsToUse,
-        amountPaid: finalAmount,
+        total_amount: finalAmount,
+        points_used: pointsToUse,
+        amount_paid: finalAmount,
         points: Math.floor(finalAmount * 0.1), // 10% points
         status: 'pending' as const,
-        paymentMethod,
+        payment_method: paymentMethod,
         pincode: customerInfo.pincode,
-        deliveryAddress: customerInfo.address,
-        isPendingApproval: true,
-        isPointsAwarded: false,
-        deliveryApproved: false,
-        pointsApproved: false
+        delivery_address: customerInfo.address,
+        is_pending_approval: true,
+        is_points_awarded: false,
+        delivery_approved: false,
+        points_approved: false
       };
 
-      const orderId = await addOrder(orderData);
+      console.log('Placing order with data:', orderData);
       
-      if (orderId) {
+      const result = await addOrder(orderData);
+      
+      if (result) {
         clearCart();
         toast.success('Order placed successfully!');
         navigate('/orders');
@@ -278,24 +284,32 @@ const Checkout = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2">
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                       <input
                         type="radio"
                         value="cod"
                         checked={paymentMethod === 'cod'}
                         onChange={(e) => setPaymentMethod(e.target.value as 'cod')}
+                        className="h-4 w-4"
                       />
-                      Cash on Delivery
+                      <div>
+                        <div className="font-medium">Cash on Delivery</div>
+                        <div className="text-sm text-muted-foreground">Pay when your order arrives</div>
+                      </div>
                     </label>
-                    <label className="flex items-center gap-2">
+                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
                       <input
                         type="radio"
                         value="upi"
                         checked={paymentMethod === 'upi'}
                         onChange={(e) => setPaymentMethod(e.target.value as 'upi')}
+                        className="h-4 w-4"
                       />
-                      UPI Payment
+                      <div>
+                        <div className="font-medium">UPI Payment</div>
+                        <div className="text-sm text-muted-foreground">Pay instantly using UPI</div>
+                      </div>
                     </label>
                   </div>
                 </CardContent>
