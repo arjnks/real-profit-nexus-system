@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import AdminLayout from '@/components/AdminLayout';
@@ -34,7 +35,7 @@ const Requests = () => {
   const [filterType, setFilterType] = useState('all');
   const [viewOrderId, setViewOrderId] = useState<string | null>(null);
 
-  // Get pending orders
+  // Get pending orders - using correct field name
   const pendingOrders = orders.filter(order => order.isPendingApproval);
   
   // Get pending customers
@@ -86,36 +87,36 @@ const Requests = () => {
     return { pointMoney, actualPoints, remainingMoney };
   };
 
-  // Handle order approval
+  // Handle order approval - using correct snake_case field names
   const handleApproveOrder = (orderId: string) => {
     updateOrder(orderId, { 
-      isPendingApproval: false, 
+      is_pending_approval: false, 
       status: 'confirmed'
     });
     toast.success('Order approved successfully');
   };
 
-  // Handle order rejection
+  // Handle order rejection - using correct snake_case field names
   const handleRejectOrder = (orderId: string) => {
     updateOrder(orderId, { 
-      isPendingApproval: false, 
+      is_pending_approval: false, 
       status: 'cancelled'
     });
     toast.success('Order rejected successfully');
   };
 
-  // Handle delivery confirmation and points awarding
+  // Handle delivery confirmation and points awarding - using correct snake_case field names
   const handleConfirmDelivery = (orderId: string) => {
     const order = orders.find(order => order.id === orderId);
     if (order && !order.isPointsAwarded) {
       // Award the point money (which will handle accumulation and conversion)
       awardPoints(order.customerId, order.points);
       
-      // Update order status
+      // Update order status - using correct snake_case field names
       updateOrder(orderId, { 
         status: 'delivered',
-        isPointsAwarded: true,
-        deliveryApproved: true 
+        is_points_awarded: true,
+        delivery_approved: true 
       });
       
       const { pointMoney, actualPoints, remainingMoney } = calculateActualPointsAwarded(orderId);
@@ -124,9 +125,9 @@ const Requests = () => {
     }
   };
 
-  // Handle customer approval
+  // Handle customer approval - using correct snake_case field names
   const handleApproveCustomer = (customerId: string) => {
-    updateCustomer(customerId, { isPending: false });
+    updateCustomer(customerId, { is_pending: false });
     toast.success('Customer approved successfully');
   };
 
