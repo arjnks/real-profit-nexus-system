@@ -89,12 +89,20 @@ const Register = () => {
       await addCustomer({
         name: formData.name,
         phone: formData.phone,
-        address: '', // Default empty address
+        address: '',
         code: newCode,
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
         isReserved: false,
         isPending: false,
-        passwordHash: hashedPassword
+        passwordHash: hashedPassword,
+        points: 0,
+        tier: 'Bronze',
+        joinedDate: new Date().toISOString(),
+        totalSpent: 0,
+        monthlySpent: {},
+        accumulatedPointMoney: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
 
       console.log('Customer added successfully');

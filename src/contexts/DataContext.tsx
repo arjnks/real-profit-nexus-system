@@ -10,6 +10,7 @@ interface DataContextType {
   addCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer | null>;
   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<boolean>;
   deleteCustomer: (id: string) => Promise<boolean>;
+  getNextAvailableCode: () => string;
 
   // Product data
   products: Product[];
@@ -35,7 +36,7 @@ interface DataContextType {
   // Order data
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  addOrder: (order: Omit<Order, 'orderDate'>) => Promise<string | null>;
+  addOrder: (order: Partial<Order>) => Promise<string | null>;
   updateOrder: (id: string, order: Partial<Order>) => Promise<boolean>;
   deleteOrder: (id: string) => Promise<boolean>;
 
@@ -160,10 +161,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshData();
   }, []);
 
+  // Get next available customer code
+  const getNextAvailableCode = () => {
+    const existingCodes = customers.map(c => c.code).filter(Boolean);
+    let nextNumber = 101; // Start from A101
+    
+    while (existingCodes.includes(`A${nextNumber}`)) {
+      nextNumber++;
+    }
+    
+    return `A${nextNumber}`;
+  };
+
   // Customer operations
   const addCustomer = async (customerData: Omit<Customer, 'id'>) => {
     try {
-      const newCustomer = await supabaseService.addCustomer(customerData);
+      const fullCustomerData = {
+        ...customerData,
+        points: customerData.points || 0,
+        tier: customerData.tier || 'Bronze',
+        joinedDate: customerData.joinedDate || new Date().toISOString(),
+        totalSpent: customerData.totalSpent || 0,
+        monthlySpent: customerData.monthlySpent || {},
+        accumulatedPointMoney: customerData.accumulatedPointMoney || 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const newCustomer = await supabaseService.addCustomer(fullCustomerData);
       if (newCustomer) {
         setCustomers(prev => [newCustomer, ...prev]);
         return newCustomer;
@@ -253,7 +278,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Category operations
   const addCategory = async (categoryData: Omit<Category, 'id'>) => {
     try {
-      const newCategory = await supabaseService.addCategory(categoryData);
+      const fullCategoryData = {
+        ...categoryData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const newCategory = await supabaseService.addCategory(fullCategoryData);
       if (newCategory) {
         setCategories(prev => [newCategory, ...prev]);
         return newCategory;
@@ -341,15 +372,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Order operations
-  const addOrder = async (orderData: Omit<Order, 'orderDate'>) => {
+  const addOrder = async (orderData: Partial<Order>) => {
     try {
-      const orderWithDate = {
-        ...orderData,
-        order_date: new Date().toISOString()
+      const orderWithDefaults = {
+        id: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        customerId: orderData.customerId || '',
+        customerName: orderData.customerName || '',
+        customerPhone: orderData.customerPhone || '',
+        customerCode: orderData.customerCode || '',
+        products: orderData.products || [],
+        totalAmount: orderData.totalAmount || 0,
+        pointsUsed: orderData.pointsUsed || 0,
+        amountPaid: orderData.amountPaid || 0,
+        points: orderData.points || 0,
+        status: orderData.status || 'pending',
+        paymentMethod: orderData.paymentMethod || 'cod',
+        pincode: orderData.pincode || '',
+        deliveryAddress: orderData.deliveryAddress || '',
+        isPendingApproval: orderData.isPendingApproval || true,
+        isPointsAwarded: orderData.isPointsAwarded || false,
+        deliveryApproved: orderData.deliveryApproved || false,
+        pointsApproved: orderData.pointsApproved || false,
+        orderDate: new Date().toISOString()
       };
       
-      console.log('DataContext: Adding order with data:', orderWithDate);
-      const newOrder = await supabaseService.addOrder(orderWithDate);
+      console.log('DataContext: Adding order with data:', orderWithDefaults);
+      const newOrder = await supabaseService.addOrder(orderWithDefaults);
       
       if (newOrder) {
         setOrders(prev => [newOrder, ...prev]);
@@ -415,6 +463,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addCustomer,
     updateCustomer,
     deleteCustomer,
+    getNextAvailableCode,
     products,
     setProducts,
     addProduct,

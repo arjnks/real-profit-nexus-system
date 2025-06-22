@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Minus, Plus, ShoppingBag, CreditCard, Truck } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Truck } from 'lucide-react';
 
 const Checkout = () => {
   const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
@@ -26,7 +26,6 @@ const Checkout = () => {
     pincode: '',
     address: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
   const [pointsToUse, setPointsToUse] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -61,33 +60,29 @@ const Checkout = () => {
         return;
       }
 
-      // Generate a unique order ID
-      const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
       const orderData = {
-        id: orderId,
-        customer_id: customer?.id || '',
-        customer_name: customerInfo.name,
-        customer_phone: customerInfo.phone,
-        customer_code: customer?.code || '',
+        customerId: customer?.id || '',
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
+        customerCode: customer?.code || '',
         products: items.map(item => ({
           productId: item.id,
           name: item.name,
           price: item.price,
           quantity: item.quantity
         })),
-        total_amount: finalAmount,
-        points_used: pointsToUse,
-        amount_paid: finalAmount,
+        totalAmount: finalAmount,
+        pointsUsed: pointsToUse,
+        amountPaid: finalAmount,
         points: Math.floor(finalAmount * 0.1), // 10% points
         status: 'pending' as const,
-        payment_method: paymentMethod,
+        paymentMethod: 'cod',
         pincode: customerInfo.pincode,
-        delivery_address: customerInfo.address,
-        is_pending_approval: true,
-        is_points_awarded: false,
-        delivery_approved: false,
-        points_approved: false
+        deliveryAddress: customerInfo.address,
+        isPendingApproval: true,
+        isPointsAwarded: false,
+        deliveryApproved: false,
+        pointsApproved: false
       };
 
       console.log('Placing order with data:', orderData);
@@ -278,39 +273,12 @@ const Checkout = () => {
               {/* Payment Method */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Payment Method
-                  </CardTitle>
+                  <CardTitle>Payment Method</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        value="cod"
-                        checked={paymentMethod === 'cod'}
-                        onChange={(e) => setPaymentMethod(e.target.value as 'cod')}
-                        className="h-4 w-4"
-                      />
-                      <div>
-                        <div className="font-medium">Cash on Delivery</div>
-                        <div className="text-sm text-muted-foreground">Pay when your order arrives</div>
-                      </div>
-                    </label>
-                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        value="upi"
-                        checked={paymentMethod === 'upi'}
-                        onChange={(e) => setPaymentMethod(e.target.value as 'upi')}
-                        className="h-4 w-4"
-                      />
-                      <div>
-                        <div className="font-medium">UPI Payment</div>
-                        <div className="text-sm text-muted-foreground">Pay instantly using UPI</div>
-                      </div>
-                    </label>
+                  <div className="p-3 border rounded-lg bg-gray-50">
+                    <div className="font-medium">Cash on Delivery (COD)</div>
+                    <div className="text-sm text-muted-foreground">Pay when your order arrives</div>
                   </div>
                 </CardContent>
               </Card>
