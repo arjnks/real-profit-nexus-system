@@ -102,12 +102,16 @@ const Products = () => {
     try {
       console.log('Adding category with data:', { 
         name: categoryName.trim(), 
-        description: categoryDescription.trim() || undefined 
+        description: categoryDescription.trim() || undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
       
       await addCategory({
         name: categoryName.trim(),
-        description: categoryDescription.trim() || undefined
+        description: categoryDescription.trim() || undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
       
       toast.success('Category added successfully');

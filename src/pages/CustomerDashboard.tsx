@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
@@ -20,7 +19,7 @@ import {
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
-  const { orders, customers, offers } = useData();
+  const { orders, customers } = useData();
 
   if (!user || user.role !== 'customer') {
     return <Layout><div>Access denied</div></Layout>;
@@ -30,13 +29,21 @@ const CustomerDashboard = () => {
   const customer = customers.find(c => c.id === user.id);
   const customerOrders = orders.filter(o => o.customerId === user.id);
   
-  // Get tier-based offers
-  const availableOffers = offers.filter(offer => {
-    const tierOrder = ['Bronze', 'Silver', 'Gold', 'Diamond'];
-    const customerTierIndex = tierOrder.indexOf(customer?.tier || 'Bronze');
-    const offerTierIndex = tierOrder.indexOf(offer.minTier);
-    return customerTierIndex >= offerTierIndex;
-  });
+  // For now, we'll create some sample offers since we don't have the offers table yet
+  const availableOffers = [
+    {
+      id: '1',
+      title: 'Bronze Member Special',
+      description: 'Get 5% off on your next purchase',
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: '2', 
+      title: 'Free Shipping',
+      description: 'Free delivery on orders above ₹500',
+      validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
+    }
+  ];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
