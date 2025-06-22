@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
@@ -18,6 +17,7 @@ interface DataContextType {
   addProduct: (product: Omit<Product, 'id'>) => Promise<Product | null>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<boolean>;
+  calculatePointsForProduct: (mrp: number, price: number) => number;
 
   // Category data
   categories: Category[];
@@ -50,6 +50,9 @@ interface DataContextType {
   leaderboardConfig: LeaderboardConfig | null;
   setLeaderboardConfig: React.Dispatch<React.SetStateAction<LeaderboardConfig | null>>;
   updateLeaderboardConfig: (config: Partial<LeaderboardConfig>) => Promise<boolean>;
+
+  // Points and rewards
+  awardPoints: (customerId: string, pointMoney: number) => Promise<boolean>;
 
   // Loading and refresh
   isLoading: boolean;
@@ -173,6 +176,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return `A${nextNumber}`;
   };
 
+  // Add calculatePointsForProduct function
+  const calculatePointsForProduct = (mrp: number, price: number) => {
+    const profit = mrp - price;
+    return Math.floor(profit * 0.1); // 10% of profit as point money
+  };
+
+  // Add awardPoints function
+  const awardPoints = async (customerId: string, pointMoney: number) => {
+    try {
+      const customer = customers.find(c => c.id === customerId);
+      if (!customer) return false;
+
+      const newAccumulated = customer.accumulatedPointMoney + pointMoney;
+      const newPoints = Math.floor(newAccumulated / 5);
+      const remainingMoney = newAccumulated % 5;
+
+      const success = await updateCustomer(customerId, {
+        points: customer.points + newPoints,
+        accumulatedPointMoney: remainingMoney
+      });
+
+      return success;
+    } catch (error) {
+      console.error('Error awarding points:', error);
+      return false;
+    }
+  };
+
   // Customer operations
   const addCustomer = async (customerData: Omit<Customer, 'id'>) => {
     try {
@@ -183,9 +214,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         joinedDate: customerData.joinedDate || new Date().toISOString(),
         totalSpent: customerData.totalSpent || 0,
         monthlySpent: customerData.monthlySpent || {},
-        accumulatedPointMoney: customerData.accumulatedPointMoney || 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        accumulatedPointMoney: customerData.accumulatedPointMoney || 0
       };
 
       const newCustomer = await supabaseService.addCustomer(fullCustomerData);
@@ -469,6 +498,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addProduct,
     updateProduct,
     deleteProduct,
+    calculatePointsForProduct,
     categories,
     setCategories,
     addCategory,
@@ -491,6 +521,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     leaderboardConfig,
     setLeaderboardConfig,
     updateLeaderboardConfig,
+    awardPoints,
     isLoading,
     refreshData
   };

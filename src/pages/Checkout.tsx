@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
@@ -76,7 +75,7 @@ const Checkout = () => {
         amountPaid: finalAmount,
         points: Math.floor(finalAmount * 0.1), // 10% points
         status: 'pending' as const,
-        paymentMethod: 'cod',
+        paymentMethod: 'cod' as const, // Fix: explicitly type as 'cod'
         pincode: customerInfo.pincode,
         deliveryAddress: customerInfo.address,
         isPendingApproval: true,

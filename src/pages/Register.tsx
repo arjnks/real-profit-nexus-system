@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -100,9 +99,7 @@ const Register = () => {
         joinedDate: new Date().toISOString(),
         totalSpent: 0,
         monthlySpent: {},
-        accumulatedPointMoney: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        accumulatedPointMoney: 0
       });
 
       console.log('Customer added successfully');

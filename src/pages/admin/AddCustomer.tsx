@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -7,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { ArrowLeft, UserPlus } from 'lucide-react';
@@ -90,7 +88,13 @@ const AddCustomer = () => {
         parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
         isReserved: formData.isReserved,
         isPending: formData.isPending,
-        passwordHash
+        passwordHash,
+        points: 0,
+        tier: 'Bronze' as const,
+        joinedDate: new Date().toISOString(),
+        totalSpent: 0,
+        monthlySpent: {},
+        accumulatedPointMoney: 0
       };
 
       const customerId = await addCustomer(customerData);
