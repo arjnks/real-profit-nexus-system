@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
@@ -412,6 +413,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         products: orderData.products || [],
         total_amount: orderData.total_amount || 0,
         points_used: orderData.points_used || 0,
+        amount_paid: orderData.amount_paid || orderData.total_amount || 0, // Ensure amount_paid is set
         points: orderData.points || 0,
         status: orderData.status || 'pending',
         payment_method: orderData.payment_method || 'cod',

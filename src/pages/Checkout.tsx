@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
@@ -72,6 +73,7 @@ const Checkout = () => {
         })),
         total_amount: finalAmount,
         points_used: pointsToUse,
+        amount_paid: finalAmount, // Add the missing amount_paid field
         points: Math.floor(finalAmount * 0.1), // 10% points
         status: 'pending' as const,
         payment_method: 'cod' as const,
