@@ -36,7 +36,7 @@ interface DataContextType {
   // Order data
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  addOrder: (order: Partial<Order>) => Promise<string | null>;
+  addOrder: (order: any) => Promise<string | null>;
   updateOrder: (id: string, order: Partial<Order>) => Promise<boolean>;
   deleteOrder: (id: string) => Promise<boolean>;
 
@@ -401,27 +401,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Order operations
-  const addOrder = async (orderData: Partial<Order>) => {
+  const addOrder = async (orderData: any) => {
     try {
       const orderWithDefaults = {
         id: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        customerId: orderData.customerId || '',
-        customerName: orderData.customerName || '',
-        customerPhone: orderData.customerPhone || '',
-        customerCode: orderData.customerCode || '',
+        customer_id: orderData.customer_id || '',
+        customer_name: orderData.customer_name || '',
+        customer_phone: orderData.customer_phone || '',
+        customer_code: orderData.customer_code || '',
         products: orderData.products || [],
-        totalAmount: orderData.totalAmount || 0,
-        pointsUsed: orderData.pointsUsed || 0,
+        total_amount: orderData.total_amount || 0,
+        points_used: orderData.points_used || 0,
         points: orderData.points || 0,
         status: orderData.status || 'pending',
-        paymentMethod: orderData.paymentMethod || 'cod',
+        payment_method: orderData.payment_method || 'cod',
         pincode: orderData.pincode || '',
-        deliveryAddress: orderData.deliveryAddress || '',
-        isPendingApproval: orderData.isPendingApproval || true,
-        isPointsAwarded: orderData.isPointsAwarded || false,
-        deliveryApproved: orderData.deliveryApproved || false,
-        pointsApproved: orderData.pointsApproved || false,
-        orderDate: new Date().toISOString()
+        delivery_address: orderData.delivery_address || '',
+        is_pending_approval: orderData.is_pending_approval !== undefined ? orderData.is_pending_approval : true,
+        is_points_awarded: orderData.is_points_awarded || false,
+        delivery_approved: orderData.delivery_approved || false,
+        points_approved: orderData.points_approved || false,
+        order_date: new Date().toISOString()
       };
       
       console.log('DataContext: Adding order with data:', orderWithDefaults);

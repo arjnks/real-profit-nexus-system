@@ -60,27 +60,27 @@ const Checkout = () => {
       }
 
       const orderData = {
-        customerId: customer?.id || '',
-        customerName: customerInfo.name,
-        customerPhone: customerInfo.phone,
-        customerCode: customer?.code || '',
+        customer_id: customer?.id || '',
+        customer_name: customerInfo.name,
+        customer_phone: customerInfo.phone,
+        customer_code: customer?.code || '',
         products: items.map(item => ({
           productId: item.id,
           name: item.name,
           price: item.price,
           quantity: item.quantity
         })),
-        totalAmount: finalAmount,
-        pointsUsed: pointsToUse,
+        total_amount: finalAmount,
+        points_used: pointsToUse,
         points: Math.floor(finalAmount * 0.1), // 10% points
         status: 'pending' as const,
-        paymentMethod: 'cod' as const,
+        payment_method: 'cod' as const,
         pincode: customerInfo.pincode,
-        deliveryAddress: customerInfo.address,
-        isPendingApproval: true,
-        isPointsAwarded: false,
-        deliveryApproved: false,
-        pointsApproved: false
+        delivery_address: customerInfo.address,
+        is_pending_approval: true,
+        is_points_awarded: false,
+        delivery_approved: false,
+        points_approved: false
       };
 
       console.log('Placing order with data:', orderData);
