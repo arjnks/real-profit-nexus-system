@@ -412,7 +412,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         products: orderData.products || [],
         totalAmount: orderData.totalAmount || 0,
         pointsUsed: orderData.pointsUsed || 0,
-        amountPaid: orderData.amountPaid || 0,
         points: orderData.points || 0,
         status: orderData.status || 'pending',
         paymentMethod: orderData.paymentMethod || 'cod',

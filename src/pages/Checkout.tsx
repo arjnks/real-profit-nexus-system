@@ -72,10 +72,9 @@ const Checkout = () => {
         })),
         totalAmount: finalAmount,
         pointsUsed: pointsToUse,
-        amountPaid: finalAmount,
         points: Math.floor(finalAmount * 0.1), // 10% points
         status: 'pending' as const,
-        paymentMethod: 'cod' as const, // Fix: explicitly type as 'cod'
+        paymentMethod: 'cod' as const,
         pincode: customerInfo.pincode,
         deliveryAddress: customerInfo.address,
         isPendingApproval: true,
