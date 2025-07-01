@@ -1,356 +1,297 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
 import Layout from '@/components/Layout';
 import CartSummary from '@/components/CartSummary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Search, Plus, Minus, Package, AlertTriangle, RefreshCw, Wifi } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, ShoppingCart, Plus, Minus, Star, Package, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 const Shop = () => {
-  const { products, isLoading, refreshData } = useData();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
-  
-  const {
-    items,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    getTotalItems,
-    getTotalPrice
+  const { products, categories, customers } = useData();
+  const { 
+    cartItems, 
+    addToCart, 
+    removeFromCart, 
+    updateQuantity, 
+    clearCart, 
+    getTotalPrice, 
+    getTotalItems 
   } = useCart();
+  const { user } = useAuth();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [showCart, setShowCart] = useState(false);
 
-  // Monitor products loading
-  useEffect(() => {
-    console.log('Shop: Products state changed -', {
-      productsCount: products?.length || 0,
-      isLoading,
-      hasProducts: products && products.length > 0
+  // Get customer data if logged in
+  const customer = user?.role === 'customer' 
+    ? customers.find(c => c.id === user.id) 
+    : null;
+
+  // Calculate tier-based discount
+  const getTierDiscount = (product: any) => {
+    if (!customer) return 0;
+    return product.tier_discounts?.[customer.tier] || 0;
+  };
+
+  // Calculate discounted price
+  const getDiscountedPrice = (product: any) => {
+    const discount = getTierDiscount(product);
+    return product.price * (1 - discount / 100);
+  };
+
+  // Filter products based on search and category
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === '' || product.category === selectedCategory;
+      return matchesSearch && matchesCategory && product.in_stock;
     });
+  }, [products, searchTerm, selectedCategory]);
 
-    if (!isLoading && (!products || products.length === 0)) {
-      console.warn('Shop: No products available after loading completed');
-      setLoadingError('No products found. This might be a connection issue.');
-    } else if (products && products.length > 0) {
-      setLoadingError(null);
+  const handleAddToCart = (product: any) => {
+    if (product.stock_quantity <= 0) {
+      toast.error('Product is out of stock');
+      return;
     }
-  }, [products, isLoading]);
-
-  // Initial data refresh with retry logic
-  useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    const loadWithRetry = async () => {
-      try {
-        console.log(`Shop: Loading data attempt ${retryCount + 1}/${maxRetries}`);
-        await refreshData();
-        setLoadingError(null);
-      } catch (error) {
-        console.error(`Shop: Load attempt ${retryCount + 1} failed:`, error);
-        retryCount++;
-        
-        if (retryCount < maxRetries) {
-          setTimeout(loadWithRetry, 2000 * retryCount); // Exponential backoff
-        } else {
-          setLoadingError('Failed to load products after multiple attempts. Please check your connection.');
-        }
-      }
-    };
-
-    loadWithRetry();
-  }, []);
-
-  // Filter products safely
-  const filteredProducts = (products || []).filter(product => {
-    if (!product) return false;
     
-    const productName = product.name || '';
-    const productCategory = product.category || '';
-    
-    const matchesSearch = productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         productCategory.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || productCategory === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Get unique categories safely
-  const categories = ['all', ...Array.from(new Set(
-    (products || [])
-      .map(p => p?.category)
-      .filter(Boolean)
-  ))];
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    setLoadingError(null);
-    
-    try {
-      console.log('Shop: Manual refresh initiated');
-      await refreshData();
-      toast.success('Products refreshed successfully');
-    } catch (error) {
-      console.error('Shop: Manual refresh failed:', error);
-      setLoadingError('Failed to refresh products. Please try again.');
-      toast.error('Failed to refresh products');
-    } finally {
-      setIsRefreshing(false);
+    const currentQuantity = cartItems.find(item => item.id === product.id)?.quantity || 0;
+    if (currentQuantity >= product.stock_quantity) {
+      toast.error('Cannot add more items than available in stock');
+      return;
     }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: getDiscountedPrice(product),
+      originalPrice: product.price,
+      image: product.image,
+      maxQuantity: product.stock_quantity
+    });
+    
+    toast.success(`${product.name} added to cart`);
   };
 
   const handleCheckout = () => {
     if (!user) {
-      toast.error('Please login to proceed with checkout');
-      navigate('/login');
+      toast.error('Please login to checkout');
       return;
     }
-    
-    navigate('/checkout');
+    // Implement checkout logic
+    console.log('Checkout with items:', cartItems);
   };
-
-  const getStockBadge = (stockQuantity: number) => {
-    if (stockQuantity === 0) {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          <Package className="h-3 w-3 mr-1" />
-          Out of Stock
-        </Badge>
-      );
-    } else if (stockQuantity === 1) {
-      return (
-        <Badge variant="outline" className="text-xs text-orange-600 border-orange-600">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Only 1 Left!
-        </Badge>
-      );
-    } else if (stockQuantity <= 5) {
-      return (
-        <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-600">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Low Stock ({stockQuantity} left)
-        </Badge>
-      );
-    }
-    return null;
-  };
-
-  // Helper function to check if product is in cart
-  const getCartQuantity = (productId: string) => {
-    const cartItem = items.find(item => item.id === productId);
-    return cartItem ? cartItem.quantity : 0;
-  };
-
-  if (isLoading && (!products || products.length === 0)) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="text-lg">Loading products...</span>
-            <p className="text-sm text-gray-500">This may take a moment</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Shop</h1>
-          <div className="flex items-center gap-4">
-            {loadingError && (
-              <div className="flex items-center text-red-600 text-sm">
-                <Wifi className="h-4 w-4 mr-1" />
-                Connection Issue
-              </div>
-            )}
-            
-            <div className="text-sm text-gray-500">
-              {(products || []).length} products available
-            </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            
-            {getTotalItems() > 0 && (
-              <Button className="relative" onClick={handleCheckout}>
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Cart ({getTotalItems()})
-                <Badge className="absolute -top-2 -right-2 bg-red-500">
-                  {getTotalItems()}
-                </Badge>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {loadingError && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
-              <div>
-                <p className="text-yellow-800 font-medium">Connection Issue</p>
-                <p className="text-yellow-600 text-sm">{loadingError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  className="mt-2"
-                  disabled={isRefreshing}
-                >
-                  Try Again
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Search and Filter */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {categories.map(category => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category === 'all' ? 'All Categories' : category}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => {
-            const cartQuantity = getCartQuantity(product.id);
-            
-            return (
-              <Card key={product.id} className={`${product.stock_quantity === 0 ? 'opacity-60' : ''}`}>
-                <CardHeader className="p-4">
-                  <img 
-                    src={product.image || '/placeholder.svg'} 
-                    alt={product.name}
-                    className="w-full h-48 object-cover rounded-md mb-2"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
-                    }}
-                  />
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{product.description}</p>
-                  <Badge variant="outline" className="w-fit">{product.category}</Badge>
-                  {getStockBadge(product.stock_quantity)}
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="space-y-2">
-                    {product.dummy_price && (
-                      <div className="text-sm text-gray-500 line-through">
-                        Was ₹{product.dummy_price.toFixed(2)}
-                      </div>
-                    )}
-                    <div className="text-2xl font-bold text-green-600">
-                      ₹{product.price.toFixed(2)}
-                      {product.dummy_price && (
-                        <span className="text-sm text-gray-500 ml-2">
-                          (Save ₹{(product.dummy_price - product.price).toFixed(2)})
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Stock: {product.stock_quantity} available
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="p-4 pt-0">
-                  {cartQuantity > 0 ? (
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateQuantity(product.id, cartQuantity - 1)}
-                          disabled={product.stock_quantity === 0}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="font-medium">{cartQuantity}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addToCart(product)}
-                          disabled={cartQuantity >= product.stock_quantity}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeFromCart(product.id)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button 
-                      className="w-full" 
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock_quantity === 0}
-                    >
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      Add to Cart
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-
-        {filteredProducts.length === 0 && !isLoading && (
-          <div className="text-center py-12">
-            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Products Found</h3>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Shop</h1>
             <p className="text-gray-600">
-              {searchTerm || selectedCategory !== 'all' 
-                ? 'Try adjusting your search or filter criteria' 
-                : 'Products will appear here once they are added'}
+              {customer && `Welcome ${customer.name}! You're a ${customer.tier} member.`}
             </p>
           </div>
-        )}
+          
+          <Button 
+            onClick={() => setShowCart(!showCart)}
+            className="relative"
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Cart ({getTotalItems()})
+            {getTotalItems() > 0 && (
+              <Badge className="absolute -top-2 -right-2 bg-red-500">
+                {getTotalItems()}
+              </Badge>
+            )}
+          </Button>
+        </div>
 
-        {getTotalItems() > 0 && <CartSummary />}
+        <div className="grid gap-8 lg:grid-cols-4">
+          {/* Filters */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Filters</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Category</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All categories</SelectItem>
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Products */}
+          <div className="lg:col-span-3">
+            {filteredProducts.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredProducts.map(product => {
+                  const cartItem = cartItems.find(item => item.id === product.id);
+                  const tierDiscount = getTierDiscount(product);
+                  const discountedPrice = getDiscountedPrice(product);
+                  
+                  return (
+                    <Card key={product.id} className="overflow-hidden">
+                      <div className="relative">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-48 object-cover"
+                        />
+                        {tierDiscount > 0 && (
+                          <Badge className="absolute top-2 right-2 bg-green-500">
+                            {tierDiscount}% OFF
+                          </Badge>
+                        )}
+                        {product.stock_quantity <= 5 && product.stock_quantity > 0 && (
+                          <Badge variant="destructive" className="absolute top-2 left-2">
+                            Only {product.stock_quantity} left
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                          {product.description}
+                        </p>
+                        
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            {tierDiscount > 0 ? (
+                              <>
+                                <span className="text-lg font-bold text-green-600">
+                                  ₹{discountedPrice.toFixed(2)}
+                                </span>
+                                <span className="text-sm text-gray-500 line-through">
+                                  ₹{product.price.toFixed(2)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-lg font-bold">
+                                ₹{product.price.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          {product.dummy_price && (
+                            <span className="text-xs text-gray-400 line-through">
+                              MRP: ₹{product.dummy_price.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">
+                            Stock: {product.stock_quantity}
+                          </span>
+                          
+                          {cartItem ? (
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => updateQuantity(product.id, cartItem.quantity - 1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center">{cartItem.quantity}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (cartItem.quantity < product.stock_quantity) {
+                                    updateQuantity(product.id, cartItem.quantity + 1);
+                                  } else {
+                                    toast.error('Cannot add more than available stock');
+                                  }
+                                }}
+                                disabled={cartItem.quantity >= product.stock_quantity}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              onClick={() => handleAddToCart(product)}
+                              disabled={product.stock_quantity <= 0}
+                              size="sm"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add to Cart
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Products Found</h3>
+                  <p className="text-gray-600">
+                    {searchTerm || selectedCategory 
+                      ? 'Try adjusting your search or filters' 
+                      : 'No products available at the moment'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Cart Sidebar */}
+        {showCart && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
+            <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl">
+              <CartSummary
+                cartItems={cartItems}
+                totalPrice={getTotalPrice()}
+                totalItems={getTotalItems()}
+                onCheckout={handleCheckout}
+                isLoggedIn={!!user}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

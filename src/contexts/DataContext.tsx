@@ -1,7 +1,6 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabaseService } from '@/services/supabaseService';
-import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import type { Customer, Product, Category, Service, Order, DailySales } from '@/types';
+import * as supabaseService from '@/services/supabaseService';
 
 interface DataContextType {
   // Customer data
@@ -46,11 +45,11 @@ interface DataContextType {
   setDailySales: React.Dispatch<React.SetStateAction<DailySales[]>>;
 
   // Leaderboard data
-  leaderboard: LeaderboardEntry[];
-  setLeaderboard: React.Dispatch<React.SetStateAction<LeaderboardEntry[]>>;
-  leaderboardConfig: LeaderboardConfig | null;
-  setLeaderboardConfig: React.Dispatch<React.SetStateAction<LeaderboardConfig | null>>;
-  updateLeaderboardConfig: (config: Partial<LeaderboardConfig>) => Promise<boolean>;
+  leaderboard: any[];
+  setLeaderboard: React.Dispatch<React.SetStateAction<any[]>>;
+  leaderboardConfig: any | null;
+  setLeaderboardConfig: React.Dispatch<React.SetStateAction<any | null>>;
+  updateLeaderboardConfig: (config: Partial<any>) => Promise<boolean>;
 
   // Points and rewards
   awardPoints: (customerId: string, pointMoney: number) => Promise<boolean>;
@@ -69,8 +68,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [services, setServices] = useState<Service[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [leaderboardConfig, setLeaderboardConfig] = useState<LeaderboardConfig | null>(null);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboardConfig, setLeaderboardConfig] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshData = async () => {
@@ -482,7 +481,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Leaderboard operations
-  const updateLeaderboardConfig = async (configData: Partial<LeaderboardConfig>) => {
+  const updateLeaderboardConfig = async (configData: Partial<any>) => {
     try {
       const success = await supabaseService.updateLeaderboardConfig(configData);
       if (success) {

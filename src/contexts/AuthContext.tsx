@@ -1,6 +1,6 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabaseService } from '@/services/supabaseService';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import type { User } from '@/types';
+import { authenticateAdmin, authenticateCustomer } from '@/services/supabaseService';
 
 interface AuthUser {
   id: string;
@@ -53,10 +53,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (isAdmin) {
         // Admin login using username
-        result = await supabaseService.authenticateAdmin(identifier, password);
+        result = await authenticateAdmin(identifier, password);
       } else {
         // Customer login using phone
-        result = await supabaseService.authenticateCustomer(identifier, password);
+        result = await authenticateCustomer(identifier, password);
       }
       
       if (result.success && result.user) {

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { supabaseService } from '@/services/supabaseService';
+import { getLeaderboardConfig } from '@/services/supabaseService';
 import type { LeaderboardConfig } from '@/types';
 import Leaderboard from './Leaderboard';
 

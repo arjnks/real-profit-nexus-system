@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal, Award, Crown, AlertCircle } from 'lucide-react';
-import { supabaseService } from '@/services/supabaseService';
+import { getLeaderboard, getLeaderboardConfig } from '@/services/supabaseService';
 import type { LeaderboardEntry, LeaderboardConfig } from '@/types';
 import { toast } from 'sonner';
 
@@ -30,13 +29,13 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isAdmin = false, showOffer = 
       console.log('Fetching leaderboard data...');
       
       // Fetch leaderboard data
-      const leaderboardData = await supabaseService.getLeaderboard(isAdmin ? undefined : 50);
+      const leaderboardData = await getLeaderboard(isAdmin ? undefined : 50);
       console.log('Leaderboard data received:', leaderboardData);
       setLeaderboard(leaderboardData || []);
 
       // Fetch config if needed
       if (showOffer) {
-        const configData = await supabaseService.getLeaderboardConfig();
+        const configData = await getLeaderboardConfig();
         console.log('Leaderboard config received:', configData);
         setConfig(configData);
       }

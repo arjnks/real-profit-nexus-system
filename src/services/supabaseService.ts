@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Category, Service, Order, User, DailySales, LeaderboardConfig } from '@/types';
 
@@ -82,22 +81,7 @@ export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<strin
     const { data, error } = await withTimeout(
       supabase
         .from('customers')
-        .insert([{
-          name: customer.name,
-          phone: customer.phone,
-          address: customer.address,
-          code: customer.code,
-          parent_code: customer.parent_code,
-          points: customer.points,
-          tier: customer.tier,
-          joined_date: customer.joined_date,
-          is_reserved: customer.is_reserved,
-          is_pending: customer.is_pending,
-          total_spent: customer.total_spent,
-          monthly_spent: customer.monthly_spent,
-          accumulated_point_money: customer.accumulated_point_money,
-          password_hash: customer.password_hash
-        }])
+        .insert([customer])
         .select('id')
         .single()
     );
@@ -211,18 +195,7 @@ export const addProduct = async (product: Omit<Product, 'id'>): Promise<string |
     const { data, error } = await withTimeout(
       supabase
         .from('products')
-        .insert([{
-          name: product.name,
-          price: product.price,
-          mrp: product.mrp,
-          dummy_price: product.dummy_price,
-          image: product.image,
-          description: product.description,
-          category: product.category,
-          in_stock: product.in_stock,
-          stock_quantity: product.stock_quantity,
-          tier_discounts: product.tier_discounts
-        }])
+        .insert([product])
         .select('id')
         .single()
     );
@@ -324,12 +297,7 @@ export const addCategory = async (category: Omit<Category, 'id'>): Promise<strin
     const { data, error } = await withTimeout(
       supabase
         .from('categories')
-        .insert([{
-          name: category.name,
-          description: category.description,
-          created_at: category.created_at,
-          updated_at: category.updated_at
-        }])
+        .insert([category])
         .select('id')
         .single()
     );
@@ -433,14 +401,7 @@ export const addService = async (service: Omit<Service, 'id'>): Promise<string |
     const { data, error } = await withTimeout(
       supabase
         .from('services')
-        .insert([{
-          title: service.title,
-          description: service.description,
-          price: service.price,
-          image: service.image,
-          category: service.category,
-          is_active: service.is_active
-        }])
+        .insert([service])
         .select('id')
         .single()
     );
@@ -556,26 +517,7 @@ export const addOrder = async (order: Omit<Order, 'id'>): Promise<string | null>
     const { data, error } = await withTimeout(
       supabase
         .from('orders')
-        .insert([{
-          customer_id: order.customer_id,
-          customer_name: order.customer_name,
-          customer_phone: order.customer_phone,
-          customer_code: order.customer_code,
-          products: order.products,
-          total_amount: order.total_amount,
-          points_used: order.points_used,
-          amount_paid: order.amount_paid,
-          points: order.points,
-          status: order.status,
-          payment_method: order.payment_method,
-          pincode: order.pincode,
-          delivery_address: order.delivery_address,
-          order_date: order.order_date,
-          is_pending_approval: order.is_pending_approval,
-          is_points_awarded: order.is_points_awarded,
-          delivery_approved: order.delivery_approved,
-          points_approved: order.points_approved
-        }])
+        .insert([order])
         .select('id')
         .single()
     );

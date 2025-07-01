@@ -16,7 +16,7 @@ import {
 const Services = () => {
   const { services } = useData();
 
-  const activeServices = services.filter(service => service.isActive);
+  const activeServices = services.filter(service => service.is_active);
 
   const handleContactForService = () => {
     window.open('mailto:werealprofit@gmail.com?subject=Service Inquiry', '_blank');
