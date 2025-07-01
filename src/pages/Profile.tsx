@@ -48,7 +48,7 @@ const Profile = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Member Since</label>
-                <p>{customer?.joinedDate ? new Date(customer.joinedDate).toLocaleDateString() : 'N/A'}</p>
+                <p>{customer?.joined_date ? new Date(customer.joined_date).toLocaleDateString() : 'N/A'}</p>
               </div>
             </CardContent>
           </Card>
@@ -70,7 +70,7 @@ const Profile = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Total Spent</label>
-                <p className="text-lg font-semibold">₹{customer?.totalSpent?.toFixed(2) || '0.00'}</p>
+                <p className="text-lg font-semibold">₹{customer?.total_spent?.toFixed(2) || '0.00'}</p>
               </div>
             </CardContent>
           </Card>

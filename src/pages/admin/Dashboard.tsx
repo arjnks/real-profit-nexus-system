@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -46,10 +47,10 @@ const Dashboard = () => {
   
   // Calculate stats
   const totalCustomers = customers.length;
-  const pendingCustomers = customers.filter(customer => customer.isPending).length;
+  const pendingCustomers = customers.filter(customer => customer.is_pending).length;
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter(order => order.isPendingApproval).length;
-  const totalSales = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const pendingOrders = orders.filter(order => order.is_pending_approval).length;
+  const totalSales = orders.reduce((sum, order) => sum + order.total_amount, 0);
   const totalPoints = orders.reduce((sum, order) => sum + order.points, 0);
   
   // Today's date
@@ -199,9 +200,9 @@ const Dashboard = () => {
               {orders.slice(0, 5).map((order) => (
                 <div key={order.id} className="flex justify-between items-center border-b pb-2">
                   <div>
-                    <h4 className="font-medium">{order.customerName}</h4>
+                    <h4 className="font-medium">{order.customer_name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      Order #{order.id} - ₹{order.totalAmount.toFixed(2)}
+                      Order #{order.id} - ₹{order.total_amount.toFixed(2)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -214,7 +215,7 @@ const Dashboard = () => {
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </span>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(order.orderDate).toLocaleDateString()}
+                      {new Date(order.order_date).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

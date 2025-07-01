@@ -24,8 +24,8 @@ const Customers = () => {
 
   // Calculate statistics
   const totalCustomers = customers.length;
-  const activeCustomers = customers.filter(c => !c.isReserved && !c.isPending).length;
-  const totalSpent = customers.reduce((sum, c) => sum + c.totalSpent, 0);
+  const activeCustomers = customers.filter(c => !c.is_reserved && !c.is_pending).length;
+  const totalSpent = customers.reduce((sum, c) => sum + c.total_spent, 0);
   const tierCounts = customers.reduce((acc, customer) => {
     acc[customer.tier] = (acc[customer.tier] || 0) + 1;
     return acc;
@@ -169,14 +169,14 @@ const Customers = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>{customer.points}</TableCell>
-                          <TableCell>₹{customer.totalSpent.toLocaleString()}</TableCell>
+                          <TableCell>₹{customer.total_spent.toLocaleString()}</TableCell>
                           <TableCell>
                             <Badge variant={
-                              customer.isReserved ? 'destructive' :
-                              customer.isPending ? 'outline' : 'default'
+                              customer.is_reserved ? 'destructive' :
+                              customer.is_pending ? 'outline' : 'default'
                             }>
-                              {customer.isReserved ? 'Reserved' :
-                               customer.isPending ? 'Pending' : 'Active'}
+                              {customer.is_reserved ? 'Reserved' :
+                               customer.is_pending ? 'Pending' : 'Active'}
                             </Badge>
                           </TableCell>
                           <TableCell>

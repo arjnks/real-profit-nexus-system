@@ -256,7 +256,7 @@ const Shop = () => {
             const cartQuantity = getCartQuantity(product.id);
             
             return (
-              <Card key={product.id} className={`${product.stockQuantity === 0 ? 'opacity-60' : ''}`}>
+              <Card key={product.id} className={`${product.stock_quantity === 0 ? 'opacity-60' : ''}`}>
                 <CardHeader className="p-4">
                   <img 
                     src={product.image || '/placeholder.svg'} 
@@ -270,58 +270,63 @@ const Shop = () => {
                   <CardTitle className="text-lg">{product.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">{product.description}</p>
                   <Badge variant="outline" className="w-fit">{product.category}</Badge>
-                  {getStockBadge(product.stockQuantity)}
+                  {getStockBadge(product.stock_quantity)}
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="space-y-2">
-                    {product.dummyPrice && (
+                    {product.dummy_price && (
                       <div className="text-sm text-gray-500 line-through">
-                        Was ₹{product.dummyPrice.toFixed(2)}
+                        Was ₹{product.dummy_price.toFixed(2)}
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-blue-600">
-                        ₹{product.price.toFixed(2)}
-                      </span>
-                      {product.dummyPrice && (
-                        <Badge variant="destructive" className="text-xs">
-                          Save ₹{(product.dummyPrice - product.price).toFixed(2)}
-                        </Badge>
+                    <div className="text-2xl font-bold text-green-600">
+                      ₹{product.price.toFixed(2)}
+                      {product.dummy_price && (
+                        <span className="text-sm text-gray-500 ml-2">
+                          (Save ₹{(product.dummy_price - product.price).toFixed(2)})
+                        </span>
                       )}
                     </div>
                     <div className="text-sm text-gray-600">
-                      Stock: {product.stockQuantity} available
+                      Stock: {product.stock_quantity} available
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
-                  {product.stockQuantity === 0 ? (
-                    <Button disabled className="w-full">
-                      Out of Stock
-                    </Button>
-                  ) : cartQuantity > 0 ? (
+                  {cartQuantity > 0 ? (
                     <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateQuantity(product.id, cartQuantity - 1)}
+                          disabled={product.stock_quantity === 0}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="font-medium">{cartQuantity}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addToCart(product)}
+                          disabled={cartQuantity >= product.stock_quantity}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => updateQuantity(product.id, Math.max(0, cartQuantity - 1))}
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeFromCart(product.id)}
                       >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="font-medium">{cartQuantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => updateQuantity(product.id, cartQuantity + 1)}
-                        disabled={cartQuantity >= product.stockQuantity}
-                      >
-                        <Plus className="h-4 w-4" />
+                        Remove
                       </Button>
                     </div>
                   ) : (
                     <Button 
                       className="w-full" 
                       onClick={() => addToCart(product)}
+                      disabled={product.stock_quantity === 0}
                     >
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       Add to Cart
@@ -335,33 +340,17 @@ const Shop = () => {
 
         {filteredProducts.length === 0 && !isLoading && (
           <div className="text-center py-12">
-            <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-lg">
-              {(products || []).length === 0 
-                ? 'No products available at the moment.' 
-                : searchTerm || selectedCategory !== 'all' 
-                  ? 'No products found matching your criteria.' 
-                  : 'No products available at the moment.'}
+            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Products Found</h3>
+            <p className="text-gray-600">
+              {searchTerm || selectedCategory !== 'all' 
+                ? 'Try adjusting your search or filter criteria' 
+                : 'Products will appear here once they are added'}
             </p>
-            {(products || []).length === 0 && (
-              <div className="mt-4">
-                <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Try Loading Again
-                </Button>
-              </div>
-            )}
           </div>
         )}
 
-        {/* Cart Summary */}
-        <CartSummary
-          cartItems={items}
-          totalPrice={getTotalPrice()}
-          totalItems={getTotalItems()}
-          onCheckout={handleCheckout}
-          isLoggedIn={!!user}
-        />
+        {getTotalItems() > 0 && <CartSummary />}
       </div>
     </Layout>
   );

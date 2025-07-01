@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
@@ -27,7 +28,7 @@ const CustomerDashboard = () => {
 
   // Get customer data
   const customer = customers.find(c => c.id === user.id);
-  const customerOrders = orders.filter(o => o.customerId === user.id);
+  const customerOrders = orders.filter(o => o.customer_id === user.id);
   
   // For now, we'll create some sample offers since we don't have the offers table yet
   const availableOffers = [
@@ -115,7 +116,7 @@ const CustomerDashboard = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Spent</p>
-                  <p className="text-lg font-semibold text-gray-900">₹{customer?.totalSpent?.toFixed(2) || '0.00'}</p>
+                  <p className="text-lg font-semibold text-gray-900">₹{customer?.total_spent?.toFixed(2) || '0.00'}</p>
                 </div>
               </div>
             </CardContent>
@@ -138,12 +139,12 @@ const CustomerDashboard = () => {
                         <div>
                           <p className="font-medium">Order #{order.id}</p>
                           <p className="text-sm text-gray-500">
-                            {new Date(order.orderDate).toLocaleDateString()}
+                            {new Date(order.order_date).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">₹{order.totalAmount.toFixed(2)}</p>
+                        <p className="font-medium">₹{order.total_amount.toFixed(2)}</p>
                         <p className="text-sm text-gray-500 capitalize">{order.status}</p>
                       </div>
                     </div>

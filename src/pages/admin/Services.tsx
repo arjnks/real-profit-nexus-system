@@ -73,7 +73,7 @@ const Services = () => {
       price,
       category,
       image: image || 'https://images.unsplash.com/photo-1556741533-6e6a62bd8b49?q=80&w=400',
-      isActive
+      is_active: isActive
     });
 
     toast.success('Service added successfully');
@@ -94,7 +94,7 @@ const Services = () => {
       price,
       category,
       image: image || editingService.image,
-      isActive
+      is_active: isActive
     });
 
     toast.success('Service updated successfully');
@@ -112,7 +112,7 @@ const Services = () => {
 
   // Toggle service status
   const toggleServiceStatus = (serviceId: string, currentStatus: boolean) => {
-    updateService(serviceId, { isActive: !currentStatus });
+    updateService(serviceId, { is_active: !currentStatus });
     toast.success(`Service ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
   };
 
@@ -124,7 +124,7 @@ const Services = () => {
     setPrice(service.price);
     setCategory(service.category);
     setImage(service.image);
-    setIsActive(service.isActive);
+    setIsActive(service.is_active);
     setIsEditDialogOpen(true);
   };
 
@@ -252,17 +252,17 @@ const Services = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleServiceStatus(service.id, service.isActive)}
-                        className={service.isActive ? 'text-green-600' : 'text-red-600'}
+                        onClick={() => toggleServiceStatus(service.id, service.is_active)}
+                        className={service.is_active ? 'text-green-600' : 'text-red-600'}
                       >
-                        {service.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        {service.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </Button>
                       <span className={`text-xs px-2 py-1 rounded-full ${
-                        service.isActive 
+                        service.is_active 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {service.isActive ? 'Active' : 'Inactive'}
+                        {service.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </TableCell>

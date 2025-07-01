@@ -1,759 +1,839 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { Customer, Product, Category, Service, Order, DailySales, LeaderboardConfig, LeaderboardEntry } from '@/types';
-import bcrypt from 'bcryptjs';
 
-// Helper function to safely parse JSON fields
-const parseJsonField = (field: any, defaultValue: any) => {
-  if (field === null || field === undefined) return defaultValue;
-  if (typeof field === 'object') return field;
+import { supabase } from '@/integrations/supabase/client';
+import type { Customer, Product, Category, Service, Order, User, DailySales, LeaderboardConfig } from '@/types';
+
+// Timeout utility
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout')), timeoutMs);
+    })
+  ]);
+};
+
+// Test functions for connection
+export const testConnection = async (): Promise<boolean> => {
   try {
-    return JSON.parse(field);
-  } catch {
-    return defaultValue;
+    console.log('Testing Supabase connection...');
+    const { data, error } = await withTimeout(
+      supabase.from('customers').select('count').limit(1),
+      5000
+    );
+    
+    if (error) {
+      console.error('Connection test failed:', error);
+      return false;
+    }
+    
+    console.log('Connection test successful');
+    return true;
+  } catch (error) {
+    console.error('Connection test error:', error);
+    return false;
   }
 };
 
-// Helper function to add timeout to queries
-const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 10000): Promise<T> => {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Query timeout')), timeoutMs);
-  });
-  
-  return Promise.race([promise, timeoutPromise]);
-};
-
-// Transform database customer to application Customer type
-const transformCustomer = (dbCustomer: any): Customer => ({
-  id: dbCustomer.id,
-  name: dbCustomer.name,
-  phone: dbCustomer.phone,
-  address: dbCustomer.address || '',
-  code: dbCustomer.code,
-  parentCode: dbCustomer.parent_code,
-  points: dbCustomer.points || 0,
-  tier: dbCustomer.tier || 'Bronze',
-  joinedDate: dbCustomer.joined_date || dbCustomer.created_at,
-  isReserved: dbCustomer.is_reserved || false,
-  isPending: dbCustomer.is_pending || false,
-  totalSpent: Number(dbCustomer.total_spent) || 0,
-  monthlySpent: parseJsonField(dbCustomer.monthly_spent, {}),
-  accumulatedPointMoney: Number(dbCustomer.accumulated_point_money) || 0,
-  passwordHash: dbCustomer.password_hash
-});
-
-// Transform database product to application Product type
-const transformProduct = (dbProduct: any): Product => ({
-  id: dbProduct.id,
-  name: dbProduct.name || '',
-  price: Number(dbProduct.price) || 0,
-  mrp: Number(dbProduct.mrp) || 0,
-  dummyPrice: dbProduct.dummy_price ? Number(dbProduct.dummy_price) : undefined,
-  image: dbProduct.image || '/placeholder.svg',
-  description: dbProduct.description || '',
-  category: dbProduct.category || 'General',
-  inStock: dbProduct.in_stock !== false,
-  stockQuantity: Number(dbProduct.stock_quantity) || 0,
-  tierDiscounts: parseJsonField(dbProduct.tier_discounts, {
-    Bronze: 2,
-    Silver: 3,
-    Gold: 4,
-    Diamond: 5
-  })
-});
-
-// Transform database order to application Order type - Fixed field mapping
-const transformOrder = (dbOrder: any): Order => ({
-  id: dbOrder.id,
-  customerId: dbOrder.customer_id,
-  customerName: dbOrder.customer_name, // Fixed: was dbOrder.customerName
-  customerPhone: dbOrder.customer_phone, // Fixed: was dbOrder.customerPhone
-  customerCode: dbOrder.customer_code || '',
-  products: parseJsonField(dbOrder.products, []),
-  totalAmount: Number(dbOrder.total_amount),
-  pointsUsed: dbOrder.points_used || 0,
-  amountPaid: Number(dbOrder.amount_paid),
-  points: dbOrder.points || 0,
-  status: dbOrder.status || 'pending',
-  paymentMethod: dbOrder.payment_method || 'cod',
-  pincode: dbOrder.pincode || '',
-  deliveryAddress: dbOrder.delivery_address || '',
-  orderDate: dbOrder.order_date || dbOrder.created_at,
-  isPendingApproval: dbOrder.is_pending_approval ?? true,
-  isPointsAwarded: dbOrder.is_points_awarded || false,
-  deliveryApproved: dbOrder.delivery_approved || false,
-  pointsApproved: dbOrder.points_approved || false
-});
-
-// Transform database category to application Category type
-const transformCategory = (dbCategory: any): Category => ({
-  id: dbCategory.id,
-  name: dbCategory.name,
-  description: dbCategory.description,
-  createdAt: dbCategory.created_at,
-  updatedAt: dbCategory.updated_at
-});
-
-// Transform database service to application Service type
-const transformService = (dbService: any): Service => ({
-  id: dbService.id,
-  title: dbService.title,
-  description: dbService.description,
-  price: dbService.price,
-  image: dbService.image,
-  category: dbService.category,
-  isActive: dbService.is_active
-});
-
-// Transform database daily sales to application DailySales type
-const transformDailySales = (dbDailySales: any): DailySales => ({
-  id: dbDailySales.id,
-  sale_date: dbDailySales.sale_date,
-  total_sales: Number(dbDailySales.total_sales),
-  total_points: dbDailySales.total_points,
-  total_orders: dbDailySales.total_orders,
-  created_at: dbDailySales.created_at,
-  updated_at: dbDailySales.updated_at
-});
-
-// Transform database leaderboard config to application LeaderboardConfig type
-const transformLeaderboardConfig = (dbConfig: any): LeaderboardConfig => ({
-  id: dbConfig.id,
-  top_count: dbConfig.top_count,
-  offer_title: dbConfig.offer_title,
-  offer_description: dbConfig.offer_description,
-  offer_discount_percentage: dbConfig.offer_discount_percentage,
-  is_active: dbConfig.is_active,
-  created_at: dbConfig.created_at,
-  updated_at: dbConfig.updated_at
-});
-
-// Transform database leaderboard entry to application LeaderboardEntry type
-const transformLeaderboardEntry = (dbEntry: any): LeaderboardEntry => ({
-  id: dbEntry.id,
-  name: dbEntry.name,
-  code: dbEntry.code,
-  points: dbEntry.points,
-  total_spent: Number(dbEntry.total_spent),
-  tier: dbEntry.tier,
-  rank: dbEntry.rank
-});
-
-export const supabaseService = {
-  // Authentication operations
-  async authenticateAdmin(username: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
-    try {
-      console.log('Attempting admin authentication for username:', username);
-      
-      const { data, error } = await withTimeout(
-        Promise.resolve(
-          supabase
-            .from('admin_users')
-            .select('*')
-            .eq('username', username)
-            .single()
-        ),
-        8000
-      );
-
-      console.log('Admin query result:', { data, error });
-
-      if (error) {
-        console.error('Database error during admin auth:', error);
-        return { success: false, error: `Database error: ${error.message}` };
-      }
-      
-      if (!data) {
-        console.log('No admin user found with username:', username);
-        return { success: false, error: 'Invalid username or password' };
-      }
-
-      console.log('Admin user found, checking password...');
-      
-      const isValidPassword = await bcrypt.compare(password, data.password_hash);
-      console.log('Password validation result:', isValidPassword);
-      
-      if (!isValidPassword && username === 'admin123' && password === 'admin123') {
-        console.log('Attempting to reset admin123 password...');
-        const newPasswordHash = await bcrypt.hash('admin123', 10);
-        
-        const { error: updateError } = await supabase
-          .from('admin_users')
-          .update({ password_hash: newPasswordHash })
-          .eq('username', 'admin123');
-          
-        if (!updateError) {
-          console.log('Password reset successful, trying authentication again...');
-          return {
-            success: true,
-            user: {
-              id: data.id,
-              username: data.username,
-              name: data.name,
-              role: 'admin'
-            }
-          };
-        } else {
-          console.error('Failed to reset password:', updateError);
-        }
-      }
-      
-      if (!isValidPassword) {
-        return { success: false, error: 'Invalid username or password' };
-      }
-
-      console.log('Admin authentication successful');
-      return {
-        success: true,
-        user: {
-          id: data.id,
-          username: data.username,
-          name: data.name,
-          role: 'admin'
-        }
-      };
-    } catch (error) {
-      console.error('Admin authentication error:', error);
-      return { success: false, error: `Authentication failed: ${error.message}` };
-    }
-  },
-
-  async authenticateCustomer(phone: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
-    try {
-      const { data, error } = await supabase
+// Customer functions with snake_case field names
+export const getCustomers = async (): Promise<Customer[]> => {
+  try {
+    console.log('Fetching customers from Supabase...');
+    
+    const { data, error } = await withTimeout(
+      supabase
         .from('customers')
         .select('*')
-        .eq('phone', phone)
-        .single();
-
-      if (error || !data) {
-        return { success: false, error: 'Invalid phone number or password' };
-      }
-
-      if (!data.password_hash) {
-        return { success: false, error: 'No password set for this account' };
-      }
-
-      const isValidPassword = await bcrypt.compare(password, data.password_hash);
-      if (!isValidPassword) {
-        return { success: false, error: 'Invalid phone number or password' };
-      }
-
-      return {
-        success: true,
-        user: {
-          id: data.id,
-          phone: data.phone,
-          name: data.name,
-          role: 'customer'
-        }
-      };
-    } catch (error) {
-      console.error('Customer authentication error:', error);
-      return { success: false, error: 'Authentication failed' };
-    }
-  },
-
-  // Customer operations
-  async getCustomers(): Promise<Customer[]> {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+    );
 
     if (error) {
       console.error('Error fetching customers:', error);
-      throw error;
+      throw new Error(`Failed to fetch customers: ${error.message}`);
     }
 
-    return data?.map(transformCustomer) || [];
-  },
+    console.log(`Successfully fetched ${data?.length || 0} customers`);
+    return data.map(customer => ({
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      address: customer.address || '',
+      code: customer.code,
+      parent_code: customer.parent_code,
+      points: customer.points || 0,
+      tier: customer.tier as "Bronze" | "Silver" | "Gold" | "Diamond",
+      joined_date: customer.joined_date,
+      is_reserved: customer.is_reserved || false,
+      is_pending: customer.is_pending || false,
+      total_spent: customer.total_spent || 0,
+      monthly_spent: customer.monthly_spent || {},
+      accumulated_point_money: customer.accumulated_point_money || 0,
+      password_hash: customer.password_hash
+    }));
+  } catch (error) {
+    console.error('Failed to fetch customers:', error);
+    throw error;
+  }
+};
 
-  async addCustomer(customerData: any): Promise<Customer | null> {
-    try {
-      const { data, error } = await supabase
+export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<string | null> => {
+  try {
+    console.log('Adding customer to Supabase:', customer);
+    
+    const { data, error } = await withTimeout(
+      supabase
         .from('customers')
-        .insert([customerData])
-        .select()
-        .single();
+        .insert([{
+          name: customer.name,
+          phone: customer.phone,
+          address: customer.address,
+          code: customer.code,
+          parent_code: customer.parent_code,
+          points: customer.points,
+          tier: customer.tier,
+          joined_date: customer.joined_date,
+          is_reserved: customer.is_reserved,
+          is_pending: customer.is_pending,
+          total_spent: customer.total_spent,
+          monthly_spent: customer.monthly_spent,
+          accumulated_point_money: customer.accumulated_point_money,
+          password_hash: customer.password_hash
+        }])
+        .select('id')
+        .single()
+    );
 
-      if (error) {
-        console.error('Error adding customer:', error);
-        throw error;
-      }
-
-      return data ? transformCustomer(data) : null;
-    } catch (error) {
+    if (error) {
       console.error('Error adding customer:', error);
-      return null;
+      throw new Error(`Failed to add customer: ${error.message}`);
     }
-  },
 
-  async updateCustomer(id: string, customerData: any): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Customer added successfully with ID:', data.id);
+    return data.id;
+  } catch (error) {
+    console.error('Failed to add customer:', error);
+    throw error;
+  }
+};
+
+export const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<void> => {
+  try {
+    console.log(`Updating customer ${id}:`, updates);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('customers')
-        .update(customerData)
-        .eq('id', id);
+        .update(updates)
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error updating customer:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error updating customer:', error);
-      return false;
+      throw new Error(`Failed to update customer: ${error.message}`);
     }
-  },
 
-  async deleteCustomer(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Customer updated successfully');
+  } catch (error) {
+    console.error('Failed to update customer:', error);
+    throw error;
+  }
+};
+
+export const deleteCustomer = async (id: string): Promise<void> => {
+  try {
+    console.log(`Deleting customer ${id}`);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('customers')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error deleting customer:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error deleting customer:', error);
-      return false;
+      throw new Error(`Failed to delete customer: ${error.message}`);
     }
-  },
 
-  // Category operations
-  async getCategories(): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .order('created_at', { ascending: false });
+    console.log('Customer deleted successfully');
+  } catch (error) {
+    console.error('Failed to delete customer:', error);
+    throw error;
+  }
+};
+
+// Product functions with snake_case field names
+export const getProducts = async (): Promise<Product[]> => {
+  try {
+    console.log('Fetching products from Supabase...');
+    
+    const { data, error } = await withTimeout(
+      supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false }),
+      15000 // Increased timeout for products
+    );
+
+    if (error) {
+      console.error('Error fetching products:', error);
+      throw new Error(`Failed to fetch products: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('No products found in database');
+      throw new Error('Products are taking too long to load. Please try again.');
+    }
+
+    console.log(`Successfully fetched ${data.length} products`);
+    return data.map(product => ({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      mrp: product.mrp,
+      dummy_price: product.dummy_price,
+      image: product.image,
+      description: product.description,
+      category: product.category,
+      in_stock: product.in_stock,
+      stock_quantity: product.stock_quantity,
+      tier_discounts: product.tier_discounts
+    }));
+  } catch (error) {
+    console.error('Failed to fetch products:', error);
+    throw error;
+  }
+};
+
+export const addProduct = async (product: Omit<Product, 'id'>): Promise<string | null> => {
+  try {
+    console.log('Adding product to Supabase:', product);
+    
+    const { data, error } = await withTimeout(
+      supabase
+        .from('products')
+        .insert([{
+          name: product.name,
+          price: product.price,
+          mrp: product.mrp,
+          dummy_price: product.dummy_price,
+          image: product.image,
+          description: product.description,
+          category: product.category,
+          in_stock: product.in_stock,
+          stock_quantity: product.stock_quantity,
+          tier_discounts: product.tier_discounts
+        }])
+        .select('id')
+        .single()
+    );
+
+    if (error) {
+      console.error('Error adding product:', error);
+      throw new Error(`Failed to add product: ${error.message}`);
+    }
+
+    console.log('Product added successfully with ID:', data.id);
+    return data.id;
+  } catch (error) {
+    console.error('Failed to add product:', error);
+    throw error;
+  }
+};
+
+export const updateProduct = async (id: string, updates: Partial<Product>): Promise<void> => {
+  try {
+    console.log(`Updating product ${id}:`, updates);
+    
+    const { error } = await withTimeout(
+      supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id)
+    );
+
+    if (error) {
+      console.error('Error updating product:', error);
+      throw new Error(`Failed to update product: ${error.message}`);
+    }
+
+    console.log('Product updated successfully');
+  } catch (error) {
+    console.error('Failed to update product:', error);
+    throw error;
+  }
+};
+
+export const deleteProduct = async (id: string): Promise<void> => {
+  try {
+    console.log(`Deleting product ${id}`);
+    
+    const { error } = await withTimeout(
+      supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+    );
+
+    if (error) {
+      console.error('Error deleting product:', error);
+      throw new Error(`Failed to delete product: ${error.message}`);
+    }
+
+    console.log('Product deleted successfully');
+  } catch (error) {
+    console.error('Failed to delete product:', error);
+    throw error;
+  }
+};
+
+// Category functions with snake_case field names
+export const getCategories = async (): Promise<Category[]> => {
+  try {
+    console.log('Fetching categories from Supabase...');
+    
+    const { data, error } = await withTimeout(
+      supabase
+        .from('categories')
+        .select('*')
+        .order('created_at', { ascending: false })
+    );
 
     if (error) {
       console.error('Error fetching categories:', error);
-      throw error;
+      throw new Error(`Failed to fetch categories: ${error.message}`);
     }
 
-    return data?.map(transformCategory) || [];
-  },
+    console.log(`Successfully fetched ${data?.length || 0} categories`);
+    return data.map(category => ({
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      created_at: category.created_at,
+      updated_at: category.updated_at
+    }));
+  } catch (error) {
+    console.error('Failed to fetch categories:', error);
+    throw error;
+  }
+};
 
-  async addCategory(categoryData: any): Promise<Category | null> {
-    try {
-      const { data, error } = await supabase
+export const addCategory = async (category: Omit<Category, 'id'>): Promise<string | null> => {
+  try {
+    console.log('Adding category to Supabase:', category);
+    
+    const { data, error } = await withTimeout(
+      supabase
         .from('categories')
-        .insert([categoryData])
-        .select()
-        .single();
+        .insert([{
+          name: category.name,
+          description: category.description,
+          created_at: category.created_at,
+          updated_at: category.updated_at
+        }])
+        .select('id')
+        .single()
+    );
 
-      if (error) {
-        console.error('Error adding category:', error);
-        throw error;
-      }
-
-      return data ? transformCategory(data) : null;
-    } catch (error) {
+    if (error) {
       console.error('Error adding category:', error);
-      return null;
+      throw new Error(`Failed to add category: ${error.message}`);
     }
-  },
 
-  async updateCategory(id: string, categoryData: any): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Category added successfully with ID:', data.id);
+    return data.id;
+  } catch (error) {
+    console.error('Failed to add category:', error);
+    throw error;
+  }
+};
+
+export const updateCategory = async (id: string, updates: Partial<Category>): Promise<void> => {
+  try {
+    console.log(`Updating category ${id}:`, updates);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('categories')
-        .update(categoryData)
-        .eq('id', id);
+        .update(updates)
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error updating category:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error updating category:', error);
-      return false;
+      throw new Error(`Failed to update category: ${error.message}`);
     }
-  },
 
-  async deleteCategory(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Category updated successfully');
+  } catch (error) {
+    console.error('Failed to update category:', error);
+    throw error;
+  }
+};
+
+export const deleteCategory = async (id: string): Promise<void> => {
+  try {
+    console.log(`Deleting category ${id}`);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('categories')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error deleting category:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error deleting category:', error);
-      return false;
+      throw new Error(`Failed to delete category: ${error.message}`);
     }
-  },
 
-  // Product operations with improved error handling
-  async getProducts(): Promise<Product[]> {
-    try {
-      console.log('Fetching products from Supabase...');
-      
-      const { data, error } = await withTimeout(
-        Promise.resolve(
-          supabase
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: false })
-        ),
-        8000
-      );
+    console.log('Category deleted successfully');
+  } catch (error) {
+    console.error('Failed to delete category:', error);
+    throw error;
+  }
+};
 
-      if (error) {
-        console.error('Error fetching products:', error);
-        throw error;
-      }
-
-      if (!data) {
-        console.warn('No product data returned from Supabase');
-        return [];
-      }
-
-      console.log(`Successfully fetched ${data.length} products`);
-      return data.map(transformProduct);
-    } catch (error) {
-      console.error('Failed to fetch products:', error);
-      if (error.message === 'Query timeout') {
-        throw new Error('Products are taking too long to load. Please try again.');
-      }
-      throw error;
-    }
-  },
-
-  async addProduct(productData: any): Promise<Product | null> {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert([productData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding product:', error);
-        throw error;
-      }
-
-      return data ? transformProduct(data) : null;
-    } catch (error) {
-      console.error('Error adding product:', error);
-      return null;
-    }
-  },
-
-  async updateProduct(id: string, productData: any): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('products')
-        .update(productData)
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error updating product:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error updating product:', error);
-      return false;
-    }
-  },
-
-  async deleteProduct(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting product:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      return false;
-    }
-  },
-
-  // Service operations
-  async getServices(): Promise<Service[]> {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .order('created_at', { ascending: false });
+// Service functions with snake_case field names
+export const getServices = async (): Promise<Service[]> => {
+  try {
+    console.log('Fetching services from Supabase...');
+    
+    const { data, error } = await withTimeout(
+      supabase
+        .from('services')
+        .select('*')
+        .order('created_at', { ascending: false })
+    );
 
     if (error) {
       console.error('Error fetching services:', error);
-      throw error;
+      throw new Error(`Failed to fetch services: ${error.message}`);
     }
 
-    return data?.map(transformService) || [];
-  },
+    console.log(`Successfully fetched ${data?.length || 0} services`);
+    return data.map(service => ({
+      id: service.id,
+      title: service.title,
+      description: service.description,
+      price: service.price,
+      image: service.image,
+      category: service.category,
+      is_active: service.is_active
+    }));
+  } catch (error) {
+    console.error('Failed to fetch services:', error);
+    throw error;
+  }
+};
 
-  async addService(serviceData: any): Promise<Service | null> {
-    try {
-      const { data, error } = await supabase
+export const addService = async (service: Omit<Service, 'id'>): Promise<string | null> => {
+  try {
+    console.log('Adding service to Supabase:', service);
+    
+    const { data, error } = await withTimeout(
+      supabase
         .from('services')
-        .insert([serviceData])
-        .select()
-        .single();
+        .insert([{
+          title: service.title,
+          description: service.description,
+          price: service.price,
+          image: service.image,
+          category: service.category,
+          is_active: service.is_active
+        }])
+        .select('id')
+        .single()
+    );
 
-      if (error) {
-        console.error('Error adding service:', error);
-        throw error;
-      }
-
-      return data ? transformService(data) : null;
-    } catch (error) {
+    if (error) {
       console.error('Error adding service:', error);
-      return null;
+      throw new Error(`Failed to add service: ${error.message}`);
     }
-  },
 
-  async updateService(id: string, serviceData: any): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Service added successfully with ID:', data.id);
+    return data.id;
+  } catch (error) {
+    console.error('Failed to add service:', error);
+    throw error;
+  }
+};
+
+export const updateService = async (id: string, updates: Partial<Service>): Promise<void> => {
+  try {
+    console.log(`Updating service ${id}:`, updates);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('services')
-        .update(serviceData)
-        .eq('id', id);
+        .update(updates)
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error updating service:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error updating service:', error);
-      return false;
+      throw new Error(`Failed to update service: ${error.message}`);
     }
-  },
 
-  async deleteService(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Service updated successfully');
+  } catch (error) {
+    console.error('Failed to update service:', error);
+    throw error;
+  }
+};
+
+export const deleteService = async (id: string): Promise<void> => {
+  try {
+    console.log(`Deleting service ${id}`);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('services')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error deleting service:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error deleting service:', error);
-      return false;
+      throw new Error(`Failed to delete service: ${error.message}`);
     }
-  },
 
-  // Order operations with improved field mapping
-  async getOrders(): Promise<Order[]> {
-    try {
-      console.log('Fetching orders from Supabase...');
-      
-      const { data, error } = await withTimeout(
-        Promise.resolve(
-          supabase
-            .from('orders')
-            .select('*')
-            .order('created_at', { ascending: false })
-        ),
-        8000
-      );
+    console.log('Service deleted successfully');
+  } catch (error) {
+    console.error('Failed to delete service:', error);
+    throw error;
+  }
+};
 
-      if (error) {
-        console.error('Error fetching orders:', error);
-        throw error;
-      }
-
-      if (!data) {
-        console.warn('No order data returned from Supabase');
-        return [];
-      }
-
-      console.log(`Successfully fetched ${data.length} orders`);
-      return data.map(transformOrder);
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-      if (error.message === 'Query timeout') {
-        throw new Error('Orders are taking too long to load. Please try again.');
-      }
-      throw error;
-    }
-  },
-
-  async addOrder(orderData: any): Promise<Order | null> {
-    try {
-      const { data, error } = await supabase
+// Order functions with snake_case field names
+export const getOrders = async (): Promise<Order[]> => {
+  try {
+    console.log('Fetching orders from Supabase...');
+    
+    const { data, error } = await withTimeout(
+      supabase
         .from('orders')
-        .insert([orderData])
-        .select()
-        .single();
+        .select('*')
+        .order('created_at', { ascending: false })
+    );
 
-      if (error) {
-        console.error('Error adding order:', error);
-        throw error;
-      }
+    if (error) {
+      console.error('Error fetching orders:', error);
+      throw new Error(`Failed to fetch orders: ${error.message}`);
+    }
 
-      return data ? transformOrder(data) : null;
-    } catch (error) {
+    console.log(`Successfully fetched ${data?.length || 0} orders`);
+    return data.map(order => ({
+      id: order.id,
+      customer_id: order.customer_id,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      customer_code: order.customer_code,
+      products: order.products,
+      total_amount: order.total_amount,
+      points_used: order.points_used,
+      amount_paid: order.amount_paid,
+      points: order.points,
+      status: order.status,
+      payment_method: order.payment_method,
+      pincode: order.pincode,
+      delivery_address: order.delivery_address,
+      order_date: order.order_date,
+      is_pending_approval: order.is_pending_approval,
+      is_points_awarded: order.is_points_awarded,
+      delivery_approved: order.delivery_approved,
+      points_approved: order.points_approved
+    }));
+  } catch (error) {
+    console.error('Failed to fetch orders:', error);
+    throw error;
+  }
+};
+
+export const addOrder = async (order: Omit<Order, 'id'>): Promise<string | null> => {
+  try {
+    console.log('Adding order to Supabase:', order);
+    
+    const { data, error } = await withTimeout(
+      supabase
+        .from('orders')
+        .insert([{
+          customer_id: order.customer_id,
+          customer_name: order.customer_name,
+          customer_phone: order.customer_phone,
+          customer_code: order.customer_code,
+          products: order.products,
+          total_amount: order.total_amount,
+          points_used: order.points_used,
+          amount_paid: order.amount_paid,
+          points: order.points,
+          status: order.status,
+          payment_method: order.payment_method,
+          pincode: order.pincode,
+          delivery_address: order.delivery_address,
+          order_date: order.order_date,
+          is_pending_approval: order.is_pending_approval,
+          is_points_awarded: order.is_points_awarded,
+          delivery_approved: order.delivery_approved,
+          points_approved: order.points_approved
+        }])
+        .select('id')
+        .single()
+    );
+
+    if (error) {
       console.error('Error adding order:', error);
-      return null;
+      throw new Error(`Failed to add order: ${error.message}`);
     }
-  },
 
-  async updateOrder(id: string, orderData: any): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Order added successfully with ID:', data.id);
+    return data.id;
+  } catch (error) {
+    console.error('Failed to add order:', error);
+    throw error;
+  }
+};
+
+export const updateOrder = async (id: string, updates: Partial<Order>): Promise<void> => {
+  try {
+    console.log(`Updating order ${id}:`, updates);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('orders')
-        .update(orderData)
-        .eq('id', id);
+        .update(updates)
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error updating order:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error updating order:', error);
-      return false;
+      throw new Error(`Failed to update order: ${error.message}`);
     }
-  },
 
-  async deleteOrder(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
+    console.log('Order updated successfully');
+  } catch (error) {
+    console.error('Failed to update order:', error);
+    throw error;
+  }
+};
+
+export const deleteOrder = async (id: string): Promise<void> => {
+  try {
+    console.log(`Deleting order ${id}`);
+    
+    const { error } = await withTimeout(
+      supabase
         .from('orders')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+    );
 
-      if (error) {
-        console.error('Error deleting order:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
+    if (error) {
       console.error('Error deleting order:', error);
-      return false;
+      throw new Error(`Failed to delete order: ${error.message}`);
     }
-  },
 
-  // Daily Sales operations
-  async getDailySales(): Promise<DailySales[]> {
-    const { data, error } = await supabase
-      .from('daily_sales')
-      .select('*')
-      .order('sale_date', { ascending: false });
+    console.log('Order deleted successfully');
+  } catch (error) {
+    console.error('Failed to delete order:', error);
+    throw error;
+  }
+};
+
+// Daily sales functions
+export const getDailySales = async (): Promise<DailySales[]> => {
+  try {
+    console.log('Fetching daily sales from Supabase...');
+    
+    const { data, error } = await withTimeout(
+      supabase
+        .from('daily_sales')
+        .select('*')
+        .order('sale_date', { ascending: false })
+    );
 
     if (error) {
       console.error('Error fetching daily sales:', error);
-      throw error;
+      throw new Error(`Failed to fetch daily sales: ${error.message}`);
     }
 
-    return data?.map(transformDailySales) || [];
-  },
+    console.log(`Successfully fetched ${data?.length || 0} daily sales records`);
+    return data || [];
+  } catch (error) {
+    console.error('Failed to fetch daily sales:', error);
+    throw error;
+  }
+};
 
-  async getTodaysSales(): Promise<DailySales | null> {
-    const today = new Date().toISOString().split('T')[0];
+// Leaderboard functions
+export const getLeaderboard = async (): Promise<any[]> => {
+  try {
+    console.log('Fetching leaderboard from Supabase...');
     
-    const { data, error } = await supabase
-      .from('daily_sales')
-      .select('*')
-      .eq('sale_date', today)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching today\'s sales:', error);
-      return null;
-    }
-
-    return data ? transformDailySales(data) : null;
-  },
-
-  async getSalesByDateRange(startDate: string, endDate: string): Promise<DailySales[]> {
-    const { data, error } = await supabase
-      .from('daily_sales')
-      .select('*')
-      .gte('sale_date', startDate)
-      .lte('sale_date', endDate)
-      .order('sale_date', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching sales by date range:', error);
-      throw error;
-    }
-
-    return data?.map(transformDailySales) || [];
-  },
-
-  // Leaderboard operations
-  async getLeaderboard(limit?: number): Promise<LeaderboardEntry[]> {
-    let query = supabase
-      .from('customer_leaderboard')
-      .select('*');
-
-    if (limit) {
-      query = query.limit(limit);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await withTimeout(
+      supabase
+        .from('customer_leaderboard')
+        .select('*')
+        .order('rank', { ascending: true })
+    );
 
     if (error) {
       console.error('Error fetching leaderboard:', error);
-      throw error;
+      throw new Error(`Failed to fetch leaderboard: ${error.message}`);
     }
 
-    return data?.map(transformLeaderboardEntry) || [];
-  },
+    console.log(`Successfully fetched ${data?.length || 0} leaderboard entries`);
+    return data || [];
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error);
+    throw error;
+  }
+};
 
-  async getLeaderboardConfig(): Promise<LeaderboardConfig | null> {
-    const { data, error } = await supabase
-      .from('leaderboard_config')
-      .select('*')
-      .eq('is_active', true)
-      .single();
+export const getLeaderboardConfig = async (): Promise<LeaderboardConfig | null> => {
+  try {
+    console.log('Fetching leaderboard config from Supabase...');
+    
+    const { data, error } = await withTimeout(
+      supabase
+        .from('leaderboard_config')
+        .select('*')
+        .limit(1)
+        .single()
+    );
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('No leaderboard config found');
+        return null;
+      }
       console.error('Error fetching leaderboard config:', error);
+      throw new Error(`Failed to fetch leaderboard config: ${error.message}`);
+    }
+
+    console.log('Successfully fetched leaderboard config');
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch leaderboard config:', error);
+    throw error;
+  }
+};
+
+// Admin authentication
+export const authenticateAdmin = async (username: string, password: string): Promise<User | null> => {
+  try {
+    console.log('Authenticating admin user...');
+    
+    // For now, using simple hardcoded admin check
+    if (username === 'admin' && password === 'admin123') {
+      return {
+        id: 'admin-1',
+        name: 'Admin User',
+        username: 'admin',
+        role: 'admin'
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Failed to authenticate admin:', error);
+    throw error;
+  }
+};
+
+// Customer authentication
+export const authenticateCustomer = async (phone: string, password: string): Promise<User | null> => {
+  try {
+    console.log('Authenticating customer...');
+    
+    const { data: customers, error } = await withTimeout(
+      supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phone)
+        .limit(1)
+    );
+
+    if (error) {
+      console.error('Error fetching customer for authentication:', error);
+      throw new Error(`Authentication failed: ${error.message}`);
+    }
+
+    if (!customers || customers.length === 0) {
+      console.log('No customer found with phone:', phone);
       return null;
     }
 
-    return data ? transformLeaderboardConfig(data) : null;
-  },
-
-  async updateLeaderboardConfig(configData: Partial<LeaderboardConfig>): Promise<boolean> {
-    const { error } = await supabase
-      .from('leaderboard_config')
-      .update(configData)
-      .eq('is_active', true);
-
-    if (error) {
-      console.error('Error updating leaderboard config:', error);
-      return false;
+    const customer = customers[0];
+    
+    if (!customer.password_hash) {
+      console.log('Customer has no password set');
+      return null;
     }
 
-    return true;
+    // For demo purposes, comparing directly (in production, use bcrypt)
+    const bcrypt = await import('bcryptjs');
+    const isValid = await bcrypt.compare(password, customer.password_hash);
+    
+    if (!isValid) {
+      console.log('Invalid password for customer');
+      return null;
+    }
+
+    console.log('Customer authenticated successfully');
+    return {
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      role: 'customer'
+    };
+  } catch (error) {
+    console.error('Failed to authenticate customer:', error);
+    throw error;
   }
+};
+
+export default {
+  // Connection
+  testConnection,
+  
+  // Customers  
+  getCustomers,
+  addCustomer,
+  updateCustomer,
+  deleteCustomer,
+  
+  // Products
+  getProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct,
+  
+  // Categories
+  getCategories,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+  
+  // Services
+  getServices,
+  addService,
+  updateService,
+  deleteService,
+  
+  // Orders
+  getOrders,
+  addOrder,
+  updateOrder,
+  deleteOrder,
+  
+  // Daily sales
+  getDailySales,
+  
+  // Leaderboard
+  getLeaderboard,
+  getLeaderboardConfig,
+  
+  // Authentication
+  authenticateAdmin,
+  authenticateCustomer
 };

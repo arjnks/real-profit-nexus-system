@@ -113,9 +113,9 @@ const CustomerPasswordsTable = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {customer.passwordHash ? (
+                    {customer.password_hash ? (
                       visiblePasswords.has(customer.id) 
-                        ? customer.passwordHash.substring(0, 60) + '...'
+                        ? customer.password_hash.substring(0, 60) + '...'
                         : '••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••'
                     ) : (
                       <Badge variant="destructive" className="text-xs">
@@ -124,7 +124,7 @@ const CustomerPasswordsTable = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    {customer.passwordHash && (
+                    {customer.password_hash && (
                       <Button
                         variant="ghost"
                         size="sm"

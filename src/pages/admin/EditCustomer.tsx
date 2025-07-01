@@ -58,8 +58,8 @@ const EditCustomer = () => {
         setCode(customer.code);
         setPoints(customer.points);
         setTier(customer.tier);
-        setParentCode(customer.parentCode || 'A100');
-        setIsReserved(customer.isReserved || false);
+        setParentCode(customer.parent_code || 'A100');
+        setIsReserved(customer.is_reserved || false);
         setCustomerFound(true);
       } else {
         console.log('Customer not found with ID:', id);
@@ -94,8 +94,8 @@ const EditCustomer = () => {
         code,
         points,
         tier: tier as "Bronze" | "Silver" | "Gold" | "Diamond",
-        parentCode: parentCode === 'A100' ? null : parentCode,
-        isReserved,
+        parent_code: parentCode === 'A100' ? null : parentCode,
+        is_reserved: isReserved,
       });
       
       toast.success('Customer updated successfully!');
@@ -115,7 +115,7 @@ const EditCustomer = () => {
     
     try {
       // Check if customer has children in MLM tree
-      const hasChildren = customers.some(c => c.parentCode === code);
+      const hasChildren = customers.some(c => c.parent_code === code);
       
       if (hasChildren) {
         toast.error('Cannot delete customer with children in MLM tree. Please reassign children first.');

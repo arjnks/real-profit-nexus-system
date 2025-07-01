@@ -31,7 +31,7 @@ const Orders = () => {
     return <Layout><div>Access denied</div></Layout>;
   }
 
-  const customerOrders = orders.filter(o => o.customerId === user.id);
+  const customerOrders = orders.filter(o => o.customer_id === user.id);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -85,22 +85,22 @@ const Orders = () => {
                     {customerOrders.map(order => (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.id}</TableCell>
-                        <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="space-y-1">
                             {order.products.map(product => (
-                              <div key={product.productId} className="text-sm">
+                              <div key={product.product_id} className="text-sm">
                                 {product.name} × {product.quantity}
                               </div>
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            order.paymentMethod === 'cod' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                            order.payment_method === 'cod' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
                           }`}>
-                            {order.paymentMethod === 'cod' ? 'COD' : 'UPI'}
+                            {order.payment_method === 'cod' ? 'COD' : 'UPI'}
                           </span>
                         </TableCell>
                         <TableCell>

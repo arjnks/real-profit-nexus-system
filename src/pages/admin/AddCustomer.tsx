@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
@@ -79,22 +80,22 @@ const AddCustomer = () => {
 
       console.log('Adding customer with code:', customerCode);
 
-      // Create customer data
+      // Create customer data using snake_case field names
       const customerData = {
         name: formData.name,
         phone: formData.phone,
         address: formData.address || '',
         code: customerCode,
-        parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
-        isReserved: formData.isReserved,
-        isPending: formData.isPending,
-        passwordHash,
+        parent_code: formData.parentCode === 'A100' ? null : formData.parentCode || null,
+        is_reserved: formData.isReserved,
+        is_pending: formData.isPending,
+        password_hash: passwordHash,
         points: 0,
         tier: 'Bronze' as const,
-        joinedDate: new Date().toISOString(),
-        totalSpent: 0,
-        monthlySpent: {},
-        accumulatedPointMoney: 0
+        joined_date: new Date().toISOString(),
+        total_spent: 0,
+        monthly_spent: {},
+        accumulated_point_money: 0
       };
 
       const customerId = await addCustomer(customerData);
