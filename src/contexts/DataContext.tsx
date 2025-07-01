@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { Customer, Product, Category, Service, Order, DailySales } from '@/types';
 import * as supabaseService from '@/services/supabaseService';
@@ -483,12 +484,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Leaderboard operations
   const updateLeaderboardConfig = async (configData: Partial<any>) => {
     try {
-      const success = await supabaseService.updateLeaderboardConfig(configData);
-      if (success) {
-        setLeaderboardConfig(prev => prev ? { ...prev, ...configData } : null);
-        return true;
-      }
-      return false;
+      await supabaseService.updateLeaderboardConfig(configData);
+      setLeaderboardConfig(prev => prev ? { ...prev, ...configData } : null);
+      return true;
     } catch (error) {
       console.error('Error updating leaderboard config:', error);
       return false;

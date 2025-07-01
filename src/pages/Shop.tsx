@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 const Shop = () => {
   const { products, categories, customers } = useData();
   const { 
-    cartItems, 
+    items: cartItems, 
     addToCart, 
     removeFromCart, 
     updateQuantity, 
@@ -73,7 +73,6 @@ const Shop = () => {
       id: product.id,
       name: product.name,
       price: getDiscountedPrice(product),
-      originalPrice: product.price,
       image: product.image,
       maxQuantity: product.stock_quantity
     });

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { getLeaderboardConfig } from '@/services/supabaseService';
+import { getLeaderboardConfig, updateLeaderboardConfig } from '@/services/supabaseService';
 import type { LeaderboardConfig } from '@/types';
 import Leaderboard from './Leaderboard';
 
@@ -23,7 +22,7 @@ const LeaderboardManagement = () => {
 
   const fetchConfig = async () => {
     try {
-      const configData = await supabaseService.getLeaderboardConfig();
+      const configData = await getLeaderboardConfig();
       setConfig(configData);
     } catch (error) {
       console.error('Error fetching leaderboard config:', error);
@@ -42,7 +41,7 @@ const LeaderboardManagement = () => {
 
     setSaving(true);
     try {
-      const success = await supabaseService.updateLeaderboardConfig({
+      await updateLeaderboardConfig({
         top_count: config.top_count,
         offer_title: config.offer_title,
         offer_description: config.offer_description,
@@ -50,14 +49,10 @@ const LeaderboardManagement = () => {
         is_active: config.is_active
       });
 
-      if (success) {
-        toast({
-          title: "Success",
-          description: "Leaderboard configuration updated successfully",
-        });
-      } else {
-        throw new Error('Failed to update configuration');
-      }
+      toast({
+        title: "Success",
+        description: "Leaderboard configuration updated successfully",
+      });
     } catch (error) {
       console.error('Error updating leaderboard config:', error);
       toast({

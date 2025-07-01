@@ -1,7 +1,8 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Customer, Product, Category, Service, Order, User, DailySales, LeaderboardConfig } from '@/types';
 
-// Timeout utility
+// Timeout utility  
 const withTimeout = <T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> => {
   return Promise.race([
     promise,
@@ -74,7 +75,7 @@ export const getCustomers = async (): Promise<Customer[]> => {
   }
 };
 
-export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<string | null> => {
+export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer | null> => {
   try {
     console.log('Adding customer to Supabase:', customer);
     
@@ -82,7 +83,7 @@ export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<strin
       supabase
         .from('customers')
         .insert([customer])
-        .select('id')
+        .select('*')
         .single()
     );
 
@@ -91,15 +92,31 @@ export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<strin
       throw new Error(`Failed to add customer: ${error.message}`);
     }
 
-    console.log('Customer added successfully with ID:', data.id);
-    return data.id;
+    console.log('Customer added successfully:', data);
+    return {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      address: data.address || '',
+      code: data.code,
+      parent_code: data.parent_code,
+      points: data.points || 0,
+      tier: data.tier as "Bronze" | "Silver" | "Gold" | "Diamond",
+      joined_date: data.joined_date,
+      is_reserved: data.is_reserved || false,
+      is_pending: data.is_pending || false,
+      total_spent: data.total_spent || 0,
+      monthly_spent: data.monthly_spent || {},
+      accumulated_point_money: data.accumulated_point_money || 0,
+      password_hash: data.password_hash
+    };
   } catch (error) {
     console.error('Failed to add customer:', error);
-    throw error;
+    return null;
   }
 };
 
-export const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<void> => {
+export const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<boolean> => {
   try {
     console.log(`Updating customer ${id}:`, updates);
     
@@ -116,13 +133,14 @@ export const updateCustomer = async (id: string, updates: Partial<Customer>): Pr
     }
 
     console.log('Customer updated successfully');
+    return true;
   } catch (error) {
     console.error('Failed to update customer:', error);
-    throw error;
+    return false;
   }
 };
 
-export const deleteCustomer = async (id: string): Promise<void> => {
+export const deleteCustomer = async (id: string): Promise<boolean> => {
   try {
     console.log(`Deleting customer ${id}`);
     
@@ -139,9 +157,10 @@ export const deleteCustomer = async (id: string): Promise<void> => {
     }
 
     console.log('Customer deleted successfully');
+    return true;
   } catch (error) {
     console.error('Failed to delete customer:', error);
-    throw error;
+    return false;
   }
 };
 
@@ -155,7 +174,7 @@ export const getProducts = async (): Promise<Product[]> => {
         .from('products')
         .select('*')
         .order('created_at', { ascending: false }),
-      15000 // Increased timeout for products
+      15000
     );
 
     if (error) {
@@ -188,7 +207,7 @@ export const getProducts = async (): Promise<Product[]> => {
   }
 };
 
-export const addProduct = async (product: Omit<Product, 'id'>): Promise<string | null> => {
+export const addProduct = async (product: Omit<Product, 'id'>): Promise<Product | null> => {
   try {
     console.log('Adding product to Supabase:', product);
     
@@ -196,7 +215,7 @@ export const addProduct = async (product: Omit<Product, 'id'>): Promise<string |
       supabase
         .from('products')
         .insert([product])
-        .select('id')
+        .select('*')
         .single()
     );
 
@@ -205,15 +224,27 @@ export const addProduct = async (product: Omit<Product, 'id'>): Promise<string |
       throw new Error(`Failed to add product: ${error.message}`);
     }
 
-    console.log('Product added successfully with ID:', data.id);
-    return data.id;
+    console.log('Product added successfully:', data);
+    return {
+      id: data.id,
+      name: data.name,
+      price: data.price,
+      mrp: data.mrp,
+      dummy_price: data.dummy_price,
+      image: data.image,
+      description: data.description,
+      category: data.category,
+      in_stock: data.in_stock,
+      stock_quantity: data.stock_quantity,
+      tier_discounts: data.tier_discounts
+    };
   } catch (error) {
     console.error('Failed to add product:', error);
-    throw error;
+    return null;
   }
 };
 
-export const updateProduct = async (id: string, updates: Partial<Product>): Promise<void> => {
+export const updateProduct = async (id: string, updates: Partial<Product>): Promise<boolean> => {
   try {
     console.log(`Updating product ${id}:`, updates);
     
@@ -230,13 +261,14 @@ export const updateProduct = async (id: string, updates: Partial<Product>): Prom
     }
 
     console.log('Product updated successfully');
+    return true;
   } catch (error) {
     console.error('Failed to update product:', error);
-    throw error;
+    return false;
   }
 };
 
-export const deleteProduct = async (id: string): Promise<void> => {
+export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
     console.log(`Deleting product ${id}`);
     
@@ -253,13 +285,14 @@ export const deleteProduct = async (id: string): Promise<void> => {
     }
 
     console.log('Product deleted successfully');
+    return true;
   } catch (error) {
     console.error('Failed to delete product:', error);
-    throw error;
+    return false;
   }
 };
 
-// Category functions with snake_case field names
+// Category functions
 export const getCategories = async (): Promise<Category[]> => {
   try {
     console.log('Fetching categories from Supabase...');
@@ -290,7 +323,7 @@ export const getCategories = async (): Promise<Category[]> => {
   }
 };
 
-export const addCategory = async (category: Omit<Category, 'id'>): Promise<string | null> => {
+export const addCategory = async (category: Omit<Category, 'id'>): Promise<Category | null> => {
   try {
     console.log('Adding category to Supabase:', category);
     
@@ -298,7 +331,7 @@ export const addCategory = async (category: Omit<Category, 'id'>): Promise<strin
       supabase
         .from('categories')
         .insert([category])
-        .select('id')
+        .select('*')
         .single()
     );
 
@@ -307,15 +340,21 @@ export const addCategory = async (category: Omit<Category, 'id'>): Promise<strin
       throw new Error(`Failed to add category: ${error.message}`);
     }
 
-    console.log('Category added successfully with ID:', data.id);
-    return data.id;
+    console.log('Category added successfully:', data);
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   } catch (error) {
     console.error('Failed to add category:', error);
-    throw error;
+    return null;
   }
 };
 
-export const updateCategory = async (id: string, updates: Partial<Category>): Promise<void> => {
+export const updateCategory = async (id: string, updates: Partial<Category>): Promise<boolean> => {
   try {
     console.log(`Updating category ${id}:`, updates);
     
@@ -332,13 +371,14 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
     }
 
     console.log('Category updated successfully');
+    return true;
   } catch (error) {
     console.error('Failed to update category:', error);
-    throw error;
+    return false;
   }
 };
 
-export const deleteCategory = async (id: string): Promise<void> => {
+export const deleteCategory = async (id: string): Promise<boolean> => {
   try {
     console.log(`Deleting category ${id}`);
     
@@ -355,13 +395,14 @@ export const deleteCategory = async (id: string): Promise<void> => {
     }
 
     console.log('Category deleted successfully');
+    return true;
   } catch (error) {
     console.error('Failed to delete category:', error);
-    throw error;
+    return false;
   }
 };
 
-// Service functions with snake_case field names
+// Service functions
 export const getServices = async (): Promise<Service[]> => {
   try {
     console.log('Fetching services from Supabase...');
@@ -394,7 +435,7 @@ export const getServices = async (): Promise<Service[]> => {
   }
 };
 
-export const addService = async (service: Omit<Service, 'id'>): Promise<string | null> => {
+export const addService = async (service: Omit<Service, 'id'>): Promise<Service | null> => {
   try {
     console.log('Adding service to Supabase:', service);
     
@@ -402,7 +443,7 @@ export const addService = async (service: Omit<Service, 'id'>): Promise<string |
       supabase
         .from('services')
         .insert([service])
-        .select('id')
+        .select('*')
         .single()
     );
 
@@ -411,15 +452,23 @@ export const addService = async (service: Omit<Service, 'id'>): Promise<string |
       throw new Error(`Failed to add service: ${error.message}`);
     }
 
-    console.log('Service added successfully with ID:', data.id);
-    return data.id;
+    console.log('Service added successfully:', data);
+    return {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      image: data.image,
+      category: data.category,
+      is_active: data.is_active
+    };
   } catch (error) {
     console.error('Failed to add service:', error);
-    throw error;
+    return null;
   }
 };
 
-export const updateService = async (id: string, updates: Partial<Service>): Promise<void> => {
+export const updateService = async (id: string, updates: Partial<Service>): Promise<boolean> => {
   try {
     console.log(`Updating service ${id}:`, updates);
     
@@ -436,13 +485,14 @@ export const updateService = async (id: string, updates: Partial<Service>): Prom
     }
 
     console.log('Service updated successfully');
+    return true;
   } catch (error) {
     console.error('Failed to update service:', error);
-    throw error;
+    return false;
   }
 };
 
-export const deleteService = async (id: string): Promise<void> => {
+export const deleteService = async (id: string): Promise<boolean> => {
   try {
     console.log(`Deleting service ${id}`);
     
@@ -459,13 +509,14 @@ export const deleteService = async (id: string): Promise<void> => {
     }
 
     console.log('Service deleted successfully');
+    return true;
   } catch (error) {
     console.error('Failed to delete service:', error);
-    throw error;
+    return false;
   }
 };
 
-// Order functions with snake_case field names
+// Order functions
 export const getOrders = async (): Promise<Order[]> => {
   try {
     console.log('Fetching orders from Supabase...');
@@ -510,7 +561,7 @@ export const getOrders = async (): Promise<Order[]> => {
   }
 };
 
-export const addOrder = async (order: Omit<Order, 'id'>): Promise<string | null> => {
+export const addOrder = async (order: Omit<Order, 'id'>): Promise<Order | null> => {
   try {
     console.log('Adding order to Supabase:', order);
     
@@ -518,7 +569,7 @@ export const addOrder = async (order: Omit<Order, 'id'>): Promise<string | null>
       supabase
         .from('orders')
         .insert([order])
-        .select('id')
+        .select('*')
         .single()
     );
 
@@ -527,15 +578,35 @@ export const addOrder = async (order: Omit<Order, 'id'>): Promise<string | null>
       throw new Error(`Failed to add order: ${error.message}`);
     }
 
-    console.log('Order added successfully with ID:', data.id);
-    return data.id;
+    console.log('Order added successfully:', data);
+    return {
+      id: data.id,
+      customer_id: data.customer_id,
+      customer_name: data.customer_name,
+      customer_phone: data.customer_phone,
+      customer_code: data.customer_code,
+      products: data.products,
+      total_amount: data.total_amount,
+      points_used: data.points_used,
+      amount_paid: data.amount_paid,
+      points: data.points,
+      status: data.status,
+      payment_method: data.payment_method,
+      pincode: data.pincode,
+      delivery_address: data.delivery_address,
+      order_date: data.order_date,
+      is_pending_approval: data.is_pending_approval,
+      is_points_awarded: data.is_points_awarded,
+      delivery_approved: data.delivery_approved,
+      points_approved: data.points_approved
+    };
   } catch (error) {
     console.error('Failed to add order:', error);
-    throw error;
+    return null;
   }
 };
 
-export const updateOrder = async (id: string, updates: Partial<Order>): Promise<void> => {
+export const updateOrder = async (id: string, updates: Partial<Order>): Promise<boolean> => {
   try {
     console.log(`Updating order ${id}:`, updates);
     
@@ -552,13 +623,14 @@ export const updateOrder = async (id: string, updates: Partial<Order>): Promise<
     }
 
     console.log('Order updated successfully');
+    return true;
   } catch (error) {
     console.error('Failed to update order:', error);
-    throw error;
+    return false;
   }
 };
 
-export const deleteOrder = async (id: string): Promise<void> => {
+export const deleteOrder = async (id: string): Promise<boolean> => {
   try {
     console.log(`Deleting order ${id}`);
     
@@ -575,9 +647,10 @@ export const deleteOrder = async (id: string): Promise<void> => {
     }
 
     console.log('Order deleted successfully');
+    return true;
   } catch (error) {
     console.error('Failed to delete order:', error);
-    throw error;
+    return false;
   }
 };
 
@@ -660,30 +733,56 @@ export const getLeaderboardConfig = async (): Promise<LeaderboardConfig | null> 
   }
 };
 
+export const updateLeaderboardConfig = async (configData: Partial<LeaderboardConfig>): Promise<void> => {
+  try {
+    console.log('Updating leaderboard config:', configData);
+    
+    const { error } = await withTimeout(
+      supabase
+        .from('leaderboard_config')
+        .update(configData)
+        .eq('id', 'default')
+    );
+
+    if (error) {
+      console.error('Error updating leaderboard config:', error);
+      throw new Error(`Failed to update leaderboard config: ${error.message}`);
+    }
+
+    console.log('Leaderboard config updated successfully');
+  } catch (error) {
+    console.error('Failed to update leaderboard config:', error);
+    throw error;
+  }
+};
+
 // Admin authentication
-export const authenticateAdmin = async (username: string, password: string): Promise<User | null> => {
+export const authenticateAdmin = async (username: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
     console.log('Authenticating admin user...');
     
     // For now, using simple hardcoded admin check
     if (username === 'admin' && password === 'admin123') {
       return {
-        id: 'admin-1',
-        name: 'Admin User',
-        username: 'admin',
-        role: 'admin'
+        success: true,
+        user: {
+          id: 'admin-1',
+          name: 'Admin User',
+          username: 'admin',
+          role: 'admin'
+        }
       };
     }
     
-    return null;
+    return { success: false, error: 'Invalid credentials' };
   } catch (error) {
     console.error('Failed to authenticate admin:', error);
-    throw error;
+    return { success: false, error: 'Authentication failed' };
   }
 };
 
 // Customer authentication
-export const authenticateCustomer = async (phone: string, password: string): Promise<User | null> => {
+export const authenticateCustomer = async (phone: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
     console.log('Authenticating customer...');
     
@@ -697,19 +796,19 @@ export const authenticateCustomer = async (phone: string, password: string): Pro
 
     if (error) {
       console.error('Error fetching customer for authentication:', error);
-      throw new Error(`Authentication failed: ${error.message}`);
+      return { success: false, error: `Authentication failed: ${error.message}` };
     }
 
     if (!customers || customers.length === 0) {
       console.log('No customer found with phone:', phone);
-      return null;
+      return { success: false, error: 'Invalid credentials' };
     }
 
     const customer = customers[0];
     
     if (!customer.password_hash) {
       console.log('Customer has no password set');
-      return null;
+      return { success: false, error: 'Invalid credentials' };
     }
 
     // For demo purposes, comparing directly (in production, use bcrypt)
@@ -718,19 +817,22 @@ export const authenticateCustomer = async (phone: string, password: string): Pro
     
     if (!isValid) {
       console.log('Invalid password for customer');
-      return null;
+      return { success: false, error: 'Invalid credentials' };
     }
 
     console.log('Customer authenticated successfully');
     return {
-      id: customer.id,
-      name: customer.name,
-      phone: customer.phone,
-      role: 'customer'
+      success: true,
+      user: {
+        id: customer.id,
+        name: customer.name,
+        phone: customer.phone,
+        role: 'customer'
+      }
     };
   } catch (error) {
     console.error('Failed to authenticate customer:', error);
-    throw error;
+    return { success: false, error: 'Authentication failed' };
   }
 };
 
@@ -774,6 +876,7 @@ export default {
   // Leaderboard
   getLeaderboard,
   getLeaderboardConfig,
+  updateLeaderboardConfig,
   
   // Authentication
   authenticateAdmin,

@@ -29,7 +29,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ isAdmin = false, showOffer = 
       console.log('Fetching leaderboard data...');
       
       // Fetch leaderboard data
-      const leaderboardData = await getLeaderboard(isAdmin ? undefined : 50);
+      const leaderboardData = await getLeaderboard();
       console.log('Leaderboard data received:', leaderboardData);
       setLeaderboard(leaderboardData || []);
 
