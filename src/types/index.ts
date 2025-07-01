@@ -5,16 +5,16 @@ export interface Customer {
   phone: string;
   address?: string;
   code: string;
-  parentCode: string | null;
+  parent_code: string | null;
   points: number;
   tier: "Bronze" | "Silver" | "Gold" | "Diamond";
-  joinedDate: string;
-  isReserved: boolean;
-  isPending: boolean;
-  totalSpent: number;
-  monthlySpent: Record<string, number>;
-  accumulatedPointMoney: number;
-  passwordHash?: string;
+  joined_date: string;
+  is_reserved: boolean;
+  is_pending: boolean;
+  total_spent: number;
+  monthly_spent: Record<string, number>;
+  accumulated_point_money: number;
+  password_hash?: string;
 }
 
 export interface Product {
@@ -22,13 +22,13 @@ export interface Product {
   name: string;
   price: number;
   mrp: number;
-  dummyPrice?: number;
+  dummy_price?: number;
   image: string;
   description: string;
   category: string;
-  inStock: boolean;
-  stockQuantity: number;
-  tierDiscounts: {
+  in_stock: boolean;
+  stock_quantity: number;
+  tier_discounts: {
     Bronze: number;
     Silver: number;
     Gold: number;
@@ -40,8 +40,8 @@ export interface Category {
   id: string;
   name: string;
   description?: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Service {
@@ -51,34 +51,34 @@ export interface Service {
   price: string;
   image: string;
   category: string;
-  isActive: boolean;
+  is_active: boolean;
 }
 
 export interface Order {
   id: string;
-  customerId: string;
-  customerName: string;
-  customerPhone: string;
-  customerCode: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_code: string;
   products: Array<{
-    productId: string;
+    product_id: string;
     name: string;
     price: number;
     quantity: number;
   }>;
-  totalAmount: number;
-  pointsUsed: number;
-  amountPaid: number;
+  total_amount: number;
+  points_used: number;
+  amount_paid: number;
   points: number;
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled" | "refunded";
-  paymentMethod: "cod" | "upi";
+  payment_method: "cod" | "upi";
   pincode: string;
-  deliveryAddress?: string;
-  orderDate: string;
-  isPendingApproval: boolean;
-  isPointsAwarded: boolean;
-  deliveryApproved: boolean;
-  pointsApproved: boolean;
+  delivery_address?: string;
+  order_date: string;
+  is_pending_approval: boolean;
+  is_points_awarded: boolean;
+  delivery_approved: boolean;
+  points_approved: boolean;
 }
 
 export interface User {

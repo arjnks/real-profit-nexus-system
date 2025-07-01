@@ -36,10 +36,10 @@ const Purchases = () => {
   }, [orders, isLoading]);
 
   const filteredOrders = orders.filter(order =>
-    order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customerPhone.includes(searchTerm) ||
+    order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.customer_phone.includes(searchTerm) ||
     order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customerCode?.toLowerCase().includes(searchTerm.toLowerCase())
+    order.customer_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -69,8 +69,8 @@ const Purchases = () => {
   };
 
   const getDeliveryAddress = (order: any) => {
-    return order.deliveryAddress || 
-           getCustomerByCode(order.customerCode)?.address || 
+    return order.delivery_address || 
+           getCustomerByCode(order.customer_code)?.address || 
            (order.pincode ? `Pincode: ${order.pincode}` : 'No address provided');
   };
 
@@ -142,14 +142,14 @@ const Purchases = () => {
               <TableBody>
                 {filteredOrders.length > 0 ? (
                   filteredOrders.map((order) => {
-                    const customer = getCustomerByCode(order.customerCode);
+                    const customer = getCustomerByCode(order.customer_code);
                     const deliveryAddress = getDeliveryAddress(order);
                     return (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.id}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{order.customerName}</span>
+                            <span className="font-medium">{order.customer_name}</span>
                             {customer && (
                               <Badge variant="outline" className="text-xs w-fit">
                                 {customer.tier}
@@ -159,10 +159,10 @@ const Purchases = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="font-mono">
-                            {order.customerCode || 'N/A'}
+                            {order.customer_code || 'N/A'}
                           </Badge>
                         </TableCell>
-                        <TableCell>{order.customerPhone}</TableCell>
+                        <TableCell>{order.customer_phone}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 max-w-[200px]">
                             <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
@@ -177,12 +177,12 @@ const Purchases = () => {
                             <span>{order.products.length} item(s)</span>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">₹{order.totalAmount.toFixed(2)}</TableCell>
-                        <TableCell className="text-green-600 font-medium">₹{order.amountPaid.toFixed(2)}</TableCell>
+                        <TableCell className="font-medium">₹{order.total_amount.toFixed(2)}</TableCell>
+                        <TableCell className="text-green-600 font-medium">₹{order.amount_paid.toFixed(2)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <span className="text-blue-600 font-medium">₹{order.points}</span>
-                            {order.isPointsAwarded && (
+                            {order.is_points_awarded && (
                               <Badge variant="outline" className="text-xs text-green-600 border-green-600">
                                 Awarded
                               </Badge>
@@ -194,7 +194,7 @@ const Purchases = () => {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-gray-500" />
                             <span className="text-sm">
-                              {format(new Date(order.orderDate), 'MMM dd, yyyy')}
+                              {format(new Date(order.order_date), 'MMM dd, yyyy')}
                             </span>
                           </div>
                         </TableCell>
@@ -242,15 +242,15 @@ const Purchases = () => {
                   <h3 className="font-semibold mb-2">Customer Information</h3>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">Name:</span> {selectedOrder.customerName}
+                      <span className="font-medium">Name:</span> {selectedOrder.customer_name}
                     </div>
                     <div>
-                      <span className="font-medium">Phone:</span> {selectedOrder.customerPhone}
+                      <span className="font-medium">Phone:</span> {selectedOrder.customer_phone}
                     </div>
                     <div>
                       <span className="font-medium">Customer Code:</span> 
                       <Badge variant="secondary" className="ml-2">
-                        {selectedOrder.customerCode || 'N/A'}
+                        {selectedOrder.customer_code || 'N/A'}
                       </Badge>
                     </div>
                     <div>
@@ -269,14 +269,14 @@ const Purchases = () => {
                   <h3 className="font-semibold mb-2">Order Information</h3>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">Order Date:</span> {format(new Date(selectedOrder.orderDate), 'MMM dd, yyyy HH:mm')}
+                      <span className="font-medium">Order Date:</span> {format(new Date(selectedOrder.order_date), 'MMM dd, yyyy HH:mm')}
                     </div>
                     <div>
                       <span className="font-medium">Status:</span> 
                       <span className="ml-2">{getStatusBadge(selectedOrder.status)}</span>
                     </div>
                     <div>
-                      <span className="font-medium">Payment Method:</span> {selectedOrder.paymentMethod.toUpperCase()}
+                      <span className="font-medium">Payment Method:</span> {selectedOrder.payment_method.toUpperCase()}
                     </div>
                     <div>
                       <span className="font-medium">Pincode:</span> {selectedOrder.pincode}
@@ -320,23 +320,23 @@ const Purchases = () => {
                     <span>Subtotal:</span>
                     <span>₹{calculateSubtotal(selectedOrder.products).toFixed(2)}</span>
                   </div>
-                  {selectedOrder.pointsUsed > 0 && (
+                  {selectedOrder.points_used > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Points Used:</span>
-                      <span>-₹{selectedOrder.pointsUsed.toFixed(2)}</span>
+                      <span>-₹{selectedOrder.points_used.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-semibold text-lg border-t pt-2">
                     <span>Total Amount:</span>
-                    <span>₹{selectedOrder.totalAmount.toFixed(2)}</span>
+                    <span>₹{selectedOrder.total_amount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-green-600">
                     <span>Amount Paid:</span>
-                    <span>₹{selectedOrder.amountPaid.toFixed(2)}</span>
+                    <span>₹{selectedOrder.amount_paid.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-blue-600">
                     <span>Points Earned:</span>
-                    <span>₹{selectedOrder.points} {selectedOrder.isPointsAwarded ? '(Awarded)' : '(Pending)'}</span>
+                    <span>₹{selectedOrder.points} {selectedOrder.is_points_awarded ? '(Awarded)' : '(Pending)'}</span>
                   </div>
                 </div>
               </div>

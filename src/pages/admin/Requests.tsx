@@ -36,29 +36,29 @@ const Requests = () => {
   const [viewOrderId, setViewOrderId] = useState<string | null>(null);
 
   // Get pending orders - using correct field name
-  const pendingOrders = orders.filter(order => order.isPendingApproval);
+  const pendingOrders = orders.filter(order => order.is_pending_approval);
   
   // Get pending customers
-  const pendingCustomers = customers.filter(customer => customer.isPending);
+  const pendingCustomers = customers.filter(customer => customer.is_pending);
 
   // Filter orders based on filter
   const filteredOrders = filterType === 'all' 
     ? pendingOrders 
-    : pendingOrders.filter(order => order.paymentMethod === filterType);
+    : pendingOrders.filter(order => order.payment_method === filterType);
 
   // Get the currently viewed order details
   const viewedOrder = viewOrderId ? orders.find(order => order.id === viewOrderId) : null;
 
   // Helper function to get delivery address
   const getDeliveryAddress = (order: any) => {
-    const customer = customers.find(c => c.id === order.customerId);
+    const customer = customers.find(c => c.id === order.customer_id);
     
-    console.log('Order delivery address:', order.deliveryAddress);
+    console.log('Order delivery address:', order.delivery_address);
     console.log('Customer address:', customer?.address);
     console.log('Order pincode:', order.pincode);
     
-    if (order.deliveryAddress) {
-      return order.deliveryAddress;
+    if (order.delivery_address) {
+      return order.delivery_address;
     }
     
     if (customer?.address) {
@@ -75,19 +75,19 @@ const Requests = () => {
   // Calculate actual points that will be awarded after accumulation
   const calculateActualPointsAwarded = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
-    const customer = customers.find(c => c.id === order?.customerId);
+    const customer = customers.find(c => c.id === order?.customer_id);
     
     if (!order || !customer) return { pointMoney: 0, actualPoints: 0, remainingMoney: 0 };
     
     const pointMoney = order.points; // This is the point money from the order
-    const totalAccumulated = customer.accumulatedPointMoney + pointMoney;
+    const totalAccumulated = customer.accumulated_point_money + pointMoney;
     const actualPoints = Math.floor(totalAccumulated / 5);
     const remainingMoney = totalAccumulated % 5;
     
     return { pointMoney, actualPoints, remainingMoney };
   };
 
-  // Handle order approval - using correct snake_case field names
+  // Handle order approval - using correct field names
   const handleApproveOrder = (orderId: string) => {
     updateOrder(orderId, { 
       is_pending_approval: false, 
@@ -96,7 +96,7 @@ const Requests = () => {
     toast.success('Order approved successfully');
   };
 
-  // Handle order rejection - using correct snake_case field names
+  // Handle order rejection - using correct field names
   const handleRejectOrder = (orderId: string) => {
     updateOrder(orderId, { 
       is_pending_approval: false, 
@@ -105,14 +105,14 @@ const Requests = () => {
     toast.success('Order rejected successfully');
   };
 
-  // Handle delivery confirmation and points awarding - using correct snake_case field names
+  // Handle delivery confirmation and points awarding - using correct field names
   const handleConfirmDelivery = (orderId: string) => {
     const order = orders.find(order => order.id === orderId);
-    if (order && !order.isPointsAwarded) {
+    if (order && !order.is_points_awarded) {
       // Award the point money (which will handle accumulation and conversion)
-      awardPoints(order.customerId, order.points);
+      awardPoints(order.customer_id, order.points);
       
-      // Update order status - using correct snake_case field names
+      // Update order status - using correct field names
       updateOrder(orderId, { 
         status: 'delivered',
         is_points_awarded: true,
@@ -125,7 +125,7 @@ const Requests = () => {
     }
   };
 
-  // Handle customer approval - using correct snake_case field names
+  // Handle customer approval - using correct field names
   const handleApproveCustomer = (customerId: string) => {
     updateCustomer(customerId, { is_pending: false });
     toast.success('Customer approved successfully');
@@ -193,10 +193,10 @@ const Requests = () => {
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.id}</TableCell>
                         <TableCell>
-                          {order.customerName}
-                          <div className="text-xs text-muted-foreground">{order.customerCode}</div>
+                          {order.customer_name}
+                          <div className="text-xs text-muted-foreground">{order.customer_code}</div>
                         </TableCell>
-                        <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
                         <TableCell>
                           <div className="text-sm">
                             ₹{order.points}
@@ -212,9 +212,9 @@ const Requests = () => {
                         </TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            order.paymentMethod === 'cod' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                            order.payment_method === 'cod' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
                           }`}>
-                            {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI Payment'}
+                            {order.payment_method === 'cod' ? 'Cash on Delivery' : 'UPI Payment'}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -232,7 +232,7 @@ const Requests = () => {
                             {getDeliveryAddress(order)}
                           </div>
                         </TableCell>
-                        <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
                             <Button
@@ -245,7 +245,7 @@ const Requests = () => {
                               <span className="sr-only">View</span>
                             </Button>
                             
-                            {order.isPendingApproval && (
+                            {order.is_pending_approval && (
                               <>
                                 <Button
                                   variant="ghost"
@@ -269,7 +269,7 @@ const Requests = () => {
                               </>
                             )}
                             
-                            {order.status === 'confirmed' && !order.isPointsAwarded && (
+                            {order.status === 'confirmed' && !order.is_points_awarded && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -318,8 +318,8 @@ const Requests = () => {
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell>{customer.phone}</TableCell>
                       <TableCell>{customer.code}</TableCell>
-                      <TableCell>{customer.parentCode || 'N/A'}</TableCell>
-                      <TableCell>{new Date(customer.joinedDate).toLocaleDateString()}</TableCell>
+                      <TableCell>{customer.parent_code || 'N/A'}</TableCell>
+                      <TableCell>{new Date(customer.joined_date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
@@ -373,9 +373,9 @@ const Requests = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground">Customer Information</h3>
-                  <p className="font-medium">{viewedOrder.customerName}</p>
-                  <p className="text-sm">{viewedOrder.customerCode}</p>
-                  <p className="text-sm">{viewedOrder.customerPhone}</p>
+                  <p className="font-medium">{viewedOrder.customer_name}</p>
+                  <p className="text-sm">{viewedOrder.customer_code}</p>
+                  <p className="text-sm">{viewedOrder.customer_phone}</p>
                 </div>
                 
                 <div>
@@ -406,7 +406,7 @@ const Requests = () => {
                     </TableHeader>
                     <TableBody>
                       {viewedOrder.products.map((product) => (
-                        <TableRow key={product.productId}>
+                        <TableRow key={product.product_id}>
                           <TableCell>{product.name}</TableCell>
                           <TableCell className="text-right">₹{product.price.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{product.quantity}</TableCell>
@@ -415,7 +415,7 @@ const Requests = () => {
                       ))}
                       <TableRow>
                         <TableCell colSpan={3} className="text-right font-semibold">Total:</TableCell>
-                        <TableCell className="text-right font-semibold">₹{viewedOrder.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-semibold">₹{viewedOrder.total_amount.toFixed(2)}</TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
@@ -450,7 +450,7 @@ const Requests = () => {
                   <div>
                     <p className="text-sm">Payment Method:</p>
                     <p className="font-medium">
-                      {viewedOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'UPI Payment'}
+                      {viewedOrder.payment_method === 'cod' ? 'Cash on Delivery' : 'UPI Payment'}
                     </p>
                   </div>
                   <div>
@@ -473,7 +473,7 @@ const Requests = () => {
             </div>
             
             <div className="flex gap-2">
-              {viewedOrder && viewedOrder.isPendingApproval && (
+              {viewedOrder && viewedOrder.is_pending_approval && (
                 <>
                   <Button 
                     variant="destructive"
@@ -496,7 +496,7 @@ const Requests = () => {
                 </>
               )}
               
-              {viewedOrder && viewedOrder.status === 'confirmed' && !viewedOrder.isPointsAwarded && (
+              {viewedOrder && viewedOrder.status === 'confirmed' && !viewedOrder.is_points_awarded && (
                 <Button 
                   onClick={() => {
                     handleConfirmDelivery(viewedOrder.id);

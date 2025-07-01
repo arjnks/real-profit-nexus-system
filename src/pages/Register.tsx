@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -84,35 +85,39 @@ const Register = () => {
       
       console.log('Registering new customer with code:', newCode);
 
-      // Create and add customer
-      await addCustomer({
+      // Create and add customer using snake_case field names
+      const customerResult = await addCustomer({
         name: formData.name,
         phone: formData.phone,
         address: '',
         code: newCode,
-        parentCode: formData.parentCode === 'A100' ? null : formData.parentCode || null,
-        isReserved: false,
-        isPending: false,
-        passwordHash: hashedPassword,
+        parent_code: formData.parentCode === 'A100' ? null : formData.parentCode || null,
+        is_reserved: false,
+        is_pending: false,
+        password_hash: hashedPassword,
         points: 0,
         tier: 'Bronze',
-        joinedDate: new Date().toISOString(),
-        totalSpent: 0,
-        monthlySpent: {},
-        accumulatedPointMoney: 0
+        joined_date: new Date().toISOString(),
+        total_spent: 0,
+        monthly_spent: {},
+        accumulated_point_money: 0
       });
 
-      console.log('Customer added successfully');
+      if (customerResult) {
+        console.log('Customer added successfully');
 
-      // Auto-login the customer
-      const loginResult = await login(formData.phone, formData.password, false);
-      
-      if (loginResult.success) {
-        toast.success(`Registration successful! Your customer code is ${newCode}`);
-        navigate('/');
+        // Auto-login the customer
+        const loginResult = await login(formData.phone, formData.password, false);
+        
+        if (loginResult.success) {
+          toast.success(`Registration successful! Your customer code is ${newCode}`);
+          navigate('/');
+        } else {
+          toast.success(`Registration successful! Your customer code is ${newCode}. Please login.`);
+          navigate('/login');
+        }
       } else {
-        toast.success(`Registration successful! Your customer code is ${newCode}. Please login.`);
-        navigate('/login');
+        setError('Registration failed. Please try again.');
       }
     } catch (error) {
       console.error('Registration error:', error);

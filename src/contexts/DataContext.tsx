@@ -189,13 +189,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const customer = customers.find(c => c.id === customerId);
       if (!customer) return false;
 
-      const newAccumulated = customer.accumulatedPointMoney + pointMoney;
+      const newAccumulated = customer.accumulated_point_money + pointMoney;
       const newPoints = Math.floor(newAccumulated / 5);
       const remainingMoney = newAccumulated % 5;
 
       const success = await updateCustomer(customerId, {
         points: customer.points + newPoints,
-        accumulatedPointMoney: remainingMoney
+        accumulated_point_money: remainingMoney
       });
 
       return success;
@@ -212,36 +212,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...customerData,
         points: customerData.points || 0,
         tier: customerData.tier || 'Bronze',
-        joinedDate: customerData.joinedDate || new Date().toISOString(),
-        totalSpent: customerData.totalSpent || 0,
-        monthlySpent: customerData.monthlySpent || {},
-        accumulatedPointMoney: customerData.accumulatedPointMoney || 0
+        joined_date: customerData.joined_date || new Date().toISOString(),
+        total_spent: customerData.total_spent || 0,
+        monthly_spent: customerData.monthly_spent || {},
+        accumulated_point_money: customerData.accumulated_point_money || 0
       };
 
+      console.log('DataContext: Adding customer with data:', fullCustomerData);
       const newCustomer = await supabaseService.addCustomer(fullCustomerData);
       if (newCustomer) {
         setCustomers(prev => [newCustomer, ...prev]);
+        console.log('DataContext: Customer added successfully:', newCustomer.id);
         return newCustomer;
       }
+      console.error('DataContext: Failed to add customer - no customer returned');
       return null;
     } catch (error) {
-      console.error('Error adding customer:', error);
+      console.error('DataContext: Error adding customer:', error);
       return null;
     }
   };
 
   const updateCustomer = async (id: string, customerData: Partial<Customer>) => {
     try {
+      console.log('DataContext: Updating customer:', id, customerData);
       const success = await supabaseService.updateCustomer(id, customerData);
       if (success) {
         setCustomers(prev => prev.map(customer => 
           customer.id === id ? { ...customer, ...customerData } : customer
         ));
+        console.log('DataContext: Customer updated successfully');
         return true;
       }
+      console.error('DataContext: Failed to update customer');
       return false;
     } catch (error) {
-      console.error('Error updating customer:', error);
+      console.error('DataContext: Error updating customer:', error);
       return false;
     }
   };
@@ -310,8 +316,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const fullCategoryData = {
         ...categoryData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       const newCategory = await supabaseService.addCategory(fullCategoryData);
@@ -413,7 +419,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         products: orderData.products || [],
         total_amount: orderData.total_amount || 0,
         points_used: orderData.points_used || 0,
-        amount_paid: orderData.amount_paid || orderData.total_amount || 0, // Ensure amount_paid is set
+        amount_paid: orderData.amount_paid || orderData.total_amount || 0,
         points: orderData.points || 0,
         status: orderData.status || 'pending',
         payment_method: orderData.payment_method || 'cod',
@@ -444,16 +450,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateOrder = async (id: string, orderData: Partial<Order>) => {
     try {
+      console.log('DataContext: Updating order:', id, orderData);
       const success = await supabaseService.updateOrder(id, orderData);
       if (success) {
         setOrders(prev => prev.map(order => 
           order.id === id ? { ...order, ...orderData } : order
         ));
+        console.log('DataContext: Order updated successfully');
         return true;
       }
+      console.error('DataContext: Failed to update order');
       return false;
     } catch (error) {
-      console.error('Error updating order:', error);
+      console.error('DataContext: Error updating order:', error);
       return false;
     }
   };
